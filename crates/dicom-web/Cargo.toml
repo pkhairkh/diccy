@@ -1,0 +1,17 @@
+[package]
+name = "dicom-web"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-auth = { path = "../dicom-auth" }
+dicom-audit = { path = "../dicom-audit" }
+dicom-query = { path = "../dicom-query", optional = true }
+dicom-storage = { path = "../dicom-storage", optional = true }
+
+[features]
+qido = ["dicom-query", "dicom-storage"]
+wado = ["dicom-storage"]
+stow = ["dicom-storage"]

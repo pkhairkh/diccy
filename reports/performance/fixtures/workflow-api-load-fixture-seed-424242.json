@@ -1,0 +1,20 @@
+{
+  "seed": 424242,
+  "dataset_id": "workflow-api-load-fixture-v1",
+  "tenants": [
+    "tenant-default",
+    "tenant-a",
+    "tenant-b"
+  ],
+  "worklist_items": 250,
+  "tasks": 500,
+  "query_mix": {
+    "worklist_query": 0.5,
+    "task_query": 0.3,
+    "mpps_query": 0.2
+  },
+  "mutation_mix": {
+    "task_create": 0.6,
+    "task_transition": 0.4
+  }
+}

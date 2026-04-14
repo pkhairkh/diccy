@@ -1,0 +1,9 @@
+[package]
+name = "dicom-mpps"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-audit = { path = "../dicom-audit" }

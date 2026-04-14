@@ -1,0 +1,17 @@
+[package]
+name = "dicom-workflow-server"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+workflow-main-tests = []
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-env-contract = { path = "../dicom-env-contract" }
+dicom-worklist = { path = "../dicom-worklist" }
+dicom-mpps = { path = "../dicom-mpps" }
+dicom-ups = { path = "../dicom-ups" }
+pack-sr = { path = "../pack-sr" }

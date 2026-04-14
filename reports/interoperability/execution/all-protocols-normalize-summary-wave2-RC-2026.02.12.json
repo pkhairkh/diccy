@@ -1,0 +1,24 @@
+{
+  "generated_at_utc": "2026-02-12T00:53:26Z",
+  "inputs": [
+    "./reports/interoperability/execution/raw-wave2-RC-2026.02.12/dicomweb-raw-wave2.json",
+    "./reports/interoperability/execution/raw-wave2-RC-2026.02.12/dimse-raw-wave2.csv",
+    "./reports/interoperability/execution/raw-wave2-RC-2026.02.12/workflow-raw-wave2.jsonl",
+    "./reports/interoperability/execution/raw-wave2-RC-2026.02.12/negative-raw-wave2.json"
+  ],
+  "output": "./reports/interoperability/execution/all-protocols-execution-traces-wave2-RC-2026.02.12.jsonl",
+  "protocol_counts": {
+    "DICOMweb": 14,
+    "DIMSE": 11,
+    "MPPS": 4,
+    "MWL": 4
+  },
+  "release_id": "RC-2026.02.12",
+  "thresholds": {
+    "DICOMweb": 10,
+    "DIMSE": 8,
+    "MPPS": 4,
+    "MWL": 4
+  },
+  "total_rows": 33
+}

@@ -1,0 +1,10 @@
+sop_class_uids = [
+  "1.2.840.10008.5.1.4.1.1.20",
+]
+
+required_tags = [
+  "0008,0016", # SOP Class UID
+  "0008,0018", # SOP Instance UID
+  "0020,000D", # Study Instance UID
+  "0020,000E", # Series Instance UID
+]

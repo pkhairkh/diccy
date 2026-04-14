@@ -1,0 +1,15 @@
+{
+  "seed": 515151,
+  "dataset_id": "connector-callback-load-fixture-v1",
+  "connector_count": 12,
+  "subscription_count": 48,
+  "event_count": 1200,
+  "failure_injection": {
+    "timeout_ratio": 0.08,
+    "callback_fail_domain": "callback-fail.local"
+  },
+  "expected": {
+    "circuit_breaker_recovery": true,
+    "bounded_dlq_growth": true
+  }
+}

@@ -1,0 +1,12 @@
+[package]
+name = "pack-sr"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+
+[features]
+default = []
+pack-sr = []

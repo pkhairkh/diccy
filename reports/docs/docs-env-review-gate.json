@@ -1,0 +1,23 @@
+{
+  "contract_count": 3,
+  "status": "FAIL",
+  "violations": [
+    {
+      "component": "dicom-web-server",
+      "docs_file": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "documented_not_in_code": [],
+      "missing_in_docs": [
+        "DICOM_WEB_ENABLE_DELETE",
+        "DICOM_WEB_PROVIDER_PROFILE"
+      ]
+    },
+    {
+      "component": "dicom-workflow-server",
+      "docs_file": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "documented_not_in_code": [],
+      "missing_in_docs": [
+        "DICOM_WORKFLOW_PROVIDER_PROFILE"
+      ]
+    }
+  ]
+}

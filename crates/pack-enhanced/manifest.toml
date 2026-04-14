@@ -1,0 +1,15 @@
+sop_class_uids = [
+  "1.2.840.10008.5.1.4.1.1.2.1",
+  "1.2.840.10008.5.1.4.1.1.4.1",
+]
+
+required_tags = [
+  "0008,0016", # SOP Class UID
+  "0008,0018", # SOP Instance UID
+  "0020,000D", # Study Instance UID
+  "0020,000E", # Series Instance UID
+  "0020,0052", # Frame of Reference UID
+  "0028,0008", # Number of Frames
+  "5200,9229", # Shared Functional Groups Sequence
+  "5200,9230", # Per-frame Functional Groups Sequence
+]

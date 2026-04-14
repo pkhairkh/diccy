@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-02-12T00:53:18Z",
+  "inputs": [
+    "./reports/interoperability/execution/raw-wave2-RC-2026.02.12/negative-raw-wave2.json"
+  ],
+  "output": "./reports/interoperability/execution/negative-path-execution-traces-wave2-RC-2026.02.12.jsonl",
+  "protocol_counts": {
+    "DICOMweb": 8,
+    "DIMSE": 5,
+    "MPPS": 1,
+    "MWL": 1
+  },
+  "release_id": "RC-2026.02.12",
+  "thresholds": {
+    "DICOMweb": 10,
+    "DIMSE": 8,
+    "MPPS": 4,
+    "MWL": 4
+  },
+  "total_rows": 15
+}

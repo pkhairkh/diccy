@@ -1,0 +1,270 @@
+{
+  "generated_at_utc": "2026-02-11T21:38:24Z",
+  "profile_path": "./reports/performance/profiles/soak-profile-RC-2026.02.11.json",
+  "report_digest_sha256": "3999b76489f19f73d2270f9073a8e82bc7cfe4c9c4976359ce408ab3e297f4f2",
+  "run_label": "soak-RC-2026.02.11",
+  "violations": [],
+  "workloads": [
+    {
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web",
+        "parse_http_request_basic",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "web-sustained-parse",
+      "iterations": 10,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -48.939,
+      "max_latency_ms": 300.72,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 134.801,
+      "p95_latency_ms": 254.27,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": 0.346,
+      "runs": [
+        {
+          "duration_ms": 300.72,
+          "returncode": 0,
+          "rss_kib": 47333376,
+          "run": 1
+        },
+        {
+          "duration_ms": 139.853,
+          "returncode": 0,
+          "rss_kib": 47628288,
+          "run": 2
+        },
+        {
+          "duration_ms": 132.013,
+          "returncode": 0,
+          "rss_kib": 47235072,
+          "run": 3
+        },
+        {
+          "duration_ms": 112.784,
+          "returncode": 0,
+          "rss_kib": 47775744,
+          "run": 4
+        },
+        {
+          "duration_ms": 95.201,
+          "returncode": 0,
+          "rss_kib": 47382528,
+          "run": 5
+        },
+        {
+          "duration_ms": 113.565,
+          "returncode": 0,
+          "rss_kib": 47513600,
+          "run": 6
+        },
+        {
+          "duration_ms": 197.498,
+          "returncode": 0,
+          "rss_kib": 47382528,
+          "run": 7
+        },
+        {
+          "duration_ms": 115.14,
+          "returncode": 0,
+          "rss_kib": 47628288,
+          "run": 8
+        },
+        {
+          "duration_ms": 137.589,
+          "returncode": 0,
+          "rss_kib": 47382528,
+          "run": 9
+        },
+        {
+          "duration_ms": 153.55,
+          "returncode": 0,
+          "rss_kib": 47497216,
+          "run": 10
+        }
+      ],
+      "slo_latency_p95_ms": 2200.0,
+      "slo_throughput_ops_s": 0.2,
+      "throughput_ops_s": 6.676,
+      "total_duration_s": 1.498,
+      "total_operations": 10
+    },
+    {
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_round_trip",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "dimse-sustained-cecho",
+      "iterations": 10,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -20.973,
+      "max_latency_ms": 532.782,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 192.335,
+      "p95_latency_ms": 497.723,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": -0.101,
+      "runs": [
+        {
+          "duration_ms": 251.141,
+          "returncode": 0,
+          "rss_kib": 48693248,
+          "run": 1
+        },
+        {
+          "duration_ms": 172.312,
+          "returncode": 0,
+          "rss_kib": 48431104,
+          "run": 2
+        },
+        {
+          "duration_ms": 293.489,
+          "returncode": 0,
+          "rss_kib": 48398336,
+          "run": 3
+        },
+        {
+          "duration_ms": 186.201,
+          "returncode": 0,
+          "rss_kib": 48644096,
+          "run": 4
+        },
+        {
+          "duration_ms": 454.874,
+          "returncode": 0,
+          "rss_kib": 47546368,
+          "run": 5
+        },
+        {
+          "duration_ms": 532.782,
+          "returncode": 0,
+          "rss_kib": 46940160,
+          "run": 6
+        },
+        {
+          "duration_ms": 154.195,
+          "returncode": 0,
+          "rss_kib": 48300032,
+          "run": 7
+        },
+        {
+          "duration_ms": 113.88,
+          "returncode": 0,
+          "rss_kib": 48398336,
+          "run": 8
+        },
+        {
+          "duration_ms": 131.539,
+          "returncode": 0,
+          "rss_kib": 48742400,
+          "run": 9
+        },
+        {
+          "duration_ms": 198.469,
+          "returncode": 0,
+          "rss_kib": 48644096,
+          "run": 10
+        }
+      ],
+      "slo_latency_p95_ms": 5000.0,
+      "slo_throughput_ops_s": 0.15,
+      "throughput_ops_s": 4.018,
+      "total_duration_s": 2.489,
+      "total_operations": 10
+    },
+    {
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "workflow-sustained-restart",
+      "iterations": 8,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": 31.364,
+      "max_latency_ms": 364.612,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 200.865,
+      "p95_latency_ms": 335.44,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": -0.276,
+      "runs": [
+        {
+          "duration_ms": 124.213,
+          "returncode": 0,
+          "rss_kib": 47464448,
+          "run": 1
+        },
+        {
+          "duration_ms": 119.858,
+          "returncode": 0,
+          "rss_kib": 47267840,
+          "run": 2
+        },
+        {
+          "duration_ms": 237.879,
+          "returncode": 0,
+          "rss_kib": 47628288,
+          "run": 3
+        },
+        {
+          "duration_ms": 364.612,
+          "returncode": 0,
+          "rss_kib": 47218688,
+          "run": 4
+        },
+        {
+          "duration_ms": 212.322,
+          "returncode": 0,
+          "rss_kib": 47890432,
+          "run": 5
+        },
+        {
+          "duration_ms": 189.407,
+          "returncode": 0,
+          "rss_kib": 47366144,
+          "run": 6
+        },
+        {
+          "duration_ms": 281.264,
+          "returncode": 0,
+          "rss_kib": 47284224,
+          "run": 7
+        },
+        {
+          "duration_ms": 163.171,
+          "returncode": 0,
+          "rss_kib": 47333376,
+          "run": 8
+        }
+      ],
+      "slo_latency_p95_ms": 8500.0,
+      "slo_throughput_ops_s": 0.08,
+      "throughput_ops_s": 4.726,
+      "total_duration_s": 1.693,
+      "total_operations": 8
+    }
+  ]
+}

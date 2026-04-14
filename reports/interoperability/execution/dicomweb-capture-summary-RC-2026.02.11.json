@@ -1,0 +1,85 @@
+{
+  "capture_digest_sha256": "337f96dfc1e83f426ba9eae0371ce2583c850b59fc5fd68979af2898bd6d7704",
+  "generated_at_utc": "2026-02-11T21:24:49Z",
+  "release_id": "RC-2026.02.11",
+  "rows": [
+    {
+      "case_id": "IOP-S11-DW-001",
+      "evidence_ref": "WEB-QIDO-STUDIES",
+      "interface_id": "IFS-WEB-QIDO-001",
+      "note": "local runtime qido execution",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "response_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DW-002",
+      "evidence_ref": "WEB-STOW-WADO",
+      "interface_id": "IFS-WEB-STOW-WADO-002",
+      "note": "local runtime round-trip",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "response_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DW-003",
+      "evidence_ref": "ORTHANC-QIDO-PEER",
+      "interface_id": "IFS-WEB-QIDO-PEER-001",
+      "note": "peer profile replay qido",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "response_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "target_system": "TGT-004",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DW-004",
+      "evidence_ref": "ORTHANC-STOW-WADO-PEER",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-002",
+      "note": "peer profile replay round-trip",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "response_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "target_system": "TGT-004",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DW-005",
+      "evidence_ref": "DCM4CHEE-QIDO-PEER",
+      "interface_id": "IFS-WEB-QIDO-PEER-003",
+      "note": "enterprise peer profile replay qido",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "response_hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "target_system": "TGT-005",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DW-006",
+      "evidence_ref": "DCM4CHEE-STOW-WADO-PEER",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-004",
+      "note": "enterprise peer profile replay round-trip",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "response_hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "target_system": "TGT-005",
+      "verdict": "PASS"
+    }
+  ],
+  "total_rows": 6,
+  "verdict_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "PASS": 6
+  }
+}

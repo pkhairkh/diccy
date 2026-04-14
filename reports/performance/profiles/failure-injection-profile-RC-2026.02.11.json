@@ -1,0 +1,95 @@
+{
+  "profile_id": "perf-failure-injection-rc-2026-02-11",
+  "release_id": "RC-2026.02.11",
+  "description": "Failure-injection profile validating restart, storage-path, and auth fail-closed behaviors.",
+  "workloads": [
+    {
+      "id": "failure-restart-recovery",
+      "category": "restart",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 1,
+      "think_time_ms": 50,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 8500.0,
+      "slo_throughput_ops_s": 0.08,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 200.0,
+      "latency_growth_limit_pct": 300.0
+    },
+    {
+      "id": "failure-storage-path-reject",
+      "category": "storage-path",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web-server",
+        "preflight_rejects_directory_path",
+        "--",
+        "--exact"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 4000.0,
+      "slo_throughput_ops_s": 0.2,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 200.0,
+      "latency_growth_limit_pct": 300.0
+    },
+    {
+      "id": "failure-auth-deny-dimse",
+      "category": "auth",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_denied_by_auth_records_audit",
+        "--",
+        "--exact"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 6000.0,
+      "slo_throughput_ops_s": 0.1,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 200.0,
+      "latency_growth_limit_pct": 300.0
+    },
+    {
+      "id": "failure-insecure-transport-reject",
+      "category": "transport",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "insecure_transport_rejected_even_when_auth_allows",
+        "--",
+        "--exact"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 3500.0,
+      "slo_throughput_ops_s": 0.2,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 200.0,
+      "latency_growth_limit_pct": 300.0
+    }
+  ]
+}

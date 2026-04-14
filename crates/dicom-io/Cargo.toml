@@ -1,0 +1,29 @@
+[package]
+name = "dicom-io"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+flate2 = { version = "1.0", optional = true }
+
+[features]
+default = []
+codec-jpegls = ["dicom-core/codec-jpegls"]
+codec-j2k = ["dicom-core/codec-j2k"]
+codec-mpeg2 = []
+codec-h264 = []
+codec-hevc = []
+tier1-deflate = ["dep:flate2", "dicom-core/tier1-deflate"]
+modality-pet = ["dicom-core/modality-pet"]
+modality-xr = ["dicom-core/modality-xr"]
+modality-mg = ["dicom-core/modality-mg"]
+gsps = ["dicom-core/gsps"]
+pack-enhanced = ["dicom-core/pack-enhanced"]
+pack-us = ["dicom-core/pack-us"]
+pack-nm = ["dicom-core/pack-nm"]
+pack-xa = ["dicom-core/pack-xa"]
+pack-seg = ["dicom-core/pack-seg"]
+pack-rt = ["dicom-core/pack-rt"]
+pack-sr = ["dicom-core/pack-sr"]

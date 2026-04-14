@@ -1,0 +1,229 @@
+{
+  "generated_at_utc": "2026-02-11T21:38:27Z",
+  "profile_path": "./reports/performance/profiles/failure-injection-profile-RC-2026.02.11.json",
+  "report_digest_sha256": "9d2d813d6efbc84fafecf1eb95806243ca1b06cb9a067f7f6a594f857c57b081",
+  "run_label": "failure-injection-RC-2026.02.11",
+  "violations": [],
+  "workloads": [
+    {
+      "category": "restart",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "failure-restart-recovery",
+      "iterations": 4,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -43.942,
+      "max_latency_ms": 159.798,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 128.537,
+      "p95_latency_ms": 157.687,
+      "rss_growth_limit_pct": 200.0,
+      "rss_growth_pct": 0.691,
+      "runs": [
+        {
+          "duration_ms": 145.727,
+          "returncode": 0,
+          "rss_kib": 47398912,
+          "run": 1
+        },
+        {
+          "duration_ms": 159.798,
+          "returncode": 0,
+          "rss_kib": 47218688,
+          "run": 2
+        },
+        {
+          "duration_ms": 111.348,
+          "returncode": 0,
+          "rss_kib": 47710208,
+          "run": 3
+        },
+        {
+          "duration_ms": 81.691,
+          "returncode": 0,
+          "rss_kib": 47726592,
+          "run": 4
+        }
+      ],
+      "slo_latency_p95_ms": 8500.0,
+      "slo_throughput_ops_s": 0.08,
+      "throughput_ops_s": 8.023,
+      "total_duration_s": 0.499,
+      "total_operations": 4
+    },
+    {
+      "category": "storage-path",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web-server",
+        "preflight_rejects_directory_path",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "failure-storage-path-reject",
+      "iterations": 4,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -26.541,
+      "max_latency_ms": 216.529,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 197.064,
+      "p95_latency_ms": 213.685,
+      "rss_growth_limit_pct": 200.0,
+      "rss_growth_pct": 0.272,
+      "runs": [
+        {
+          "duration_ms": 197.573,
+          "returncode": 0,
+          "rss_kib": 48218112,
+          "run": 1
+        },
+        {
+          "duration_ms": 216.529,
+          "returncode": 0,
+          "rss_kib": 48676864,
+          "run": 2
+        },
+        {
+          "duration_ms": 196.554,
+          "returncode": 0,
+          "rss_kib": 48103424,
+          "run": 3
+        },
+        {
+          "duration_ms": 145.135,
+          "returncode": 0,
+          "rss_kib": 48349184,
+          "run": 4
+        }
+      ],
+      "slo_latency_p95_ms": 4000.0,
+      "slo_throughput_ops_s": 0.2,
+      "throughput_ops_s": 5.292,
+      "total_duration_s": 0.756,
+      "total_operations": 4
+    },
+    {
+      "category": "auth",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_denied_by_auth_records_audit",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "failure-auth-deny-dimse",
+      "iterations": 4,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -16.593,
+      "max_latency_ms": 239.991,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 184.381,
+      "p95_latency_ms": 233.997,
+      "rss_growth_limit_pct": 200.0,
+      "rss_growth_pct": -0.909,
+      "runs": [
+        {
+          "duration_ms": 200.025,
+          "returncode": 0,
+          "rss_kib": 48660480,
+          "run": 1
+        },
+        {
+          "duration_ms": 239.991,
+          "returncode": 0,
+          "rss_kib": 48594944,
+          "run": 2
+        },
+        {
+          "duration_ms": 168.736,
+          "returncode": 0,
+          "rss_kib": 48447488,
+          "run": 3
+        },
+        {
+          "duration_ms": 166.835,
+          "returncode": 0,
+          "rss_kib": 48218112,
+          "run": 4
+        }
+      ],
+      "slo_latency_p95_ms": 6000.0,
+      "slo_throughput_ops_s": 0.1,
+      "throughput_ops_s": 5.157,
+      "total_duration_s": 0.776,
+      "total_operations": 4
+    },
+    {
+      "category": "transport",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "insecure_transport_rejected_even_when_auth_allows",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "failure-insecure-transport-reject",
+      "iterations": 4,
+      "latency_growth_limit_pct": 300.0,
+      "latency_growth_pct": -46.51,
+      "max_latency_ms": 191.429,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 185.593,
+      "p95_latency_ms": 191.093,
+      "rss_growth_limit_pct": 200.0,
+      "rss_growth_pct": -0.515,
+      "runs": [
+        {
+          "duration_ms": 189.192,
+          "returncode": 0,
+          "rss_kib": 47742976,
+          "run": 1
+        },
+        {
+          "duration_ms": 181.994,
+          "returncode": 0,
+          "rss_kib": 47185920,
+          "run": 2
+        },
+        {
+          "duration_ms": 191.429,
+          "returncode": 0,
+          "rss_kib": 47775744,
+          "run": 3
+        },
+        {
+          "duration_ms": 101.198,
+          "returncode": 0,
+          "rss_kib": 47497216,
+          "run": 4
+        }
+      ],
+      "slo_latency_p95_ms": 3500.0,
+      "slo_throughput_ops_s": 0.2,
+      "throughput_ops_s": 6.026,
+      "total_duration_s": 0.664,
+      "total_operations": 4
+    }
+  ]
+}

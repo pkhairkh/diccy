@@ -1,0 +1,16 @@
+[package]
+name = "pack-enhanced"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+
+[dev-dependencies]
+dicom-io = { path = "../dicom-io" }
+sha2 = "0.10"
+
+[features]
+default = []
+pack-enhanced = []

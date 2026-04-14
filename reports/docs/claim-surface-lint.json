@@ -1,0 +1,13 @@
+{
+  "allow_paths": [
+    "docs/15-Regulatory-and-Standards-Mapping.md"
+  ],
+  "scan_roots": [
+    "README.md",
+    "docs"
+  ],
+  "scanned_markdown_files": 101,
+  "status": "PASS",
+  "violations": [],
+  "violations_count": 0
+}

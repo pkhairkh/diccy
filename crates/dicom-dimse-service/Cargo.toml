@@ -1,0 +1,21 @@
+[package]
+name = "dicom-dimse-service"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-net = { path = "../dicom-net" }
+dicom-dimse = { path = "../dicom-dimse" }
+dicom-env-contract = { path = "../dicom-env-contract" }
+dicom-auth = { path = "../dicom-auth" }
+dicom-audit = { path = "../dicom-audit" }
+dicom-io = { path = "../dicom-io" }
+dicom-query = { path = "../dicom-query", optional = true }
+dicom-storage = { path = "../dicom-storage" }
+
+[features]
+dimse-c-find = ["dicom-dimse/dimse-c-find", "dicom-query"]
+dimse-c-move = ["dicom-dimse/dimse-c-move", "dicom-query"]
+dimse-c-get = ["dicom-dimse/dimse-c-get", "dicom-query"]

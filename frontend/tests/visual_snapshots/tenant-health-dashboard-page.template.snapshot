@@ -1,0 +1,16 @@
+<main :class="classTokens.pageShell">
+<section :class="classTokens.pageHeroSection">
+<h1 :class="classTokens.pageTitle">Tenant Integration Health</h1>
+<p :class="classTokens.pageSubtitle">Tenant: {{ props.tenantId }}</p>
+<p v-if="!canMutateOperationalPanel" :class="classTokens.pageNoticeText">
+Read-only mode active for this role.
+</p>
+</section>
+<section :class="classTokens.pageBodySection">
+<ConnectorOpsPanel
+v-if="canViewOperationalPanel"
+:tenant-id="props.tenantId"
+:role="props.role"
+/>
+</section>
+</main>

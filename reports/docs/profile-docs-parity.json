@@ -1,0 +1,29 @@
+{
+  "docs12_contract_sections": [
+    "dicom-dimse-service",
+    "dicom-web-server",
+    "dicom-workflow-server"
+  ],
+  "docs33_profiles": [
+    "backend-services",
+    "backend-services-with-dimse",
+    "framework-core",
+    "workstation"
+  ],
+  "docs49_profiles": [
+    "backend-services",
+    "backend-services-with-dimse",
+    "framework-core",
+    "workstation"
+  ],
+  "envelope_version": "1.1",
+  "findings": [],
+  "generated_on_utc": "2026-02-25T11:42:46Z",
+  "matrix_profiles": [
+    "backend-services",
+    "backend-services-with-dimse",
+    "framework-core",
+    "workstation"
+  ],
+  "status": "PASS"
+}

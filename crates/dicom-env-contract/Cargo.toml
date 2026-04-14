@@ -1,0 +1,6 @@
+[package]
+name = "dicom-env-contract"
+version = "0.1.0"
+edition = "2021"
+publish = false
+

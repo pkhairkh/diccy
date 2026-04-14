@@ -1,0 +1,73 @@
+{
+  "profile_id": "perf-soak-rc-2026-02-11",
+  "release_id": "RC-2026.02.11",
+  "description": "Sustained stability profile across web, DIMSE, and workflow service paths.",
+  "workloads": [
+    {
+      "id": "web-sustained-parse",
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web",
+        "parse_http_request_basic",
+        "--",
+        "--exact"
+      ],
+      "iterations": 10,
+      "operations_per_iteration": 1,
+      "think_time_ms": 50,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 2200.0,
+      "slo_throughput_ops_s": 0.2,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 300.0
+    },
+    {
+      "id": "dimse-sustained-cecho",
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_round_trip",
+        "--",
+        "--exact"
+      ],
+      "iterations": 10,
+      "operations_per_iteration": 1,
+      "think_time_ms": 50,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 5000.0,
+      "slo_throughput_ops_s": 0.15,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 300.0
+    },
+    {
+      "id": "workflow-sustained-restart",
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "iterations": 8,
+      "operations_per_iteration": 1,
+      "think_time_ms": 100,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 8500.0,
+      "slo_throughput_ops_s": 0.08,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 300.0
+    }
+  ]
+}

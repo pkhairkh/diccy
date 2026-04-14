@@ -1,0 +1,9 @@
+{
+  "pack": ".reports/performance/profiles/browser-scenario-pack-RC-2026.02.22.json",
+  "scenario_count": 3,
+  "outputs": [
+    ".reports/performance/scenarios/baseline-512.json",
+    ".reports/performance/scenarios/stress-768.json",
+    ".reports/performance/scenarios/fallback-pressure-1024.json"
+  ]
+}

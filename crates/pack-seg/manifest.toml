@@ -1,0 +1,19 @@
+sop_class_uids = [
+  "1.2.840.10008.5.1.4.1.1.66.4",
+]
+
+required_tags = [
+  "0008,0016", # SOP Class UID
+  "0008,0018", # SOP Instance UID
+  "0020,000D", # Study Instance UID
+  "0020,000E", # Series Instance UID
+  "0020,0052", # Frame of Reference UID
+  "0062,0001", # Segmentation Type
+  "0062,0004", # Segment Number
+  "0028,0010", # Rows
+  "0028,0011", # Columns
+  "0028,0100", # Bits Allocated
+  "0028,0101", # Bits Stored
+  "0028,0102", # High Bit
+  "7FE0,0010", # Pixel Data
+]

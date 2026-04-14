@@ -1,0 +1,49 @@
+{
+  "version": "1",
+  "tenant_snapshot_support": true,
+  "profiles": {
+    "framework-core": {
+      "default_profile": true,
+      "requires": [],
+      "required_for_documentation": true,
+      "size_budget_bytes": 120000000,
+      "binaries": ["dicom-visualizer"],
+      "features": ["core", "deterministic-cpu-oracle", "headless-runtime"],
+      "image_suffix": "framework-core",
+      "build_command": "cargo build -p rdvf"
+    },
+    "workstation": {
+      "default_profile": true,
+      "requires": [],
+      "required_for_documentation": true,
+      "size_budget_bytes": 150000000,
+      "artifact_strategy": "script-hosted",
+      "binaries": [],
+      "features": ["viewer-wasm", "viewer-wgpu", "mpr", "sr-workflow-prototype"],
+      "image_suffix": "workstation",
+      "build_command": "cargo build -p viewer-wasm -p viewer-wgpu"
+    },
+    "backend-services": {
+      "default_profile": true,
+      "requires": [],
+      "required_for_documentation": true,
+      "tenant_aware": true,
+      "size_budget_bytes": 300000000,
+      "binaries": ["dicom-web-server", "dicom-workflow-server"],
+      "features": ["dicomweb", "workflow-service", "worklist", "mpps", "sr-commit"],
+      "image_suffix": "backend-services",
+      "build_command": "cargo build -p dicom-web-server -p dicom-workflow-server"
+    },
+    "backend-services-with-dimse": {
+      "default_profile": false,
+      "requires": ["backend-services"],
+      "required_for_documentation": false,
+      "tenant_aware": true,
+      "size_budget_bytes": 360000000,
+      "binaries": ["dicom-web-server", "dicom-workflow-server", "dicom-dimse-service"],
+      "features": ["dicomweb", "workflow-service", "dimse-transport", "worklist", "mpps", "sr-commit"],
+      "image_suffix": "backend-services-with-dimse",
+      "build_command": "cargo build -p dicom-web-server -p dicom-workflow-server -p dicom-dimse-service"
+    }
+  }
+}

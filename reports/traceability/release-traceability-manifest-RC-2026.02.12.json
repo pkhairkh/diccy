@@ -1,0 +1,296 @@
+{
+  "schema_version": "release-traceability/v1.1",
+  "release_id": "RC-2026.02.12",
+  "origin_taxonomy": [
+    "synthetic",
+    "de-identified",
+    "external-independent"
+  ],
+  "claims": [
+    {
+      "claim_id": "CLM-S01-001",
+      "source_doc": "reports/release/external-evidence-acceptance-criteria-v1.md",
+      "claim_text": "Release evidence acceptance is governed by explicit site, sample-size, reviewer-independence, and cryptographic integrity requirements.",
+      "req_ids": [
+        "REQ-REL-601",
+        "REQ-TEST-701"
+      ],
+      "evidence_paths": [
+        "reports/release/external-evidence-acceptance-criteria-v1.md",
+        "reports/release/evidence-signature-RC-2026.02.12.json",
+        "reports/analytical/ANL-S01-CLOSE.md"
+      ],
+      "evidence_origin": {
+        "reports/release/external-evidence-acceptance-criteria-v1.md": "synthetic",
+        "reports/release/evidence-signature-RC-2026.02.12.json": "synthetic",
+        "reports/analytical/ANL-S01-CLOSE.md": "synthetic"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-sign-verify-RC-2026.02.12.log",
+        "reports/analytical/gates/s01-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S01-002",
+      "source_doc": "reports/clinical/external-validation/dataset-ingestion-log-RC-2026.02.12.md",
+      "claim_text": "External validation dataset ingestion uses release-specific controlled execution with no template placeholder rows.",
+      "req_ids": [
+        "REQ-TEST-701"
+      ],
+      "evidence_paths": [
+        "reports/clinical/external-validation/dataset-ingestion-log-RC-2026.02.12.md"
+      ],
+      "evidence_origin": {
+        "reports/clinical/external-validation/dataset-ingestion-log-RC-2026.02.12.md": "de-identified"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S01-003",
+      "source_doc": "reports/interoperability/external-site-readiness-checklist-RC-2026.02.12.md",
+      "claim_text": "External-site readiness is controlled by signed third-party environment prerequisites before counting evidence as external-independent.",
+      "req_ids": [
+        "REQ-WEB-304"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/external-site-readiness-checklist-RC-2026.02.12.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/external-site-readiness-checklist-RC-2026.02.12.md": "external-independent"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S02-001",
+      "source_doc": "reports/interoperability/verification-matrix.md",
+      "claim_text": "DICOMweb and DIMSE wave-1 interoperability passes on at least two independent external targets with signed external-site baselines.",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304",
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/execution/dicomweb-capture-matrix-RC-2026.02.12.md",
+        "reports/interoperability/execution/dimse-capture-matrix-RC-2026.02.12.md",
+        "reports/interoperability/verification-matrix.md",
+        "reports/interoperability/hash-verification-register-RC-2026.02.12.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/execution/dicomweb-capture-matrix-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/execution/dimse-capture-matrix-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/verification-matrix.md": "synthetic",
+        "reports/interoperability/hash-verification-register-RC-2026.02.12.md": "external-independent"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s02-interoperability-capture-dicomweb-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-interoperability-capture-dimse-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-interoperability-hash-verify-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S02-002",
+      "source_doc": "reports/interoperability/negative-path-matrix.md",
+      "claim_text": "Workflow and negative-path security controls pass fail-closed semantics on external workflow-capable targets.",
+      "req_ids": [
+        "REQ-WL-301",
+        "REQ-WL-302",
+        "REQ-MPPS-352",
+        "REQ-NET-308",
+        "REQ-AUTH-300"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/execution/workflow-capture-matrix-RC-2026.02.12.md",
+        "reports/interoperability/execution/negative-capture-matrix-RC-2026.02.12.md",
+        "reports/interoperability/negative-path-matrix.md",
+        "reports/interoperability/environment-matrix.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/execution/workflow-capture-matrix-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/execution/negative-capture-matrix-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/negative-path-matrix.md": "synthetic",
+        "reports/interoperability/environment-matrix.md": "synthetic"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s02-interoperability-capture-workflow-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-interoperability-capture-negative-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-interoperability-hash-verify-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S02-003",
+      "source_doc": "reports/interoperability/release-evidence-index.md",
+      "claim_text": "Wave-1 interoperability evidence is release-locked with traceability bindings and signed closure gates.",
+      "req_ids": [
+        "REQ-REL-601",
+        "REQ-TEST-701"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/release-evidence-index.md",
+        "reports/traceability/claim-evidence-trace-bundle-RC-2026.02.12.md",
+        "reports/traceability/release-evidence-trace-index-RC-2026.02.12.md",
+        "reports/analytical/ANL-S02-CLOSE.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/release-evidence-index.md": "synthetic",
+        "reports/traceability/claim-evidence-trace-bundle-RC-2026.02.12.md": "synthetic",
+        "reports/traceability/release-evidence-trace-index-RC-2026.02.12.md": "synthetic",
+        "reports/analytical/ANL-S02-CLOSE.md": "synthetic"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s02-interoperability-hash-verify-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S03-001",
+      "source_doc": "reports/interoperability/reproducibility-wave2-RC-2026.02.12.md",
+      "claim_text": "Wave-2 repeated interoperability execution remains hash-stable against wave-1 within zero-variance policy bounds.",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-DIMSE-300",
+        "REQ-WL-301",
+        "REQ-MPPS-351"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/reproducibility-wave2-RC-2026.02.12.md",
+        "reports/interoperability/execution/dicomweb-capture-matrix-wave2-RC-2026.02.12.md",
+        "reports/interoperability/execution/dimse-capture-matrix-wave2-RC-2026.02.12.md",
+        "reports/interoperability/execution/workflow-capture-matrix-wave2-RC-2026.02.12.md",
+        "reports/interoperability/hash-verification-register-wave2-RC-2026.02.12.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/reproducibility-wave2-RC-2026.02.12.md": "synthetic",
+        "reports/interoperability/execution/dicomweb-capture-matrix-wave2-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/execution/dimse-capture-matrix-wave2-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/execution/workflow-capture-matrix-wave2-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/hash-verification-register-wave2-RC-2026.02.12.md": "external-independent"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s03-interoperability-capture-dicomweb-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interoperability-capture-dimse-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interoperability-capture-workflow-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interoperability-hash-verify-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-reproducibility-compare-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S03-002",
+      "source_doc": "reports/interoperability/negative-path-matrix.md",
+      "claim_text": "Boundary negative-path cases for PDU/PDV limits, route parsing, and auth policy transitions fail closed on external targets.",
+      "req_ids": [
+        "REQ-NET-309",
+        "REQ-HTTP-303",
+        "REQ-AUTH-300",
+        "REQ-SEC-405"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/execution/negative-capture-matrix-wave2-RC-2026.02.12.md",
+        "reports/interoperability/execution/negative-path-execution-evidence-wave2-RC-2026.02.12.md",
+        "reports/interoperability/negative-path-matrix.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/execution/negative-capture-matrix-wave2-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/execution/negative-path-execution-evidence-wave2-RC-2026.02.12.md": "external-independent",
+        "reports/interoperability/negative-path-matrix.md": "synthetic"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s03-interoperability-capture-negative-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interoperability-hash-verify-wave2-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-S03-003",
+      "source_doc": "reports/interoperability/campaign-test-inventory.md",
+      "claim_text": "Protocol family case-volume thresholds are explicit, enforced by gate scripts, and independently reviewed.",
+      "req_ids": [
+        "REQ-TEST-701",
+        "REQ-REL-601"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/campaign-test-inventory.md",
+        "reports/interoperability/wave2-independent-review-RC-2026.02.12.md",
+        "reports/traceability/interoperability-case-bindings-RC-2026.02.12.md",
+        "reports/analytical/ANL-S03-CLOSE.md"
+      ],
+      "evidence_origin": {
+        "reports/interoperability/campaign-test-inventory.md": "synthetic",
+        "reports/interoperability/wave2-independent-review-RC-2026.02.12.md": "synthetic",
+        "reports/traceability/interoperability-case-bindings-RC-2026.02.12.md": "synthetic",
+        "reports/analytical/ANL-S03-CLOSE.md": "synthetic"
+      },
+      "gate_logs": [
+        "reports/analytical/gates/s03-case-volume-threshold-gate-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-trace-bindings-verify-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interop-evidence-scan-RC-2026.02.12.log"
+      ]
+    }
+  ],
+  "release_index_entries": [
+    {
+      "entry_id": "REL-IDX-S01-001",
+      "index_path": "reports/release/external-evidence-acceptance-criteria-v1.md",
+      "cluster_ids": [
+        "CLM-S01-001"
+      ],
+      "entry_origin": "synthetic",
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-sign-verify-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-S01-002",
+      "index_path": "reports/clinical/external-validation/dataset-ingestion-log-RC-2026.02.12.md",
+      "cluster_ids": [
+        "CLM-S01-002"
+      ],
+      "entry_origin": "de-identified",
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-S01-003",
+      "index_path": "reports/interoperability/external-site-readiness-checklist-RC-2026.02.12.md",
+      "cluster_ids": [
+        "CLM-S01-003"
+      ],
+      "entry_origin": "external-independent",
+      "gate_logs": [
+        "reports/analytical/gates/s01-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-S02-001",
+      "index_path": "reports/interoperability/release-evidence-index.md",
+      "cluster_ids": [
+        "CLM-S02-001",
+        "CLM-S02-002",
+        "CLM-S02-003"
+      ],
+      "entry_origin": "synthetic",
+      "gate_logs": [
+        "reports/analytical/gates/s02-interoperability-hash-verify-RC-2026.02.12.log",
+        "reports/analytical/gates/s02-evidence-realism-lint-RC-2026.02.12.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-S03-001",
+      "index_path": "reports/interoperability/release-evidence-index.md",
+      "cluster_ids": [
+        "CLM-S03-001",
+        "CLM-S03-002",
+        "CLM-S03-003"
+      ],
+      "entry_origin": "synthetic",
+      "gate_logs": [
+        "reports/analytical/gates/s03-interoperability-hash-verify-wave2-RC-2026.02.12.log",
+        "reports/analytical/gates/s03-interop-evidence-scan-RC-2026.02.12.log"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "profile_id": "workflow-api-load-rc-2026-02-24",
+  "release_id": "RC-2026.02.24",
+  "seed": 424242,
+  "fixture_dataset": "reports/performance/fixtures/workflow-api-load-fixture-seed-424242.json",
+  "workloads": [
+    {
+      "id": "workflow-query-load",
+      "category": "workflow-query",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "--features",
+        "workflow-main-tests",
+        "worklist_query_supports_filter_sort_and_pagination",
+        "--",
+        "--exact"
+      ],
+      "iterations": 3,
+      "operations_per_iteration": 250,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 12000.0,
+      "slo_latency_p99_ms": 15000.0,
+      "slo_throughput_ops_s": 10.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 120.0,
+      "latency_growth_limit_pct": 150.0
+    },
+    {
+      "id": "workflow-mutation-load",
+      "category": "workflow-mutation",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "--features",
+        "workflow-main-tests",
+        "workflow_task_http_flow_creates_lists_gets_and_controls_lifecycle",
+        "--",
+        "--exact"
+      ],
+      "iterations": 3,
+      "operations_per_iteration": 180,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 15000.0,
+      "slo_latency_p99_ms": 18000.0,
+      "slo_throughput_ops_s": 6.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 120.0,
+      "latency_growth_limit_pct": 150.0
+    }
+  ]
+}

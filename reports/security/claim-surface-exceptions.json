@@ -1,0 +1,6 @@
+{
+  "generated_at_utc": "2026-02-24T00:00:00Z",
+  "policy": "fail-closed",
+  "allowed_exception_path": "docs/15-Regulatory-and-Standards-Mapping.md",
+  "exceptions": []
+}

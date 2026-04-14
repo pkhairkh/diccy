@@ -1,0 +1,168 @@
+{
+  "corpus_root": "./fuzz/corpus",
+  "coverage_warning_count": 7,
+  "crash_count": 0,
+  "generated_at_utc": "2026-02-11T21:45:22Z",
+  "manifest_path": "./fuzz/Cargo.toml",
+  "report_digest_sha256": "d2de582aaf3ad1f2c2787f310e8be08026851eb62ea5ad7459ce388f136a2986",
+  "run_label": "security-fuzz-RC-2026.02.11",
+  "targets": [
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dicom_io_p10",
+        "--",
+        "-runs=128"
+      ],
+      "corpus_path": null,
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dicom_io_p10.log",
+      "returncode": 0,
+      "rss_mb": 25,
+      "runs": 128,
+      "seeds": null,
+      "target": "dicom_io_p10"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dimse_pdu",
+        "--",
+        "-runs=128",
+        "./fuzz/corpus/dimse_pdu"
+      ],
+      "corpus_path": "./fuzz/corpus/dimse_pdu",
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dimse_pdu.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": 2,
+      "target": "dimse_pdu"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dimse_command",
+        "--",
+        "-runs=128",
+        "./fuzz/corpus/dimse_command"
+      ],
+      "corpus_path": "./fuzz/corpus/dimse_command",
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dimse_command.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": 2,
+      "target": "dimse_command"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dicomweb_request",
+        "--",
+        "-runs=128"
+      ],
+      "corpus_path": null,
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dicomweb_request.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": null,
+      "target": "dicomweb_request"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dicom_pixel_pipeline",
+        "--",
+        "-runs=128"
+      ],
+      "corpus_path": null,
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dicom_pixel_pipeline.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": null,
+      "target": "dicom_pixel_pipeline"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dicom_pixel_rle",
+        "--",
+        "-runs=128"
+      ],
+      "corpus_path": null,
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dicom_pixel_rle.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": null,
+      "target": "dicom_pixel_rle"
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--manifest-path",
+        "./fuzz/Cargo.toml",
+        "--bin",
+        "dicom_pixel_jpeg_baseline",
+        "--",
+        "-runs=128",
+        "./fuzz/corpus/dicom_pixel_jpeg_baseline"
+      ],
+      "corpus_path": "./fuzz/corpus/dicom_pixel_jpeg_baseline",
+      "has_coverage_warning": true,
+      "has_crash": false,
+      "log_path": "./reports/security/fuzz/logs/dicom_pixel_jpeg_baseline.log",
+      "returncode": 0,
+      "rss_mb": 26,
+      "runs": 128,
+      "seeds": 8,
+      "target": "dicom_pixel_jpeg_baseline"
+    }
+  ]
+}

@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' http: https:; object-src 'none'; base-uri 'none'"
+    />
+    <title>RDVF WASM Viewer Host</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="backdrop" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="hero reveal">
+        <p class="eyebrow">rust-dicom-viewer-framework</p>
+        <h1>Interactive WASM Viewer Host</h1>
+        <p>
+          Browser host for <code>viewer-wasm</code>. This harness exercises
+          upload, viewport controls, policy toggles, and metadata escaping
+          against the actual Rust WASM bindings.
+        </p>
+        <p id="boot_status" class="status status-pending" role="status">
+          Initializing WASM module...
+        </p>
+      </header>
+
+      <section class="panel reveal">
+        <h2>Runtime Snapshot</h2>
+        <div class="stats">
+          <article>
+            <h3>Viewport</h3>
+            <dl>
+              <dt>Width</dt>
+              <dd id="stat_width">-</dd>
+              <dt>Height</dt>
+              <dd id="stat_height">-</dd>
+              <dt>Zoom</dt>
+              <dd id="stat_zoom">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Policy and Input</h3>
+            <dl>
+              <dt>Network Mode</dt>
+              <dd id="stat_network">-</dd>
+              <dt>Loaded Bytes</dt>
+              <dd id="stat_loaded_bytes">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Compute Path</h3>
+            <dl>
+              <dt>Backend</dt>
+              <dd id="stat_backend">-</dd>
+              <dt>Mode Badge</dt>
+              <dd id="renderer_badge" class="backend-badge">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>GPU Capabilities</h3>
+            <dl>
+              <dt>API</dt>
+              <dd id="stat_gpu_api">-</dd>
+              <dt>Adapter</dt>
+              <dd id="stat_gpu_adapter">-</dd>
+              <dt>Features</dt>
+              <dd id="stat_gpu_features">-</dd>
+              <dt>Limits</dt>
+              <dd id="stat_gpu_limits">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Render Perf</h3>
+            <dl>
+              <dt>Last Render</dt>
+              <dd id="stat_render_ms">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Backend Transitions</h3>
+            <dl>
+              <dt>Transitions</dt>
+              <dd id="stat_transition_count">-</dd>
+              <dt>Last Transition</dt>
+              <dd id="stat_last_transition_reason">-</dd>
+              <dt>Last Fallback Reason</dt>
+              <dd id="stat_last_fallback_reason">-</dd>
+              <dt>Fallback Latency (ms)</dt>
+              <dd id="stat_fallback_latency">-</dd>
+              <dt>Fallback Budget (ms)</dt>
+              <dd id="stat_fallback_budget">-</dd>
+              <dt>WebGPU Presents</dt>
+              <dd id="stat_webgpu_present">-</dd>
+              <dt>CPU Presents</dt>
+              <dd id="stat_cpu_present">-</dd>
+              <dt>Last Upload Chunk Bytes</dt>
+              <dd id="stat_upload_chunk_bytes">-</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Decoded Frame</h3>
+            <dl>
+              <dt>Frame Width</dt>
+              <dd id="stat_frame_width">-</dd>
+              <dt>Frame Height</dt>
+              <dd id="stat_frame_height">-</dd>
+            </dl>
+          </article>
+        </div>
+        <div class="button-row">
+          <button id="export_snapshot" type="button">Export runtime snapshot</button>
+        </div>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Input Ingestion</h2>
+        <p class="subtle">
+          Upload a DICOM Part 10 file or select a folder. The WASM boundary applies the same fail-closed limits and parser checks as native code.
+        </p>
+        <p class="subtle">
+          You can also drag and drop files/folders onto this page; the first decodable DICOM instance is opened deterministically.
+        </p>
+        <label class="field">
+          <span>DICOM file(s)</span>
+          <input id="dicom_file" type="file" accept=".dcm,.dicom,.p10,.ima,application/dicom" multiple />
+        </label>
+        <label class="field">
+          <span>DICOM folder</span>
+          <input id="dicom_folder" type="file" webkitdirectory directory multiple />
+        </label>
+        <p id="ingest_status" class="status status-pending" role="status">
+          No file loaded.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Frame Preview</h2>
+        <p class="subtle">
+          The first decoded frame is re-rendered from DICOM source pixels for the active zoom and ROI. Click inside the preview to recenter the ROI.
+        </p>
+        <div id="comparison_grid" class="comparison-grid preset-single">
+          <article class="comparison-card">
+            <h3>Primary</h3>
+            <div class="canvas-wrap">
+              <canvas id="preview_canvas" width="1024" height="768" tabindex="0" aria-label="DICOM preview viewport"></canvas>
+            </div>
+          </article>
+          <article class="comparison-card">
+            <h3>Comparison A</h3>
+            <div class="canvas-wrap">
+              <canvas id="compare_canvas_a" width="1024" height="768" tabindex="0" aria-label="Comparison viewport A"></canvas>
+            </div>
+          </article>
+          <article class="comparison-card">
+            <h3>Comparison B</h3>
+            <div class="canvas-wrap">
+              <canvas id="compare_canvas_b" width="1024" height="768" tabindex="0" aria-label="Comparison viewport B"></canvas>
+            </div>
+          </article>
+          <article class="comparison-card">
+            <h3>Comparison C</h3>
+            <div class="canvas-wrap">
+              <canvas id="compare_canvas_c" width="1024" height="768" tabindex="0" aria-label="Comparison viewport C"></canvas>
+            </div>
+          </article>
+        </div>
+        <div class="button-row">
+          <button id="series_prev" type="button">Previous image</button>
+          <button id="series_next" type="button">Next image</button>
+          <span id="series_nav_status" class="subtle">No image stack loaded.</span>
+        </div>
+        <div class="button-row">
+          <button id="download_preview" type="button">Download preview PNG</button>
+        </div>
+        <p id="preview_status" class="status status-pending" role="status">
+          No decoded frame available.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Tri-Planar MPR Validation</h2>
+        <p class="subtle">
+          End-to-end CPU MPR validation panel. Crosshair updates synchronize axial/coronal/sagittal indices.
+        </p>
+        <div class="form-grid">
+          <label class="field">
+            <span>Crosshair X (sagittal)</span>
+            <input id="mpr_crosshair_x" type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>Crosshair Y (coronal)</span>
+            <input id="mpr_crosshair_y" type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>Crosshair Z (axial)</span>
+            <input id="mpr_crosshair_z" type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>MPR Output Width</span>
+            <input id="mpr_output_width" type="number" min="1" step="1" value="256" />
+          </label>
+          <label class="field">
+            <span>MPR Output Height</span>
+            <input id="mpr_output_height" type="number" min="1" step="1" value="256" />
+          </label>
+          <label class="field">
+            <span>Slab Thickness</span>
+            <input id="mpr_slab_thickness" type="number" min="1" max="64" step="1" value="1" />
+          </label>
+          <label class="field">
+            <span>Slab Mode</span>
+            <select id="mpr_slab_mode">
+              <option value="average" selected>Average</option>
+              <option value="max">Max (MIP)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Modality Preset</span>
+            <select id="modality_preset">
+              <option value="ct_soft" selected>CT Soft Tissue</option>
+              <option value="ct_lung">CT Lung</option>
+              <option value="mr_t1">MR T1</option>
+              <option value="mr_t2">MR T2</option>
+              <option value="pet_overlay">PET Overlay</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Window Width</span>
+            <input id="window_width" type="number" min="1" step="1" value="400" />
+          </label>
+          <label class="field">
+            <span>Window Level</span>
+            <input id="window_level" type="number" step="1" value="40" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="render_mpr" type="button">Render Tri-Planar MPR</button>
+          <button id="apply_window_level" type="button">Apply Window/Level</button>
+        </div>
+        <div class="tri-grid">
+          <article class="tri-card">
+            <h3>Axial</h3>
+            <p id="plane_indicator_axial" class="plane-indicator">L/R • P/A</p>
+            <canvas id="mpr_axial_canvas" width="256" height="256" tabindex="0" aria-label="MPR axial plane"></canvas>
+          </article>
+          <article class="tri-card">
+            <h3>Coronal</h3>
+            <p id="plane_indicator_coronal" class="plane-indicator">L/R • I/S</p>
+            <canvas id="mpr_coronal_canvas" width="256" height="256" tabindex="0" aria-label="MPR coronal plane"></canvas>
+          </article>
+          <article class="tri-card">
+            <h3>Sagittal</h3>
+            <p id="plane_indicator_sagittal" class="plane-indicator">P/A • I/S</p>
+            <canvas id="mpr_sagittal_canvas" width="256" height="256" tabindex="0" aria-label="MPR sagittal plane"></canvas>
+          </article>
+        </div>
+        <div class="button-row">
+          <button id="export_mpr_bundle" type="button">Export MPR Bundle</button>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Patient-Space Plane</span>
+            <select id="patient_mpr_plane">
+              <option value="axial" selected>Axial</option>
+              <option value="coronal">Coronal</option>
+              <option value="sagittal">Sagittal</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Patient-Space Offset (um)</span>
+            <input id="patient_mpr_offset_um" type="number" step="100" value="0" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="run_patient_mpr" type="button">Run Patient-Space MPR</button>
+        </div>
+        <pre id="patient_mpr_output" class="output"></pre>
+        <p id="mpr_status" class="status status-pending" role="status">
+          No tri-planar MPR rendered yet.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>SR Workflow Prototype</h2>
+        <p class="subtle">
+          Minimal SR author/review/commit flow against <code>dicom-workflow-server</code> SR endpoints.
+        </p>
+        <div class="form-grid">
+          <label class="field">
+            <span>Workflow Base URL</span>
+            <input id="sr_base_url" type="text" value="" placeholder="auto: https://<host>/workflow" />
+          </label>
+          <label class="field">
+            <span>Study Instance UID</span>
+            <input id="sr_study_uid" type="text" value="1.2.3" />
+          </label>
+          <label class="field">
+            <span>Series Instance UID</span>
+            <input id="sr_series_uid" type="text" value="1.2.3.4" />
+          </label>
+          <label class="field">
+            <span>SR SOP Instance UID</span>
+            <input id="sr_sop_uid" type="text" value="1.2.3.4.5" />
+          </label>
+          <label class="field">
+            <span>Observer</span>
+            <input id="sr_observer" type="text" value="web-prototype" />
+          </label>
+          <label class="field">
+            <span>Role (`x-sr-role`)</span>
+            <select id="sr_role">
+              <option value="writer" selected>writer</option>
+              <option value="reviewer">reviewer</option>
+              <option value="reader">reader</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Known Ref SOP UIDs (comma-separated)</span>
+            <input id="sr_known_refs" type="text" value="9.8.7" />
+          </label>
+          <label class="field">
+            <span>Expected Version (update)</span>
+            <input id="sr_expected_version" type="number" min="1" step="1" value="1" />
+          </label>
+          <label class="field">
+            <span>Item Kind</span>
+            <select id="sr_item_kind">
+              <option value="num" selected>NUM (measurement)</option>
+              <option value="text">TEXT (observation)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Numeric Value (NUM)</span>
+            <input id="sr_num_value" type="number" step="0.01" value="12.5" />
+          </label>
+          <label class="field">
+            <span>Text Value (TEXT)</span>
+            <input id="sr_text_value" type="text" value="stable finding" />
+          </label>
+          <label class="field">
+            <span>Concept Code Value</span>
+            <input id="sr_concept_code" type="text" value="121071" />
+          </label>
+          <label class="field">
+            <span>Concept Scheme</span>
+            <input id="sr_concept_scheme" type="text" value="DCM" />
+          </label>
+          <label class="field">
+            <span>Concept Meaning</span>
+            <input id="sr_concept_meaning" type="text" value="Finding" />
+          </label>
+          <label class="field">
+            <span>Units Code Value (NUM)</span>
+            <input id="sr_units_code" type="text" value="mm" />
+          </label>
+          <label class="field">
+            <span>Units Scheme (NUM)</span>
+            <input id="sr_units_scheme" type="text" value="UCUM" />
+          </label>
+          <label class="field">
+            <span>Units Meaning (NUM)</span>
+            <input id="sr_units_meaning" type="text" value="millimeter" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="sr_create" type="button">Create SR</button>
+          <button id="sr_update" type="button">Update SR</button>
+          <button id="sr_load" type="button">Load SR</button>
+          <button id="sr_list" type="button">List/Search SR</button>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>List Filter Study UID</span>
+            <input id="sr_list_study_uid" type="text" value="1.2.3" />
+          </label>
+          <label class="field">
+            <span>Search SOP Prefix</span>
+            <input id="sr_list_query" type="text" value="" />
+          </label>
+        </div>
+        <p id="sr_status" class="status status-pending" role="status">
+          No SR workflow operation executed yet.
+        </p>
+        <pre id="sr_output" class="output"></pre>
+        <h3>SR Retrieval Detail</h3>
+        <pre id="sr_detail_output" class="output"></pre>
+        <h3>SR Audit Timeline (Non-PHI)</h3>
+        <ul id="sr_audit_timeline" class="event-log"></ul>
+        <h3>SR List/Search Result</h3>
+        <pre id="sr_list_output" class="output"></pre>
+      </section>
+
+      <section class="panel reveal grid-two">
+        <div>
+          <h2>Viewport Controls</h2>
+          <div class="form-grid">
+            <label class="field">
+              <span>Width</span>
+              <input id="viewport_width" type="number" min="1" step="1" value="1024" />
+            </label>
+            <label class="field">
+              <span>Height</span>
+              <input id="viewport_height" type="number" min="1" step="1" value="768" />
+            </label>
+            <label class="field">
+              <span>Viewport Preset</span>
+              <select id="viewport_preset">
+                <option value="single" selected>Single</option>
+                <option value="dual">Dual</option>
+                <option value="quad">Quad</option>
+              </select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="apply_resize" type="button">Apply Resize</button>
+            <button id="apply_viewport_preset" type="button">Apply Preset</button>
+          </div>
+        </div>
+
+        <div>
+          <h2>Zoom Controls</h2>
+          <label class="field">
+            <span>Zoom</span>
+            <input id="zoom_value" type="number" min="0.1" step="0.1" value="1.0" />
+          </label>
+          <label class="field">
+            <span>Interpolation</span>
+            <select id="interpolation_mode">
+              <option value="linear" selected>Linear (smooth)</option>
+              <option value="nearest">Nearest (pixel)</option>
+            </select>
+          </label>
+          <label class="toggle">
+            <input id="link_scroll_toggle" type="checkbox" checked />
+            <span>Link scroll/slice across viewports</span>
+          </label>
+          <label class="toggle">
+            <input id="link_window_level_toggle" type="checkbox" checked />
+            <span>Link window/level across viewports</span>
+          </label>
+          <div class="button-row">
+            <button id="set_zoom" type="button">Set Zoom</button>
+            <button id="zoom_out" type="button">-0.1</button>
+            <button id="zoom_in" type="button">+0.1</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Workstation Workflow Tools</h2>
+        <div class="form-grid">
+          <label class="field">
+            <span>Active Tool</span>
+            <input id="active_tool" type="text" value="pan" readonly />
+          </label>
+          <label class="field">
+            <span>DICOMweb Base URL</span>
+            <input id="dicomweb_base_url" type="text" value="" placeholder="auto: https://<host>/dicomweb" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="tool_pan" type="button">Pan Tool</button>
+          <button id="tool_measure" type="button">Measure Tool</button>
+          <button id="restore_session" type="button">Restore Last Session</button>
+          <button id="check_connectivity" type="button">Check Connectivity</button>
+        </div>
+        <label class="toggle">
+          <input id="patient_safe_mode" type="checkbox" />
+          <span>Enable patient-safe mode (hide potential PHI in user-visible metadata)</span>
+        </label>
+        <div class="stats">
+          <article>
+            <h3>Connectivity</h3>
+            <dl>
+              <dt>DICOMweb</dt>
+              <dd id="connect_dicomweb">unknown</dd>
+              <dt>Workflow SR</dt>
+              <dd id="connect_workflow">unknown</dd>
+            </dl>
+          </article>
+          <article>
+            <h3>Measurements</h3>
+            <div class="button-row">
+              <button id="clear_measurements" type="button">Clear Measurements</button>
+              <button id="export_measurements_csv" type="button">Export CSV</button>
+              <button id="export_measurements_json" type="button">Export JSON</button>
+            </div>
+            <ul id="measurement_list" class="event-log"></ul>
+          </article>
+        </div>
+        <p id="workstation_status" class="status status-pending" role="status">
+          Workstation tools ready.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Study Catalog</h2>
+        <p class="subtle">
+          Explore DICOMweb studies from <code>/studies</code> with deterministic filter, sort, and page controls.
+        </p>
+        <div class="study-catalog-toolbar">
+          <label class="field">
+            <span>Search (UID)</span>
+            <input id="study_catalog_filter" type="text" placeholder="Filter by Study / Series / SOP UID" />
+          </label>
+          <label class="field">
+            <span>Sort</span>
+            <select id="study_catalog_sort">
+              <option value="study_uid_asc">Study UID (A→Z)</option>
+              <option value="study_uid_desc">Study UID (Z→A)</option>
+              <option value="series_uid_asc">Series UID (A→Z)</option>
+              <option value="series_uid_desc">Series UID (Z→A)</option>
+              <option value="sop_uid_asc">SOP UID (A→Z)</option>
+              <option value="sop_uid_desc">SOP UID (Z→A)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Page size</span>
+            <select id="study_catalog_page_size">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+          <p id="study_catalog_summary" class="study-catalog-summary status status-pending" role="status">
+            No studies loaded.
+          </p>
+          <div class="button-row">
+            <button id="study_catalog_refresh" type="button">Refresh catalog</button>
+            <button id="study_catalog_prev_page" type="button">Previous page</button>
+            <button id="study_catalog_next_page" type="button">Next page</button>
+          </div>
+        </div>
+        <div class="study-catalog-columns">
+          <article>
+            <h3>Studies</h3>
+            <ul id="study_catalog_list" class="study-catalog-list" aria-live="polite"></ul>
+          </article>
+          <article>
+            <h3>Pinned studies</h3>
+            <p id="study_catalog_pinned_summary" class="subtle">Pinned: 0</p>
+            <ul id="study_catalog_pinned_list" class="study-catalog-list" aria-live="polite"></ul>
+          </article>
+        </div>
+        <p id="study_catalog_status" class="status status-pending" role="status">
+          Catalog not loaded.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Fusion Prototype Controls</h2>
+        <p class="subtle">
+          Prototype PET/CT-style overlay controls for deterministic host-side validation.
+        </p>
+        <div class="form-grid">
+          <label class="field">
+            <span>Fusion Alpha</span>
+            <input id="fusion_alpha" type="number" min="0" max="1" step="0.05" value="0.45" />
+          </label>
+          <label class="field">
+            <span>Fusion Colormap</span>
+            <select id="fusion_colormap">
+              <option value="hotiron" selected>HotIron</option>
+              <option value="icefire">IceFire</option>
+              <option value="grayscale">Grayscale</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>SUV Scale</span>
+            <input id="fusion_suv_scale" type="number" min="0.1" max="20" step="0.1" value="5.0" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="run_fusion" type="button">Render Fusion</button>
+          <button id="export_fusion_bundle" type="button">Export Fusion Bundle</button>
+        </div>
+        <div class="canvas-wrap">
+            <canvas id="fusion_canvas" width="512" height="512" tabindex="0" aria-label="Fusion output viewport"></canvas>
+        </div>
+        <p id="fusion_status" class="status status-pending" role="status">
+          No fusion render executed yet.
+        </p>
+        <h3>Fusion Preconditions</h3>
+        <pre id="fusion_diag_output" class="output"></pre>
+        <h3>Fusion ROI Quantification</h3>
+        <pre id="fusion_quant_output" class="output"></pre>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Backend Diagnostics</h2>
+        <p class="subtle">Capability probe and backend selection metrics from the WASM boundary.</p>
+        <p id="backend_state_message" class="status status-pending" role="status">
+          Backend state pending.
+        </p>
+        <div id="gpu_recovery_banner" class="status status-error hidden-banner" role="status">
+          WebGPU fallback is active. Use recovery to probe and restore an eligible GPU path.
+          <button id="gpu_recovery_action" type="button">Recover Now</button>
+        </div>
+        <div class="button-row">
+          <button id="simulate_device_lost" type="button">Simulate device loss</button>
+          <button id="recover_device" type="button">Recover device</button>
+        </div>
+        <pre id="backend_diagnostics" class="output"></pre>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Interaction Shortcuts</h2>
+        <p class="subtle">Use these shortcuts in addition to the controls above.</p>
+        <dl>
+          <dt><kbd>+</kbd> / <kbd>=</kbd></dt>
+          <dd>Zoom in by 0.1</dd>
+          <dt><kbd>-</kbd></dt>
+          <dd>Zoom out by 0.1</dd>
+          <dt><kbd>0</kbd></dt>
+          <dd>Reset zoom to 1.0</dd>
+          <dt><kbd>Arrow Keys</kbd></dt>
+          <dd>Pan viewport center</dd>
+          <dt><kbd>[</kbd> / <kbd>]</kbd></dt>
+          <dd>Adjust window level</dd>
+          <dt><kbd>{</kbd> / <kbd>}</kbd></dt>
+          <dd>Adjust window width</dd>
+          <dt><kbd>M</kbd></dt>
+          <dd>Toggle measurement tool</dd>
+          <dt><kbd>R</kbd></dt>
+          <dd>Reset ROI/view center to image midpoint</dd>
+          <dt><kbd>I</kbd></dt>
+          <dd>Toggle interpolation mode</dd>
+          <dt><kbd>D</kbd></dt>
+          <dd>Download current preview as PNG</dd>
+          <dt><kbd>S</kbd></dt>
+          <dd>Export runtime snapshot JSON</dd>
+          <dt><kbd>E</kbd></dt>
+          <dd>Export event log</dd>
+          <dt><kbd>C</kbd></dt>
+          <dd>Clear event log</dd>
+        </dl>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Runtime Policy Toggle</h2>
+        <label class="toggle">
+          <input id="network_toggle" type="checkbox" />
+          <span>Enable network mode</span>
+        </label>
+        <label class="toggle">
+          <input id="force_cpu_toggle" type="checkbox" />
+          <span>Force CPU renderer (diagnostics)</span>
+        </label>
+        <label class="toggle">
+          <input id="production_webgpu_toggle" type="checkbox" />
+          <span>Enable production WebGPU path</span>
+        </label>
+        <p class="subtle">
+          This toggle only succeeds when the WASM build enables the
+          <code>network</code> feature. Otherwise, the request is rejected.
+        </p>
+        <p class="subtle">
+          Production WebGPU remains fail-closed by default. Enable this toggle to activate the
+          browser WebGPU draw path when capability probe and runtime checks pass.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Evaluator Onboarding Guide</h2>
+        <p class="subtle">
+          Guided local evaluator setup for consistent workstation benchmarking.
+        </p>
+        <ol id="onboarding_checklist">
+          <li>Start DICOMweb service on <code>127.0.0.1:8080</code>.</li>
+          <li>Start workflow service on <code>127.0.0.1:8082</code>.</li>
+          <li>Use defaults: <code>/dicomweb</code> and <code>/workflow</code> proxy through the viewer host.</li>
+          <li>Run viewer host with <code>./tools/run_viewer_wasm_frontend.sh --port 4173</code>.</li>
+          <li>Load one sample DICOM and verify SR create/update/retrieve flow.</li>
+        </ol>
+        <p id="onboarding_status" class="status status-pending" role="status">
+          Waiting for connectivity checks.
+        </p>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Metadata Escaping Check</h2>
+        <label class="field">
+          <span>Raw metadata string</span>
+          <textarea id="metadata_input" rows="5">
+Patient<Name>& "quoted" 'sample'
+          </textarea>
+        </label>
+        <div class="button-row">
+          <button id="escape_metadata" type="button">Escape for HTML</button>
+        </div>
+        <pre id="metadata_output" class="output"></pre>
+      </section>
+
+      <section class="panel reveal">
+        <h2>Event Log</h2>
+        <div class="button-row">
+          <button id="clear_event_log" type="button">Clear event log</button>
+          <button id="export_event_log" type="button">Export event log</button>
+        </div>
+        <ul id="event_log" class="event-log" aria-live="polite"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js?v=20260225-5"></script>
+  </body>
+</html>

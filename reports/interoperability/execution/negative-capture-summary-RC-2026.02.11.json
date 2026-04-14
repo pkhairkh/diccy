@@ -1,0 +1,109 @@
+{
+  "capture_digest_sha256": "ca0e057064e530c445d223023c5a4a2c6cfdf9fc5d255e3275877df286a180d5",
+  "generated_at_utc": "2026-02-11T21:24:49Z",
+  "release_id": "RC-2026.02.11",
+  "rows": [
+    {
+      "case_id": "IOP-S11-NEG-001",
+      "evidence_ref": "WEB-UNSUPPORTED-METHOD",
+      "interface_id": "IFS-WEB-NEG-002",
+      "note": "method reject fail-closed",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:0101010101010101010101010101010101010101010101010101010101010101",
+      "response_hash": "sha256:0202020202020202020202020202020202020202020202020202020202020202",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-002",
+      "evidence_ref": "WEB-INVALID-UID",
+      "interface_id": "IFS-WEB-NEG-001",
+      "note": "uid reject fail-closed",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+      "response_hash": "sha256:0404040404040404040404040404040404040404040404040404040404040404",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-003",
+      "evidence_ref": "DIMSE-BAD-COMMAND",
+      "interface_id": "IFS-DIMSE-NEG-004",
+      "note": "unsupported command fail-closed",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:0505050505050505050505050505050505050505050505050505050505050505",
+      "response_hash": "sha256:0606060606060606060606060606060606060606060606060606060606060606",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-004",
+      "evidence_ref": "TLS-POLICY",
+      "interface_id": "IFS-AUTH-TLS-NEG-005",
+      "note": "insecure transport denied",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:0707070707070707070707070707070707070707070707070707070707070707",
+      "response_hash": "sha256:0808080808080808080808080808080808080808080808080808080808080808",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-005",
+      "evidence_ref": "MPPS-REVERSION-REJECT",
+      "interface_id": "IFS-MPPS-NEG-001",
+      "note": "terminal reversion fail-closed",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "request_hash": "sha256:0909090909090909090909090909090909090909090909090909090909090909",
+      "response_hash": "sha256:1010101010101010101010101010101010101010101010101010101010101010",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-006",
+      "evidence_ref": "WL-LIMIT-REJECT",
+      "interface_id": "IFS-WL-NEG-001",
+      "note": "oversized filter rejected",
+      "phase": "negative",
+      "protocol": "MWL",
+      "request_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111112",
+      "response_hash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-007",
+      "evidence_ref": "ORTHANC-TS-REJECT",
+      "interface_id": "IFS-WEB-NEG-TS-001",
+      "note": "unsupported transfer syntax reject",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+      "response_hash": "sha256:1414141414141414141414141414141414141414141414141414141414141414",
+      "target_system": "TGT-004",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-NEG-008",
+      "evidence_ref": "DCMTK-AE-REJECT",
+      "interface_id": "IFS-DIMSE-NEG-AE-001",
+      "note": "unknown ae title reject",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:1515151515151515151515151515151515151515151515151515151515151515",
+      "response_hash": "sha256:1616161616161616161616161616161616161616161616161616161616161616",
+      "target_system": "TGT-006",
+      "verdict": "PASS"
+    }
+  ],
+  "total_rows": 8,
+  "verdict_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "PASS": 8
+  }
+}

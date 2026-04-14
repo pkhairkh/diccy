@@ -1,0 +1,14 @@
+{
+  "tenant": "tenant-a",
+  "snapshot": {
+    "schema": "2",
+    "items": [
+      {
+        "id": "TASK-1",
+        "tenant": "tenant-a",
+        "status": "SCHEDULED"
+      }
+    ]
+  },
+  "checksum_sha256": "7660399ac05c9b0e0983f8f597f3e5df5c5448eebe0cda1ddb0af43448316692"
+}

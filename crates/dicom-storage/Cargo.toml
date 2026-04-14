@@ -1,0 +1,11 @@
+[package]
+name = "dicom-storage"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-io = { path = "../dicom-io" }
+dicom-index = { path = "../dicom-index" }
+sha2 = "0.10"

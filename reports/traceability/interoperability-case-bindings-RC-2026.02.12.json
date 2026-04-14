@@ -1,0 +1,789 @@
+{
+  "bindings": [
+    {
+      "case_id": "IOP-S02-DIM-001",
+      "interface_id": "IFS-DIMSE-ECHO-PEER-001",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DIM-002",
+      "interface_id": "IFS-DIMSE-STORE-PEER-002",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DIM-003",
+      "interface_id": "IFS-DIMSE-ECHO-PEER-003",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DIM-004",
+      "interface_id": "IFS-DIMSE-STORE-PEER-004",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DIM-005",
+      "interface_id": "IFS-DIMSE-CFIND-GW-005",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DIM-006",
+      "interface_id": "IFS-DIMSE-CMOVE-GW-006",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-001",
+      "interface_id": "IFS-WEB-QIDO-PEER-001",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-002",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-002",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-003",
+      "interface_id": "IFS-WEB-WADO-METADATA-PEER-003",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-004",
+      "interface_id": "IFS-WEB-QIDO-PEER-004",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-005",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-005",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-DW-006",
+      "interface_id": "IFS-WEB-WADO-METADATA-PEER-006",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-NEG-001",
+      "interface_id": "IFS-WEB-NEG-UNSUPPORTED-METHOD",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-002",
+      "interface_id": "IFS-WEB-NEG-MALFORMED-UID",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-003",
+      "interface_id": "IFS-WEB-NEG-TLS-REQUIRED",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-004",
+      "interface_id": "IFS-WEB-NEG-AUTH-TOKEN",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-AUTH-300",
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-005",
+      "interface_id": "IFS-DIMSE-NEG-BAD-COMMAND",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-006",
+      "interface_id": "IFS-DIMSE-NEG-AE-TITLE",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-007",
+      "interface_id": "IFS-DIMSE-NEG-TLS-POLICY",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-008",
+      "interface_id": "IFS-WL-NEG-OVERSIZED-FILTER",
+      "phase": "negative",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-302"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-009",
+      "interface_id": "IFS-MPPS-NEG-TERMINAL-REVERT",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-NEG-010",
+      "interface_id": "IFS-WEB-NEG-TRANSFER-SYNTAX",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-WF-001",
+      "interface_id": "IFS-WL-PEER-001",
+      "phase": "positive",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-301"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-WF-002",
+      "interface_id": "IFS-MPPS-PEER-002",
+      "phase": "positive",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-351",
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-WF-003",
+      "interface_id": "IFS-WL-NEG-PEER-003",
+      "phase": "negative",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-302"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-WF-004",
+      "interface_id": "IFS-MPPS-NEG-PEER-004",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S02-WF-005",
+      "interface_id": "IFS-WL-PEER-005",
+      "phase": "positive",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-301"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-001"
+    },
+    {
+      "case_id": "IOP-S02-WF-006",
+      "interface_id": "IFS-MPPS-NEG-PEER-006",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S02-002"
+    },
+    {
+      "case_id": "IOP-S03-DIM-001",
+      "interface_id": "IFS-DIMSE-ECHO-PEER-001",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DIM-002",
+      "interface_id": "IFS-DIMSE-STORE-PEER-002",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DIM-003",
+      "interface_id": "IFS-DIMSE-ECHO-PEER-003",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DIM-004",
+      "interface_id": "IFS-DIMSE-STORE-PEER-004",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DIM-005",
+      "interface_id": "IFS-DIMSE-CFIND-GW-005",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DIM-006",
+      "interface_id": "IFS-DIMSE-CMOVE-GW-006",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-300",
+        "REQ-DIMSE-302"
+      ],
+      "source_summary": "reports/interoperability/execution/dimse-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-001",
+      "interface_id": "IFS-WEB-QIDO-PEER-001",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-002",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-002",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-003",
+      "interface_id": "IFS-WEB-WADO-METADATA-PEER-003",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-004",
+      "interface_id": "IFS-WEB-QIDO-PEER-004",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-005",
+      "interface_id": "IFS-WEB-STOW-WADO-PEER-005",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-DW-006",
+      "interface_id": "IFS-WEB-WADO-METADATA-PEER-006",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304"
+      ],
+      "source_summary": "reports/interoperability/execution/dicomweb-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-001",
+      "interface_id": "IFS-WEB-NEG-UNSUPPORTED-METHOD",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-002",
+      "interface_id": "IFS-WEB-NEG-MALFORMED-UID",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-003",
+      "interface_id": "IFS-WEB-NEG-TLS-REQUIRED",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-004",
+      "interface_id": "IFS-WEB-NEG-AUTH-TOKEN",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-AUTH-300",
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-005",
+      "interface_id": "IFS-DIMSE-NEG-BAD-COMMAND",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-006",
+      "interface_id": "IFS-DIMSE-NEG-AE-TITLE",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-007",
+      "interface_id": "IFS-DIMSE-NEG-TLS-POLICY",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-008",
+      "interface_id": "IFS-WL-NEG-OVERSIZED-FILTER",
+      "phase": "negative",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-302"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-009",
+      "interface_id": "IFS-MPPS-NEG-TERMINAL-REVERT",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-010",
+      "interface_id": "IFS-WEB-NEG-TRANSFER-SYNTAX",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-NEG-011",
+      "interface_id": "IFS-DIMSE-NEG-PDU-LIMIT",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-002"
+    },
+    {
+      "case_id": "IOP-S03-NEG-012",
+      "interface_id": "IFS-DIMSE-NEG-PDV-LIMIT",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "req_ids": [
+        "REQ-DIMSE-304",
+        "REQ-NET-308"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-002"
+    },
+    {
+      "case_id": "IOP-S03-NEG-013",
+      "interface_id": "IFS-WEB-NEG-ROUTE-CANONICALIZATION",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300",
+        "REQ-HTTP-303"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-004",
+      "trace_cluster_id": "TRC-CLUSTER-S03-002"
+    },
+    {
+      "case_id": "IOP-S03-NEG-014",
+      "interface_id": "IFS-WEB-NEG-QUERY-BOUNDARY",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-CONF-002",
+        "REQ-HTTP-300",
+        "REQ-HTTP-303"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-002"
+    },
+    {
+      "case_id": "IOP-S03-NEG-015",
+      "interface_id": "IFS-AUTH-NEG-POLICY-TRANSITION",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "req_ids": [
+        "REQ-AUTH-300",
+        "REQ-CONF-002",
+        "REQ-HTTP-300"
+      ],
+      "source_summary": "reports/interoperability/execution/negative-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-002"
+    },
+    {
+      "case_id": "IOP-S03-WF-001",
+      "interface_id": "IFS-WL-PEER-001",
+      "phase": "positive",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-301"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-WF-002",
+      "interface_id": "IFS-MPPS-PEER-002",
+      "phase": "positive",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-351",
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-WF-003",
+      "interface_id": "IFS-WL-NEG-PEER-003",
+      "phase": "negative",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-302"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-WF-004",
+      "interface_id": "IFS-MPPS-NEG-PEER-004",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-005",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-WF-005",
+      "interface_id": "IFS-WL-PEER-005",
+      "phase": "positive",
+      "protocol": "MWL",
+      "req_ids": [
+        "REQ-WL-301"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    },
+    {
+      "case_id": "IOP-S03-WF-006",
+      "interface_id": "IFS-MPPS-NEG-PEER-006",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "req_ids": [
+        "REQ-MPPS-352"
+      ],
+      "source_summary": "reports/interoperability/execution/workflow-capture-summary-wave2-RC-2026.02.12.json",
+      "target_system": "TGT-006",
+      "trace_cluster_id": "TRC-CLUSTER-S03-001"
+    }
+  ],
+  "release_id": "RC-2026.02.12"
+}

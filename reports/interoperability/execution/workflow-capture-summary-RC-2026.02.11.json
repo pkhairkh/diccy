@@ -1,0 +1,61 @@
+{
+  "capture_digest_sha256": "aab50c7b9cfb6996fe2147f09a0c94b318122aa86d8c2a8ef072da063e26a46a",
+  "generated_at_utc": "2026-02-11T21:24:49Z",
+  "release_id": "RC-2026.02.11",
+  "rows": [
+    {
+      "case_id": "IOP-S11-WF-001",
+      "evidence_ref": "WL-ORDERING",
+      "interface_id": "IFS-WL-POS-001",
+      "note": "local workflow mwl ordering",
+      "phase": "positive",
+      "protocol": "MWL",
+      "request_hash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+      "response_hash": "sha256:3434343434343434343434343434343434343434343434343434343434343434",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-WF-002",
+      "evidence_ref": "MPPS-TRANSITION",
+      "interface_id": "IFS-MPPS-POS-001",
+      "note": "local workflow valid transition",
+      "phase": "positive",
+      "protocol": "MPPS",
+      "request_hash": "sha256:5656565656565656565656565656565656565656565656565656565656565656",
+      "response_hash": "sha256:7878787878787878787878787878787878787878787878787878787878787878",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-WF-003",
+      "evidence_ref": "DCM4CHEE-WL-PEER",
+      "interface_id": "IFS-WL-PEER-001",
+      "note": "peer workflow profile replay mwl",
+      "phase": "positive",
+      "protocol": "MWL",
+      "request_hash": "sha256:9090909090909090909090909090909090909090909090909090909090909090",
+      "response_hash": "sha256:abababababababababababababababababababababababababababababababac",
+      "target_system": "TGT-005",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-WF-004",
+      "evidence_ref": "DCM4CHEE-MPPS-PEER",
+      "interface_id": "IFS-MPPS-PEER-002",
+      "note": "peer workflow profile replay mpps",
+      "phase": "positive",
+      "protocol": "MPPS",
+      "request_hash": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdce",
+      "response_hash": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefeff0",
+      "target_system": "TGT-005",
+      "verdict": "PASS"
+    }
+  ],
+  "total_rows": 4,
+  "verdict_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "PASS": 4
+  }
+}

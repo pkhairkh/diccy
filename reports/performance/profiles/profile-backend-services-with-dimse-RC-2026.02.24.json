@@ -1,0 +1,80 @@
+{
+  "profile_id": "backend-services-with-dimse-performance-rc-2026-02-24",
+  "release_id": "RC-2026.02.24",
+  "description": "Profile-specific performance gate for backend-services-with-dimse.",
+  "workloads": [
+    {
+      "id": "stow-budget-probe",
+      "category": "dicomweb-ingest",
+      "budget_class": "stow",
+      "command": [
+        "python3",
+        "-c",
+        "print('stow-ok')"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 120,
+      "capture_rss": false,
+      "slo_latency_p95_ms": 1200.0,
+      "slo_latency_p99_ms": 2400.0,
+      "slo_throughput_ops_s": 2.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 220.0,
+      "observed_gpu_cache_bytes": 50331648,
+      "gpu_cache_budget_bytes": 268435456
+    },
+    {
+      "id": "dimse-cecho-gate",
+      "category": "dimse",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "--bin",
+        "dicom-dimse-service",
+        "health_listener_exposes_health_and_readiness_contract",
+        "--",
+        "--exact"
+      ],
+      "iterations": 2,
+      "operations_per_iteration": 60,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 8000.0,
+      "slo_latency_p99_ms": 12000.0,
+      "slo_throughput_ops_s": 2.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 120.0,
+      "latency_growth_limit_pct": 160.0,
+      "observed_gpu_cache_bytes": 0,
+      "gpu_cache_budget_bytes": 268435456
+    },
+    {
+      "id": "connector-callback-gate",
+      "category": "connector-callback",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "--features",
+        "workflow-main-tests",
+        "connector_callback_circuit_breaker_opens_after_repeated_failures",
+        "--",
+        "--exact"
+      ],
+      "iterations": 2,
+      "operations_per_iteration": 180,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 16000.0,
+      "slo_latency_p99_ms": 22000.0,
+      "slo_throughput_ops_s": 3.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 120.0,
+      "latency_growth_limit_pct": 160.0,
+      "observed_gpu_cache_bytes": 0,
+      "gpu_cache_budget_bytes": 268435456
+    }
+  ]
+}

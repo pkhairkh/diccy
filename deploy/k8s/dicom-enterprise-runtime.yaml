@@ -1,0 +1,409 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dicom-web-runtime
+  labels:
+    app.kubernetes.io/name: dicom-web-runtime
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dicom-web-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dicom-web-runtime
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      priorityClassName: dicom-critical-services
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: dicom-web-runtime
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dicom-web-runtime
+      containers:
+        - name: dicom-web-server
+          image: ghcr.io/dicom-rd/workflow/runtime-profile:backend-services-PROFILE-YYYYMMDD
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DICOM_WEB_BIND
+              value: "0.0.0.0:8080"
+            - name: DICOM_WEB_STORAGE_WAL
+              value: /workspace/state/dicom-web/storage.wal
+            - name: DICOM_WEB_AUTH_MODE
+              value: deny_all
+            - name: DICOM_WEB_TLS_POLICY
+              value: require_tls
+            - name: DICOM_WEB_TRANSPORT_SECURITY
+              value: tls
+            - name: DICOM_WEB_WORKERS
+              value: "8"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - name: runtime-state
+              mountPath: /workspace/state
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+      volumes:
+        - name: runtime-state
+          persistentVolumeClaim:
+            claimName: dicom-web-runtime-state-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dicom-web-server
+spec:
+  selector:
+    app.kubernetes.io/name: dicom-web-runtime
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dicom-workflow-runtime
+  labels:
+    app.kubernetes.io/name: dicom-workflow-runtime
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dicom-workflow-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dicom-workflow-runtime
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      priorityClassName: dicom-critical-services
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: dicom-workflow-runtime
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dicom-workflow-runtime
+      containers:
+        - name: dicom-workflow-server
+          image: ghcr.io/dicom-rd/workflow/runtime-profile:backend-services-PROFILE-YYYYMMDD
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DICOM_WORKFLOW_BIND
+              value: "0.0.0.0:8082"
+            - name: DICOM_WORKFLOW_AUTH_MODE
+              value: token
+            - name: DICOM_WORKFLOW_SECRET_DIR
+              value: /var/run/workflow-secrets
+            - name: DICOM_WORKFLOW_AUTH_TOKEN_PATH
+              value: auth-token
+            - name: DICOM_WORKFLOW_TRANSPORT_SECURITY
+              value: tls
+            - name: DICOM_WORKFLOW_TLS_CERT_PATH
+              value: tls.crt
+            - name: DICOM_WORKFLOW_TLS_KEY_PATH
+              value: tls.key
+            - name: DICOM_WORKFLOW_WORKLIST_STATE_PATH
+              value: /workspace/state/workflow/worklist.snapshot
+            - name: DICOM_WORKFLOW_MPPS_STATE_PATH
+              value: /workspace/state/workflow/mpps.snapshot
+            - name: DICOM_WORKFLOW_SR_STATE_PATH
+              value: /workspace/state/workflow/sr.snapshot
+            - name: DICOM_WORKFLOW_SR_AUDIT_PATH
+              value: /workspace/state/workflow/sr.audit.log
+            - name: DICOM_WORKFLOW_SNAPSHOT_MAX_BYTES
+              value: "134217728"
+          volumeMounts:
+            - name: runtime-state
+              mountPath: /workspace/state
+            - name: workflow-secrets
+              mountPath: /var/run/workflow-secrets
+              readOnly: true
+          ports:
+            - containerPort: 8082
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: 8082
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "768Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+      volumes:
+        - name: runtime-state
+          persistentVolumeClaim:
+            claimName: dicom-workflow-runtime-state-pvc
+        - name: workflow-secrets
+          projected:
+            sources:
+              - secret:
+                  name: workflow-tls
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+                    - key: tls.key
+                      path: tls.key
+              - secret:
+                  name: workflow-auth
+                  items:
+                    - key: auth-token
+                      path: auth-token
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dicom-workflow-server
+spec:
+  selector:
+    app.kubernetes.io/name: dicom-workflow-runtime
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dicom-dimse-runtime
+  labels:
+    app.kubernetes.io/name: dicom-dimse-runtime
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dicom-dimse-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dicom-dimse-runtime
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      priorityClassName: dicom-interop-services
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: dicom-dimse-runtime
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: dicom-dimse-runtime
+      containers:
+        - name: dicom-dimse-service
+          image: ghcr.io/dicom-rd/workflow/runtime-profile:backend-services-with-dimse-PROFILE-YYYYMMDD
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DICOM_DIMSE_BIND
+              value: "0.0.0.0:11112"
+            - name: DICOM_DIMSE_STORAGE_WAL
+              value: /workspace/state/dicom-dimse/storage.wal
+            - name: DICOM_DIMSE_ALLOWED_HOSTS
+              value: "10.0.0.1"
+            - name: DICOM_DIMSE_AUTH_MODE
+              value: deny_all
+            - name: DICOM_DIMSE_TLS_POLICY
+              value: require_tls
+            - name: DICOM_DIMSE_TRANSPORT_SECURITY
+              value: tls
+            - name: DICOM_DIMSE_TLS_CERT_PATH
+              value: /var/run/dimse-tls/tls.crt
+            - name: DICOM_DIMSE_TLS_KEY_PATH
+              value: /var/run/dimse-tls/tls.key
+            - name: DICOM_DIMSE_HEALTH_BIND
+              value: "0.0.0.0:18112"
+          volumeMounts:
+            - name: runtime-state
+              mountPath: /workspace/state
+            - name: dimse-tls
+              mountPath: /var/run/dimse-tls
+              readOnly: true
+          ports:
+            - containerPort: 11112
+            - containerPort: 18112
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 18112
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: 18112
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 18112
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1Gi"
+      volumes:
+        - name: runtime-state
+          persistentVolumeClaim:
+            claimName: dicom-dimse-runtime-state-pvc
+        - name: dimse-tls
+          secret:
+            secretName: dimse-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dicom-dimse-service
+spec:
+  selector:
+    app.kubernetes.io/name: dicom-dimse-runtime
+  ports:
+    - name: dimse
+      protocol: TCP
+      port: 11112
+      targetPort: 11112
+    - name: health
+      protocol: TCP
+      port: 18112
+      targetPort: 18112

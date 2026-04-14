@@ -1,0 +1,542 @@
+[
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "server health check",
+    "path": "/healthz",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "discover connector capabilities",
+    "path": "/interop/connectors/capabilities",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read hl7 connector feature flags and rollout",
+    "path": "/interop/connectors/features",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read connector health checks",
+    "path": "/interop/connectors/health",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list connector rollout percentages",
+    "path": "/interop/connectors/rollout",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "update connector rollout percentage",
+    "path": "/interop/connectors/rollout",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read hl7 connector status dashboard",
+    "path": "/interop/connectors/status",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "ingest fhir event",
+    "path": "/interop/fhir",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "ingest interoperability event",
+    "path": "/interop/hl7",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list hl7 failures",
+    "path": "/interop/hl7/failures",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list hl7 ups correlations",
+    "path": "/interop/hl7/ups-correlation",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "upsert hl7 ups correlation",
+    "path": "/interop/hl7/ups-correlation",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list ian events",
+    "path": "/interop/ian",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "ingest ian event",
+    "path": "/interop/ian",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list study reconciliation jobs",
+    "path": "/interop/reconciliation/jobs",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "create study reconciliation job",
+    "path": "/interop/reconciliation/jobs",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "run study reconciliation job",
+    "path": "/interop/reconciliation/jobs/{job_id}/run",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list storage commitment status",
+    "path": "/interop/storage-commitment/status",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "ingest storage commitment status",
+    "path": "/interop/storage-commitment/status",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read storage commitment transaction status",
+    "path": "/interop/storage-commitment/status/{task_id}",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list hl7 subscriptions",
+    "path": "/interop/subscriptions",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "create hl7 subscription",
+    "path": "/interop/subscriptions",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "query mpps update snapshots",
+    "path": "/mpps/updates",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "ingest mpps update",
+    "path": "/mpps/updates",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "get latest mpps update by sop uid",
+    "path": "/mpps/updates/{sop_instance_uid}",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read mpps update status",
+    "path": "/mpps/updates/{sop_instance_uid}/status",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "update mpps status",
+    "path": "/mpps/updates/{sop_instance_uid}/status",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "server readiness check",
+    "path": "/readyz",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list sr documents",
+    "path": "/sr/documents",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "create sr document",
+    "path": "/sr/documents",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "get sr document",
+    "path": "/sr/documents/{sop_instance_uid}",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "cancel sr document",
+    "path": "/sr/documents/{sop_instance_uid}/cancel",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "commit sr document",
+    "path": "/sr/documents/{sop_instance_uid}/commit",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "finalize sr document",
+    "path": "/sr/documents/{sop_instance_uid}/finalize",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read sr lifecycle history",
+    "path": "/sr/documents/{sop_instance_uid}/history",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "review sr document",
+    "path": "/sr/documents/{sop_instance_uid}/review",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "append sr update",
+    "path": "/sr/documents/{sop_instance_uid}/updates",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read workflow audit trail",
+    "path": "/workflow/audit",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read tenant-aware workflow metrics",
+    "path": "/workflow/metrics",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read tenant quota policy overrides",
+    "path": "/workflow/policy/quotas",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "export tenant quota policy snapshot",
+    "path": "/workflow/policy/quotas/snapshot",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "list tasks",
+    "path": "/workflow/tasks",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "create task",
+    "path": "/workflow/tasks",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "get task by id",
+    "path": "/workflow/tasks/{task_id}",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "cancel task",
+    "path": "/workflow/tasks/{task_id}/cancel",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "commit task",
+    "path": "/workflow/tasks/{task_id}/commit",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "complete task",
+    "path": "/workflow/tasks/{task_id}/complete",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "pause task",
+    "path": "/workflow/tasks/{task_id}/pause",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "resume task",
+    "path": "/workflow/tasks/{task_id}/resume",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "review task",
+    "path": "/workflow/tasks/{task_id}/review",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "start task",
+    "path": "/workflow/tasks/{task_id}/start",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "search ups workitems",
+    "path": "/workflow/workitems",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "create ups workitem",
+    "path": "/workflow/workitems",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "retrieve ups workitem",
+    "path": "/workflow/workitems/{task_id}",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "update ups workitem",
+    "path": "/workflow/workitems/{task_id}",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "cancel ups workitem",
+    "path": "/workflow/workitems/{task_id}/cancel",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "read ups workitem state",
+    "path": "/workflow/workitems/{task_id}/state",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": "application/x-www-form-urlencoded",
+    "method": "POST",
+    "operation": "change ups workitem state",
+    "path": "/workflow/workitems/{task_id}/state",
+    "requires_idempotency_key": true,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "GET|HEAD",
+    "operation": "query worklist",
+    "path": "/worklist/items",
+    "requires_idempotency_key": false,
+    "requires_writer_role": false,
+    "service": "dicom-workflow-server"
+  },
+  {
+    "content_type": null,
+    "method": "POST",
+    "operation": "upsert worklist item",
+    "path": "/worklist/items",
+    "requires_idempotency_key": false,
+    "requires_writer_role": true,
+    "service": "dicom-workflow-server"
+  }
+]

@@ -1,0 +1,42 @@
+[package]
+name = "rdvf"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core", default-features = false }
+dicom-series = { path = "../dicom-series" }
+dicom-pixel = { path = "../dicom-pixel" }
+viewer-core = { path = "../viewer-core" }
+modality-ct = { path = "../modality-ct", optional = true }
+modality-pet = { path = "../modality-pet", optional = true }
+modality-mg = { path = "../modality-mg", optional = true }
+modality-xr = { path = "../modality-xr", optional = true }
+pack-enhanced = { path = "../pack-enhanced", optional = true }
+pack-gsps = { path = "../pack-gsps", optional = true }
+pack-us = { path = "../pack-us", optional = true }
+pack-nm = { path = "../pack-nm", optional = true }
+pack-xa = { path = "../pack-xa", optional = true }
+pack-seg = { path = "../pack-seg", optional = true }
+pack-rt = { path = "../pack-rt", optional = true }
+pack-sr = { path = "../pack-sr", optional = true }
+
+[features]
+default = []
+tier1-deflate = ["dicom-core/tier1-deflate"]
+codec-jpegls = ["dicom-core/codec-jpegls", "dicom-pixel/codec-jpegls"]
+codec-j2k = ["dicom-core/codec-j2k", "dicom-pixel/codec-j2k"]
+raster-io = ["dicom-core/raster-io", "dicom-pixel/raster-io"]
+gsps = ["dicom-core/gsps", "dep:pack-gsps"]
+modality-ct = ["dep:modality-ct", "dicom-core/modality-ct"]
+modality-pet = ["dep:modality-pet", "dicom-core/modality-pet"]
+modality-mg = ["dep:modality-mg", "dicom-core/modality-mg"]
+modality-xr = ["dep:modality-xr", "dicom-core/modality-xr"]
+pack-enhanced = ["dep:pack-enhanced", "dicom-core/pack-enhanced", "dicom-pixel/pack-enhanced"]
+pack-us = ["dep:pack-us", "dicom-core/pack-us"]
+pack-nm = ["dep:pack-nm", "dicom-core/pack-nm"]
+pack-xa = ["dep:pack-xa", "dicom-core/pack-xa"]
+pack-seg = ["dep:pack-seg", "dicom-core/pack-seg"]
+pack-rt = ["dep:pack-rt", "dicom-core/pack-rt"]
+pack-sr = ["dep:pack-sr", "dicom-core/pack-sr"]

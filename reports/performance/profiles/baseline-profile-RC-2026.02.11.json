@@ -1,0 +1,117 @@
+{
+  "profile_id": "perf-baseline-rc-2026-02-11",
+  "release_id": "RC-2026.02.11",
+  "description": "Baseline release-gate workloads across web, DIMSE, workflow, and runtime preflight paths.",
+  "workloads": [
+    {
+      "id": "web-small-parse",
+      "category": "small",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web",
+        "parse_http_request_basic",
+        "--",
+        "--exact"
+      ],
+      "iterations": 3,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 2000.0,
+      "slo_throughput_ops_s": 0.2,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 200.0
+    },
+    {
+      "id": "dimse-medium-cecho",
+      "category": "medium",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_round_trip",
+        "--",
+        "--exact"
+      ],
+      "iterations": 3,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 5000.0,
+      "slo_throughput_ops_s": 0.15,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 200.0
+    },
+    {
+      "id": "workflow-large-restart",
+      "category": "large",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "iterations": 3,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 8000.0,
+      "slo_throughput_ops_s": 0.1,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 200.0
+    },
+    {
+      "id": "webserver-burst-preflight-rotation",
+      "category": "burst",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web-server",
+        "preflight_rotates_oversized_wal_and_bounds_backup_count",
+        "--",
+        "--exact"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 1,
+      "think_time_ms": 0,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 3500.0,
+      "slo_throughput_ops_s": 0.2,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 250.0
+    },
+    {
+      "id": "workflow-sustained-auth-default",
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "auth_mode_defaults_to_deny_all",
+        "--",
+        "--exact"
+      ],
+      "iterations": 6,
+      "operations_per_iteration": 1,
+      "think_time_ms": 50,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 2500.0,
+      "slo_throughput_ops_s": 0.25,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 250.0
+    }
+  ]
+}

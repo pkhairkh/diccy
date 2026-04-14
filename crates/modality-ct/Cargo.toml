@@ -1,0 +1,11 @@
+[package]
+name = "modality-ct"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+modality-ct = []
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }

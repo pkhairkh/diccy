@@ -1,0 +1,13 @@
+[package]
+name = "pack-seg"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+dicom-pixel = { path = "../dicom-pixel" }
+
+[features]
+default = []
+pack-seg = []

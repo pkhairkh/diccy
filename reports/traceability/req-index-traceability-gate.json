@@ -1,0 +1,11 @@
+{
+  "baseline": "reports/traceability/req-index-traceability-baseline.json",
+  "baseline_req_count": 75,
+  "current_req_count": 75,
+  "missing_test_refs_count": 0,
+  "missing_test_refs_for_new_req_ids": [],
+  "new_req_count": 0,
+  "new_req_ids": [],
+  "requirements_index": "docs/16-Requirements-Index.md",
+  "status": "PASS"
+}

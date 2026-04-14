@@ -1,0 +1,196 @@
+{
+  "release_id": "RC-2026.02.11",
+  "claims": [
+    {
+      "claim_id": "CLM-TRC-001",
+      "source_doc": "docs/15-Regulatory-and-Standards-Mapping.md",
+      "claim_text": "Security defaults are fail-closed across runtime surfaces with auditable controls.",
+      "req_ids": [
+        "REQ-AUTH-300",
+        "REQ-HTTP-303",
+        "REQ-NET-308",
+        "REQ-SEC-405"
+      ],
+      "evidence_paths": [
+        "reports/analytical/ANL-040.md",
+        "reports/analytical/ANL-054.md",
+        "reports/security/security-gate-decision-RC-2026.02.11.md",
+        "reports/security/authz-audit-regression-report-RC-2026.02.11.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s13-authz-audit-web-full-RC-2026.02.11.log",
+        "reports/analytical/gates/s13-authz-audit-dimse-full-RC-2026.02.11.log",
+        "reports/analytical/gates/s13-authz-audit-workflow-full-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-TRC-002",
+      "source_doc": "docs/15-Regulatory-and-Standards-Mapping.md",
+      "claim_text": "Deterministic compute is enforced by CPU oracle and reproducibility controls.",
+      "req_ids": [
+        "REQ-PIX-201",
+        "REQ-GPU-210",
+        "REQ-TEST-740",
+        "REQ-REL-601"
+      ],
+      "evidence_paths": [
+        "reports/analytical/ANL-042.md",
+        "reports/analytical/ANL-043.md",
+        "reports/analytical/reproducibility/matrix-RC-2026.02.11.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s02-cargo-test-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-TRC-003",
+      "source_doc": "docs/15-Regulatory-and-Standards-Mapping.md",
+      "claim_text": "Interoperability envelope conformance is validated with signed matrices and campaign evidence.",
+      "req_ids": [
+        "REQ-WEB-300",
+        "REQ-WEB-304",
+        "REQ-WL-301",
+        "REQ-MPPS-352"
+      ],
+      "evidence_paths": [
+        "reports/interoperability/verification-matrix.md",
+        "reports/interoperability/negative-path-matrix.md",
+        "reports/analytical/ANL-052.md",
+        "reports/interoperability/release-evidence-index.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s11-traceability-RC-2026.02.11.log",
+        "reports/analytical/gates/s11-interoperability-capture-workflow-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-TRC-004",
+      "source_doc": "docs/15-Regulatory-and-Standards-Mapping.md",
+      "claim_text": "Traceability and release governance are evidence-driven with zero missing REQ references.",
+      "req_ids": [
+        "REQ-TEST-701",
+        "REQ-TEST-703",
+        "REQ-REL-601",
+        "REQ-REL-602"
+      ],
+      "evidence_paths": [
+        "reports/analytical/ANL-002.md",
+        "reports/analytical/ANL-055.md",
+        "reports/traceability/traceability-snapshot-RC-2026.02.11.md",
+        "reports/traceability/release-evidence-trace-index-RC-2026.02.11.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s14-traceability-report-RC-2026.02.11.log",
+        "reports/analytical/gates/s14-req-completeness-lint-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-TRC-005",
+      "source_doc": "docs/14-Release-and-Versioning.md",
+      "claim_text": "Release governance GO/NO-GO decisions are backed by deterministic preflight and signed freeze records.",
+      "req_ids": [
+        "REQ-REL-601",
+        "REQ-REL-602",
+        "REQ-REL-603",
+        "REQ-TEST-701"
+      ],
+      "evidence_paths": [
+        "reports/release/release-preflight-summary-RC-2026.02.11.md",
+        "reports/release/release-artifact-integrity-RC-2026.02.11.md",
+        "reports/release/rc-freeze-record-RC-2026.02.11.md",
+        "reports/release/rc-governance-gate-decision-RC-2026.02.11.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s15-release-preflight-RC-2026.02.11.log",
+        "reports/analytical/gates/s15-release-artifact-integrity-RC-2026.02.11.log",
+        "reports/analytical/gates/s15-traceability-report-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "claim_id": "CLM-TRC-006",
+      "source_doc": "docs/22-Claim-to-Evidence-Matrix.md",
+      "claim_text": "Post-release scientific monitoring and CAPA governance remain active with deterministic drift checks and signed cycle evidence.",
+      "req_ids": [
+        "REQ-REL-601",
+        "REQ-REL-602",
+        "REQ-TEST-701"
+      ],
+      "evidence_paths": [
+        "reports/pmcf/pmcf-operating-schedule-RC-2026.02.11.md",
+        "reports/pmcf/drift-monitoring-job-definitions-RC-2026.02.11.md",
+        "reports/pmcf/post-release-monitoring-cycle-1-report-RC-2026.02.11.md",
+        "reports/pmcf/PMCF-040.md",
+        "reports/release/master-grade-closeout-decision-RC-2026.02.11.md"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s16-post-release-monitor-RC-2026.02.11.log",
+        "reports/analytical/gates/s16-traceability-report-RC-2026.02.11.log",
+        "reports/analytical/gates/s16-claim-surface-lint-RC-2026.02.11.log"
+      ]
+    }
+  ],
+  "release_index_entries": [
+    {
+      "entry_id": "REL-IDX-INTEROP-001",
+      "index_path": "reports/interoperability/release-evidence-index.md",
+      "cluster_ids": [
+        "CLM-TRC-003"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s11-cargo-test-RC-2026.02.11.log",
+        "reports/analytical/gates/s11-traceability-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-SEC-002",
+      "index_path": "reports/security/security-gate-decision-RC-2026.02.11.md",
+      "cluster_ids": [
+        "CLM-TRC-001"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s13-security-fuzz-campaign-RC-2026.02.11.log",
+        "reports/analytical/gates/s13-security-dependency-review-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-TRACE-003",
+      "index_path": "reports/traceability/release-evidence-trace-index-RC-2026.02.11.md",
+      "cluster_ids": [
+        "CLM-TRC-001",
+        "CLM-TRC-002",
+        "CLM-TRC-003",
+        "CLM-TRC-004"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s14-traceability-report-RC-2026.02.11.log",
+        "reports/analytical/gates/s14-req-completeness-lint-RC-2026.02.11.log",
+        "reports/analytical/gates/s14-cargo-test-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-GOV-004",
+      "index_path": "reports/release/rc-governance-gate-decision-RC-2026.02.11.md",
+      "cluster_ids": [
+        "CLM-TRC-004",
+        "CLM-TRC-005"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s15-release-preflight-RC-2026.02.11.log",
+        "reports/analytical/gates/s15-release-artifact-integrity-RC-2026.02.11.log",
+        "reports/analytical/gates/s15-cargo-test-RC-2026.02.11.log"
+      ]
+    },
+    {
+      "entry_id": "REL-IDX-PMCF-005",
+      "index_path": "reports/pmcf/PMCF-040.md",
+      "cluster_ids": [
+        "CLM-TRC-006"
+      ],
+      "gate_logs": [
+        "reports/analytical/gates/s16-post-release-monitor-RC-2026.02.11.log",
+        "reports/analytical/gates/s16-traceability-report-RC-2026.02.11.log",
+        "reports/analytical/gates/s16-cargo-test-RC-2026.02.11.log"
+      ]
+    }
+  ]
+}

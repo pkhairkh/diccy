@@ -1,0 +1,12 @@
+{
+  "artifacts": [
+    "dicomweb_route_matrix.json",
+    "workflow_route_matrix.json",
+    "unsupported_feature_ledger.json"
+  ],
+  "dicomweb_route_count": 30,
+  "generated_at_utc": "2026-02-25T16:36:06Z",
+  "release_id": "RC-2026.02.25",
+  "unsupported_feature_count": 3,
+  "workflow_route_count": 60
+}

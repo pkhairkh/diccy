@@ -1,0 +1,272 @@
+[
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO all instances",
+    "path": "/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO all instances",
+    "path": "/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO all series",
+    "path": "/series",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO all series",
+    "path": "/series",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO studies",
+    "path": "/studies",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO studies",
+    "path": "/studies",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom, application/dicom+xml, application/dicom+json, or multipart/related",
+    "method": "POST",
+    "operation": "STOW studies",
+    "path": "/studies",
+    "required_feature": "stow",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete study",
+    "path": "/studies/{StudyUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  },
+  {
+    "content_type": "application/dicom, application/dicom+xml, application/dicom+json, or multipart/related",
+    "method": "POST",
+    "operation": "STOW scoped by study UID",
+    "path": "/studies/{StudyUID}",
+    "required_feature": "stow",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO instances by study",
+    "path": "/studies/{StudyUID}/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO instances by study",
+    "path": "/studies/{StudyUID}/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom+json",
+    "method": "GET",
+    "operation": "WADO study metadata",
+    "path": "/studies/{StudyUID}/metadata",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO series by study",
+    "path": "/studies/{StudyUID}/series",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO series by study",
+    "path": "/studies/{StudyUID}/series",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete series",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  },
+  {
+    "content_type": null,
+    "method": "GET",
+    "operation": "QIDO instances by study/series",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "HEAD",
+    "operation": "QIDO instances by study/series",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances",
+    "required_feature": "qido",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete instance",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  },
+  {
+    "content_type": "application/dicom",
+    "method": "GET",
+    "operation": "WADO instance retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom",
+    "method": "HEAD",
+    "operation": "WADO instance retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/octet-stream",
+    "method": "GET",
+    "operation": "WADO bulkdata retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/octet-stream",
+    "method": "HEAD",
+    "operation": "WADO bulkdata retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/octet-stream",
+    "method": "GET",
+    "operation": "WADO frame retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "image/png or image/jpeg",
+    "method": "GET",
+    "operation": "WADO rendered frame retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}/rendered",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom+json",
+    "method": "GET",
+    "operation": "WADO instance metadata",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/metadata",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "image/png or image/jpeg",
+    "method": "GET",
+    "operation": "WADO rendered instance retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "image/png or image/jpeg",
+    "method": "HEAD",
+    "operation": "WADO rendered instance retrieve",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom+json",
+    "method": "GET",
+    "operation": "WADO series metadata",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/metadata",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom",
+    "method": "GET",
+    "operation": "WADO-URI compatibility retrieve",
+    "path": "/wado",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  },
+  {
+    "content_type": "application/dicom",
+    "method": "HEAD",
+    "operation": "WADO-URI compatibility retrieve",
+    "path": "/wado",
+    "required_feature": "wado",
+    "service": "dicom-web",
+    "state": "implemented"
+  }
+]

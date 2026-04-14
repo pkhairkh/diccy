@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  dicom-web-server:
+    image: rust:1.84
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+    environment:
+      DICOM_WEB_BIND: 0.0.0.0:8080
+      DICOM_WEB_AUTH_MODE: ${DICOM_WEB_AUTH_MODE:-deny_all}
+      DICOM_WEB_TLS_POLICY: ${DICOM_WEB_TLS_POLICY:-require_tls}
+      DICOM_WEB_TRANSPORT_SECURITY: ${DICOM_WEB_TRANSPORT_SECURITY:-tls}
+      DICOM_WEB_STORAGE_WAL: /workspace/state/dicom-web/storage.wal
+    command: ["bash", "-lc", "cargo run -p dicom-web-server"]
+    ports:
+      - "8080:8080"
+
+  dicom-workflow-server:
+    image: rust:1.84
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+      - ./secrets/workflow:/run/secrets/workflow:ro
+    environment:
+      DICOM_WORKFLOW_BIND: 0.0.0.0:8082
+      DICOM_WORKFLOW_AUTH_MODE: ${DICOM_WORKFLOW_AUTH_MODE:-token}
+      DICOM_WORKFLOW_SECRET_DIR: ${DICOM_WORKFLOW_SECRET_DIR:-/run/secrets/workflow}
+      DICOM_WORKFLOW_AUTH_TOKEN_PATH: ${DICOM_WORKFLOW_AUTH_TOKEN_PATH:-auth_token}
+      DICOM_WORKFLOW_TRANSPORT_SECURITY: ${DICOM_WORKFLOW_TRANSPORT_SECURITY:-tls}
+      DICOM_WORKFLOW_TLS_CERT_PATH: ${DICOM_WORKFLOW_TLS_CERT_PATH:-tls.crt}
+      DICOM_WORKFLOW_TLS_KEY_PATH: ${DICOM_WORKFLOW_TLS_KEY_PATH:-tls.key}
+      DICOM_WORKFLOW_WORKLIST_STATE_PATH: /workspace/state/workflow/worklist.snapshot
+      DICOM_WORKFLOW_MPPS_STATE_PATH: /workspace/state/workflow/mpps.snapshot
+      DICOM_WORKFLOW_SR_STATE_PATH: /workspace/state/workflow/sr.snapshot
+      DICOM_WORKFLOW_SR_AUDIT_PATH: /workspace/state/workflow/sr.audit.log
+    command: ["bash", "-lc", "cargo run -p dicom-workflow-server"]
+    ports:
+      - "8082:8082"

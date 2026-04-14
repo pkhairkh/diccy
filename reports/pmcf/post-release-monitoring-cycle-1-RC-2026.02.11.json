@@ -1,0 +1,58 @@
+{
+  "cycle_id": "cycle-1",
+  "failing_signal_count": 0,
+  "generated_at_utc": "2026-02-11T22:24:03Z",
+  "overall_status": "PASS",
+  "release_id": "RC-2026.02.11",
+  "signal_count": 6,
+  "signals": [
+    {
+      "domain": "reproducibility",
+      "metric": "mismatch_count",
+      "signal_id": "SIG-DRIFT-REP",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    },
+    {
+      "domain": "interoperability",
+      "metric": "non_pass_cases",
+      "signal_id": "SIG-DRIFT-IOP",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    },
+    {
+      "domain": "traceability",
+      "metric": "missing_references_count",
+      "signal_id": "SIG-DRIFT-TRC",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    },
+    {
+      "domain": "traceability",
+      "metric": "invalid_links_count",
+      "signal_id": "SIG-DRIFT-LNK",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    },
+    {
+      "domain": "release-package",
+      "metric": "missing_required_count",
+      "signal_id": "SIG-DRIFT-RPK",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    },
+    {
+      "domain": "release-package",
+      "metric": "missing_index_reference_count",
+      "signal_id": "SIG-DRIFT-IDX",
+      "status": "PASS",
+      "threshold": "<= 0",
+      "value": 0
+    }
+  ]
+}

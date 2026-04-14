@@ -1,0 +1,51 @@
+# OS/editor noise
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Rust
+/target/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.venv/
+venv/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node/web build outputs
+node_modules/
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test runner artifacts
+/test-results/
+/playwright-report/
+
+# Runtime state/temp
+state/
+*.tmp
+*.bak
+*.orig
+*.rej

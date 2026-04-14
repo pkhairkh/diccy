@@ -1,0 +1,15 @@
+[package]
+name = "modality-pet"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+modality-pet = []
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+viewer-core = { path = "../viewer-core" }
+
+[dev-dependencies]
+sha2 = "0.10"

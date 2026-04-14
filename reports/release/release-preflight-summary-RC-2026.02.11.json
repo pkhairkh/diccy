@@ -1,0 +1,176 @@
+{
+  "failed_gate_count": 0,
+  "gate_count": 10,
+  "gates": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "description": "Rust format gate.",
+      "duration_seconds": 1.064,
+      "exit_code": 0,
+      "gate_id": "cargo-fmt",
+      "log_path": "reports/analytical/gates/s15-preflight-cargo-fmt-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "cargo",
+        "build"
+      ],
+      "description": "Rust build gate.",
+      "duration_seconds": 0.24,
+      "exit_code": 0,
+      "gate_id": "cargo-build",
+      "log_path": "reports/analytical/gates/s15-preflight-cargo-build-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "cargo",
+        "test"
+      ],
+      "description": "Rust test gate.",
+      "duration_seconds": 205.491,
+      "exit_code": 0,
+      "gate_id": "cargo-test",
+      "log_path": "reports/analytical/gates/s15-preflight-cargo-test-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "description": "Rust lint gate.",
+      "duration_seconds": 0.582,
+      "exit_code": 0,
+      "gate_id": "cargo-clippy",
+      "log_path": "reports/analytical/gates/s15-preflight-cargo-clippy-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/claim_surface_lint.py"
+      ],
+      "description": "Claim-surface lint gate.",
+      "duration_seconds": 0.24,
+      "exit_code": 0,
+      "gate_id": "claim-surface",
+      "log_path": "reports/analytical/gates/s15-preflight-claim-surface-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/req_completeness_lint.py",
+        "--docs-dir",
+        "docs",
+        "--baseline",
+        "reports/traceability/req-completeness-baseline-RC-2026.02.11.json",
+        "--output-json",
+        "reports/traceability/req-completeness-lint-summary-RC-2026.02.11.json"
+      ],
+      "description": "REQ completeness lint gate.",
+      "duration_seconds": 0.145,
+      "exit_code": 0,
+      "gate_id": "req-completeness",
+      "log_path": "reports/analytical/gates/s15-preflight-req-completeness-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/traceability_report.py",
+        "--linkage-manifest",
+        "reports/traceability/release-traceability-manifest-RC-2026.02.11.json",
+        "--baseline-json",
+        "reports/traceability/traceability-baseline-RC-2026.02.11.json",
+        "--output-md",
+        "reports/traceability/traceability-snapshot-RC-2026.02.11.md",
+        "--output-json",
+        "reports/traceability/traceability-snapshot-RC-2026.02.11.json",
+        "--fail-on-invalid-links"
+      ],
+      "description": "Traceability linkage gate.",
+      "duration_seconds": 0.719,
+      "exit_code": 0,
+      "gate_id": "traceability",
+      "log_path": "reports/analytical/gates/s15-preflight-traceability-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/generate_determinism_manifest.py",
+        "--release-id",
+        "RC-2026.02.11",
+        "--profile-id",
+        "cpu-oracle-baseline-v1",
+        "--output",
+        "reports/analytical/determinism-manifest-RC-2026.02.11.toml",
+        "--verify-existing"
+      ],
+      "description": "Determinism manifest verification gate.",
+      "duration_seconds": 0.099,
+      "exit_code": 0,
+      "gate_id": "determinism-manifest",
+      "log_path": "reports/analytical/gates/s15-preflight-determinism-manifest-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/reproducibility_compare.py",
+        "--manifest",
+        "arm64=reports/analytical/reproducibility/actual-aarch64-apple-darwin-RC-2026.02.11.toml",
+        "--manifest",
+        "x86_64-projected=reports/analytical/reproducibility/projected-x86_64-unknown-linux-gnu-RC-2026.02.11.toml",
+        "--manifest",
+        "wasm32-projected=reports/analytical/reproducibility/projected-wasm32-unknown-unknown-RC-2026.02.11.toml",
+        "--output-md",
+        "reports/analytical/reproducibility/matrix-RC-2026.02.11.md",
+        "--output-json",
+        "reports/analytical/reproducibility/matrix-RC-2026.02.11.json",
+        "--mismatch-budget",
+        "0"
+      ],
+      "description": "Cross-target reproducibility matrix gate.",
+      "duration_seconds": 0.107,
+      "exit_code": 0,
+      "gate_id": "cross-target-matrix",
+      "log_path": "reports/analytical/gates/s15-preflight-cross-target-matrix-RC-2026.02.11.log",
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "python3",
+        "tools/release_artifact_integrity.py",
+        "--release-id",
+        "RC-2026.02.11",
+        "--output-md",
+        "reports/release/release-artifact-integrity-RC-2026.02.11.md",
+        "--output-json",
+        "reports/release/release-artifact-integrity-RC-2026.02.11.json",
+        "--fail-on-errors"
+      ],
+      "description": "Release artifact integrity gate.",
+      "duration_seconds": 0.136,
+      "exit_code": 0,
+      "gate_id": "artifact-integrity",
+      "log_path": "reports/analytical/gates/s15-preflight-artifact-integrity-RC-2026.02.11.log",
+      "status": "PASS"
+    }
+  ],
+  "generated_at_utc": "2026-02-21T16:19:00Z",
+  "overall_status": "PASS",
+  "release_id": "RC-2026.02.11"
+}

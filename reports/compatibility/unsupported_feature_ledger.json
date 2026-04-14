@@ -1,0 +1,29 @@
+[
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete study",
+    "path": "/studies/{StudyUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  },
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete series",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  },
+  {
+    "content_type": null,
+    "method": "DELETE",
+    "operation": "Delete instance",
+    "path": "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+    "required_feature": "delete",
+    "service": "dicom-web",
+    "state": "blocked"
+  }
+]

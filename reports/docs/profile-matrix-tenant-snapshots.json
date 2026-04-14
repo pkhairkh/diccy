@@ -1,0 +1,184 @@
+{
+  "profile_count": 4,
+  "snapshot_count": 12,
+  "snapshots": [
+    {
+      "binaries": [
+        "dicom-visualizer"
+      ],
+      "features": [
+        "core",
+        "deterministic-cpu-oracle",
+        "headless-runtime"
+      ],
+      "profile": "framework-core",
+      "required_for_documentation": true,
+      "tenant": "tenant-default"
+    },
+    {
+      "binaries": [],
+      "features": [
+        "viewer-wasm",
+        "viewer-wgpu",
+        "mpr",
+        "sr-workflow-prototype"
+      ],
+      "profile": "workstation",
+      "required_for_documentation": true,
+      "tenant": "tenant-default"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services",
+      "required_for_documentation": true,
+      "tenant": "tenant-default"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server",
+        "dicom-dimse-service"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "dimse-transport",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services-with-dimse",
+      "required_for_documentation": false,
+      "tenant": "tenant-default"
+    },
+    {
+      "binaries": [
+        "dicom-visualizer"
+      ],
+      "features": [
+        "core",
+        "deterministic-cpu-oracle",
+        "headless-runtime"
+      ],
+      "profile": "framework-core",
+      "required_for_documentation": true,
+      "tenant": "tenant-a"
+    },
+    {
+      "binaries": [],
+      "features": [
+        "viewer-wasm",
+        "viewer-wgpu",
+        "mpr",
+        "sr-workflow-prototype"
+      ],
+      "profile": "workstation",
+      "required_for_documentation": true,
+      "tenant": "tenant-a"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services",
+      "required_for_documentation": true,
+      "tenant": "tenant-a"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server",
+        "dicom-dimse-service"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "dimse-transport",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services-with-dimse",
+      "required_for_documentation": false,
+      "tenant": "tenant-a"
+    },
+    {
+      "binaries": [
+        "dicom-visualizer"
+      ],
+      "features": [
+        "core",
+        "deterministic-cpu-oracle",
+        "headless-runtime"
+      ],
+      "profile": "framework-core",
+      "required_for_documentation": true,
+      "tenant": "tenant-b"
+    },
+    {
+      "binaries": [],
+      "features": [
+        "viewer-wasm",
+        "viewer-wgpu",
+        "mpr",
+        "sr-workflow-prototype"
+      ],
+      "profile": "workstation",
+      "required_for_documentation": true,
+      "tenant": "tenant-b"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services",
+      "required_for_documentation": true,
+      "tenant": "tenant-b"
+    },
+    {
+      "binaries": [
+        "dicom-web-server",
+        "dicom-workflow-server",
+        "dicom-dimse-service"
+      ],
+      "features": [
+        "dicomweb",
+        "workflow-service",
+        "dimse-transport",
+        "worklist",
+        "mpps",
+        "sr-commit"
+      ],
+      "profile": "backend-services-with-dimse",
+      "required_for_documentation": false,
+      "tenant": "tenant-b"
+    }
+  ],
+  "tenant_count": 3
+}

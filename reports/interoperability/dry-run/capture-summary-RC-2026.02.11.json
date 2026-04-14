@@ -1,0 +1,157 @@
+{
+  "capture_digest_sha256": "84e07085a86209b428c35a5967c8f671bf784903ecf9a904d8104558b9dd76dc",
+  "generated_at_utc": "2026-02-11T21:19:32Z",
+  "release_id": "RC-2026.02.11",
+  "rows": [
+    {
+      "case_id": "IOP-TC-001",
+      "evidence_ref": "WEB-QIDO-STUDIES",
+      "interface_id": "IFS-WEB-QIDO-001",
+      "note": "qido query baseline",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "response_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-002",
+      "evidence_ref": "WEB-STOW-WADO",
+      "interface_id": "IFS-WEB-STOW-WADO-002",
+      "note": "round trip baseline",
+      "phase": "positive",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "response_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-003",
+      "evidence_ref": "WEB-UNSUPPORTED-METHOD",
+      "interface_id": "IFS-WEB-NEG-002",
+      "note": "fail-closed method reject",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "response_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-004",
+      "evidence_ref": "WEB-INVALID-UID",
+      "interface_id": "IFS-WEB-NEG-001",
+      "note": "fail-closed uid reject",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "request_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "response_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "target_system": "TGT-001",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-005",
+      "evidence_ref": "DIMSE-C-ECHO",
+      "interface_id": "IFS-DIMSE-ECHO-003",
+      "note": "authorized echo",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "response_hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-006",
+      "evidence_ref": "DIMSE-C-STORE",
+      "interface_id": "IFS-DIMSE-STORE-004",
+      "note": "store/query verify",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "response_hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-007",
+      "evidence_ref": "DIMSE-BAD-COMMAND",
+      "interface_id": "IFS-DIMSE-NEG-004",
+      "note": "unsupported command fail-closed",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "response_hash": "sha256:abababababababababababababababababababababababababababababababab",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-008",
+      "evidence_ref": "TLS-POLICY",
+      "interface_id": "IFS-AUTH-TLS-NEG-005",
+      "note": "insecure transport denied",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      "response_hash": "sha256:bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-009",
+      "evidence_ref": "WL-ORDERING",
+      "interface_id": "IFS-WL-POS-001",
+      "note": "mwl deterministic ordering",
+      "phase": "positive",
+      "protocol": "MWL",
+      "request_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      "response_hash": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-010",
+      "evidence_ref": "MPPS-TRANSITION",
+      "interface_id": "IFS-MPPS-POS-001",
+      "note": "valid transition",
+      "phase": "positive",
+      "protocol": "MPPS",
+      "request_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "response_hash": "sha256:dededededededededededededededededededededededededededededededede",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-011",
+      "evidence_ref": "MPPS-REVERSION-REJECT",
+      "interface_id": "IFS-MPPS-NEG-001",
+      "note": "terminal reversion rejected",
+      "phase": "negative",
+      "protocol": "MPPS",
+      "request_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "response_hash": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-TC-012",
+      "evidence_ref": "WL-LIMIT-REJECT",
+      "interface_id": "IFS-WL-NEG-001",
+      "note": "oversized filter fail-closed",
+      "phase": "negative",
+      "protocol": "MWL",
+      "request_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "response_hash": "sha256:fafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
+      "target_system": "TGT-003",
+      "verdict": "PASS"
+    }
+  ],
+  "total_rows": 12,
+  "verdict_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "PASS": 12
+  }
+}

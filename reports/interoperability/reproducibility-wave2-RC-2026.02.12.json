@@ -1,0 +1,66 @@
+{
+  "new_wave2_operations": [
+    {
+      "interface_id": "IFS-WEB-NEG-ROUTE-CANONICALIZATION",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "target_system": "TGT-004"
+    },
+    {
+      "interface_id": "IFS-AUTH-NEG-POLICY-TRANSITION",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "target_system": "TGT-005"
+    },
+    {
+      "interface_id": "IFS-WEB-NEG-QUERY-BOUNDARY",
+      "phase": "negative",
+      "protocol": "DICOMweb",
+      "target_system": "TGT-005"
+    },
+    {
+      "interface_id": "IFS-DIMSE-NEG-PDU-LIMIT",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "target_system": "TGT-006"
+    },
+    {
+      "interface_id": "IFS-DIMSE-NEG-PDV-LIMIT",
+      "phase": "negative",
+      "protocol": "DIMSE",
+      "target_system": "TGT-006"
+    }
+  ],
+  "overall_variance_pct": 0.0,
+  "pass": true,
+  "policy_max_variance_pct": 0.0,
+  "protocol_stats": {
+    "DICOMweb": {
+      "compared": 11,
+      "matched": 11,
+      "mismatch": 0,
+      "variance_pct": 0.0
+    },
+    "DIMSE": {
+      "compared": 9,
+      "matched": 9,
+      "mismatch": 0,
+      "variance_pct": 0.0
+    },
+    "MPPS": {
+      "compared": 4,
+      "matched": 4,
+      "mismatch": 0,
+      "variance_pct": 0.0
+    },
+    "MWL": {
+      "compared": 4,
+      "matched": 4,
+      "mismatch": 0,
+      "variance_pct": 0.0
+    }
+  },
+  "release_id": "RC-2026.02.12",
+  "shared_mismatch": 0,
+  "shared_operations": 28
+}

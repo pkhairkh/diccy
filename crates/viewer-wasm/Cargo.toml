@@ -1,0 +1,25 @@
+[package]
+name = "viewer-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+network = []
+webgpu-backend = []
+
+[dependencies]
+viewer-core = { path = "../viewer-core" }
+dicom-core = { path = "../dicom-core" }
+dicom-io = { path = "../dicom-io" }
+dicom-pixel = { path = "../dicom-pixel" }
+wasm-bindgen = "0.2.92"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.42"
+dicom-pixel = { path = "../dicom-pixel" }
+sha2 = "0.10"

@@ -1,0 +1,35 @@
+{
+  "artifacts": [
+    {
+      "path": "reports/clinical/external-validation/dataset-ingestion-log-RC-2026.02.12.md",
+      "sha256": "98519db7393f62ee84d27a2502192de78ff079ff815b98e14f74a2c9a52cf7f5",
+      "size_bytes": 1644
+    },
+    {
+      "path": "reports/interoperability/external-site-readiness-checklist-RC-2026.02.12.md",
+      "sha256": "2cebc2c91c63bc67a66470052a673ea02a31efe44fb98afc26d32ff1d5e2a1d7",
+      "size_bytes": 1521
+    },
+    {
+      "path": "reports/interoperability/release-evidence-index.md",
+      "sha256": "1d5fd26499e301c12178e1aab74542ab85066cd4fd7763d6f7aacd8b25a2094d",
+      "size_bytes": 3596
+    },
+    {
+      "path": "reports/release/external-evidence-acceptance-criteria-v1.md",
+      "sha256": "32f5b7af8bf244bb6b49cf431f85b84545dd65487549067f9643505edfad79fd",
+      "size_bytes": 2870
+    },
+    {
+      "path": "reports/traceability/release-traceability-manifest-RC-2026.02.12.json",
+      "sha256": "1e71d9935f04f04ffacb5c136a54747dc2c2fc21a827e9352419de204b838a23",
+      "size_bytes": 13121
+    }
+  ],
+  "generated_at_utc": "2026-02-12T01:00:15Z",
+  "hash_algorithm": "sha256",
+  "key_id": "rc-local-key-01",
+  "release_id": "RC-2026.02.12",
+  "signature": "20eae9764abcfaa735673c6990926a26cee42f4f45699a259e959adb6e0f78a5",
+  "signature_algorithm": "hmac-sha256"
+}

@@ -1,0 +1,75 @@
+{
+  "profile_id": "backend-services-performance-rc-2026-02-24",
+  "release_id": "RC-2026.02.24",
+  "description": "Profile-specific performance gate for backend-services.",
+  "workloads": [
+    {
+      "id": "qido-budget-probe",
+      "category": "dicomweb-query",
+      "budget_class": "qido",
+      "command": [
+        "python3",
+        "-c",
+        "print('qido-ok')"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 200,
+      "capture_rss": false,
+      "slo_latency_p95_ms": 250.0,
+      "slo_latency_p99_ms": 500.0,
+      "slo_throughput_ops_s": 5.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 200.0,
+      "observed_gpu_cache_bytes": 33554432,
+      "gpu_cache_budget_bytes": 268435456
+    },
+    {
+      "id": "wado-budget-probe",
+      "category": "dicomweb-retrieve",
+      "budget_class": "wado",
+      "command": [
+        "python3",
+        "-c",
+        "print('wado-ok')"
+      ],
+      "iterations": 4,
+      "operations_per_iteration": 120,
+      "capture_rss": false,
+      "slo_latency_p95_ms": 400.0,
+      "slo_latency_p99_ms": 800.0,
+      "slo_throughput_ops_s": 3.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 150.0,
+      "latency_growth_limit_pct": 200.0,
+      "observed_gpu_cache_bytes": 33554432,
+      "gpu_cache_budget_bytes": 268435456
+    },
+    {
+      "id": "workflow-api-mutation-gate",
+      "category": "workflow-mutation",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "--features",
+        "workflow-main-tests",
+        "workflow_task_http_flow_creates_lists_gets_and_controls_lifecycle",
+        "--",
+        "--exact"
+      ],
+      "iterations": 2,
+      "operations_per_iteration": 160,
+      "capture_rss": true,
+      "slo_latency_p95_ms": 15000.0,
+      "slo_latency_p99_ms": 20000.0,
+      "slo_throughput_ops_s": 4.0,
+      "error_budget_pct": 0.0,
+      "rss_growth_limit_pct": 120.0,
+      "latency_growth_limit_pct": 160.0,
+      "observed_gpu_cache_bytes": 0,
+      "gpu_cache_budget_bytes": 268435456
+    }
+  ]
+}

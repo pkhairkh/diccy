@@ -1,0 +1,84 @@
+{
+  "manifest_version": "1",
+  "generated_from": "docs/62-State-Schema-and-Migration-Manifest.md",
+  "state_artifacts": [
+    {
+      "name": "workflow_worklist_snapshot",
+      "path_contract": "DICOM_WORKFLOW_WORKLIST_STATE_PATH",
+      "current_schema": "2",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "restore_backup"
+    },
+    {
+      "name": "workflow_mpps_snapshot",
+      "path_contract": "DICOM_WORKFLOW_MPPS_STATE_PATH",
+      "current_schema": "2",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "restore_backup"
+    },
+    {
+      "name": "workflow_sr_snapshot",
+      "path_contract": "DICOM_WORKFLOW_SR_STATE_PATH",
+      "current_schema": "2",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "restore_backup"
+    },
+    {
+      "name": "workflow_hl7_failure_dlq",
+      "path_contract": "<DICOM_WORKFLOW_AUDIT_PATH>.hl7-failures.dlq",
+      "current_schema": "2",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "projection_drop_attempt_columns"
+    },
+    {
+      "name": "web_storage_wal",
+      "path_contract": "DICOM_WEB_STORAGE_WAL",
+      "current_schema": "1",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "none"
+    },
+    {
+      "name": "dimse_storage_wal",
+      "path_contract": "DICOM_DIMSE_STORAGE_WAL",
+      "current_schema": "1",
+      "n_minus_1_schema": "1",
+      "upgrade_from": [
+        "1"
+      ],
+      "downgrade_to": [
+        "1"
+      ],
+      "downgrade_strategy": "none"
+    }
+  ]
+}

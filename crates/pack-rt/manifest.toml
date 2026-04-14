@@ -1,0 +1,29 @@
+sop_class_uids = [
+  "1.2.840.10008.5.1.4.1.1.481.2",
+  "1.2.840.10008.5.1.4.1.1.481.3",
+  "1.2.840.10008.5.1.4.1.1.481.5",
+]
+
+required_tags = [
+  "0008,0016", # SOP Class UID
+  "0008,0018", # SOP Instance UID
+  "0020,000D", # Study Instance UID
+  "0020,000E", # Series Instance UID
+  "0020,0052", # Frame of Reference UID
+  "3006,0039", # ROI Contour Sequence
+  "3006,0040", # Contour Sequence
+  "3006,0042", # Contour Geometric Type
+  "3006,0050", # Contour Data
+  "300C,0060", # Referenced Structure Set Sequence
+  "0008,1155", # Referenced SOP Instance UID
+  "3004,000C", # Grid Frame Offset Vector
+  "3004,000E", # Dose Grid Scaling
+  "0028,0010", # Rows
+  "0028,0011", # Columns
+  "0028,0008", # Number of Frames
+  "0028,0030", # Pixel Spacing
+  "0020,0032", # Image Position (Patient)
+  "0020,0037", # Image Orientation (Patient)
+  "0028,0100", # Bits Allocated
+  "7FE0,0010", # Pixel Data
+]

@@ -1,0 +1,29 @@
+[package]
+name = "dicom-pixel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+jpeg-decoder = "0.3"
+image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "tiff"], optional = true }
+charls = { version = "0.3", features = ["static"], optional = true }
+hayro-jpeg2000 = { version = "0.1", optional = true }
+pack-enhanced = { path = "../pack-enhanced", optional = true }
+
+[features]
+default = []
+raster-io = ["dep:image"]
+codec-jpegls = ["dep:charls"]
+codec-j2k = ["dep:hayro-jpeg2000"]
+codec-mpeg2 = []
+codec-h264 = []
+codec-hevc = []
+pack-enhanced = ["dep:pack-enhanced"]
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+toml = "0.8"
+jpeg-encoder = "0.6"

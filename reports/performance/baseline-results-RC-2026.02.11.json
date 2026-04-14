@@ -1,0 +1,278 @@
+{
+  "generated_at_utc": "2026-02-11T21:38:16Z",
+  "profile_path": "./reports/performance/profiles/baseline-profile-RC-2026.02.11.json",
+  "report_digest_sha256": "cf6be0b46329092cf3391fc635ac753e113e2faf0c28e9da3800a41c9733ea03",
+  "run_label": "baseline-RC-2026.02.11",
+  "violations": [],
+  "workloads": [
+    {
+      "category": "small",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web",
+        "parse_http_request_basic",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "web-small-parse",
+      "iterations": 3,
+      "latency_growth_limit_pct": 200.0,
+      "latency_growth_pct": -89.382,
+      "max_latency_ms": 607.242,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 84.287,
+      "p95_latency_ms": 554.946,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": 0.731,
+      "runs": [
+        {
+          "duration_ms": 607.242,
+          "returncode": 0,
+          "rss_kib": 47071232,
+          "run": 1
+        },
+        {
+          "duration_ms": 84.287,
+          "returncode": 0,
+          "rss_kib": 47366144,
+          "run": 2
+        },
+        {
+          "duration_ms": 64.476,
+          "returncode": 0,
+          "rss_kib": 47415296,
+          "run": 3
+        }
+      ],
+      "slo_latency_p95_ms": 2000.0,
+      "slo_throughput_ops_s": 0.2,
+      "throughput_ops_s": 3.968,
+      "total_duration_s": 0.756,
+      "total_operations": 3
+    },
+    {
+      "category": "medium",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-dimse-service",
+        "c_echo_round_trip",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "dimse-medium-cecho",
+      "iterations": 3,
+      "latency_growth_limit_pct": 200.0,
+      "latency_growth_pct": -17.162,
+      "max_latency_ms": 115.501,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 95.679,
+      "p95_latency_ms": 113.519,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": 0.711,
+      "runs": [
+        {
+          "duration_ms": 115.501,
+          "returncode": 0,
+          "rss_kib": 48365568,
+          "run": 1
+        },
+        {
+          "duration_ms": 88.96,
+          "returncode": 0,
+          "rss_kib": 48250880,
+          "run": 2
+        },
+        {
+          "duration_ms": 95.679,
+          "returncode": 0,
+          "rss_kib": 48709632,
+          "run": 3
+        }
+      ],
+      "slo_latency_p95_ms": 5000.0,
+      "slo_throughput_ops_s": 0.15,
+      "throughput_ops_s": 9.995,
+      "total_duration_s": 0.3,
+      "total_operations": 3
+    },
+    {
+      "category": "large",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "workflow_runtime_persistence_recovers_after_restart",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "workflow-large-restart",
+      "iterations": 3,
+      "latency_growth_limit_pct": 200.0,
+      "latency_growth_pct": 9.859,
+      "max_latency_ms": 118.753,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 108.095,
+      "p95_latency_ms": 117.687,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": 0.104,
+      "runs": [
+        {
+          "duration_ms": 108.095,
+          "returncode": 0,
+          "rss_kib": 47300608,
+          "run": 1
+        },
+        {
+          "duration_ms": 81.459,
+          "returncode": 0,
+          "rss_kib": 47546368,
+          "run": 2
+        },
+        {
+          "duration_ms": 118.753,
+          "returncode": 0,
+          "rss_kib": 47349760,
+          "run": 3
+        }
+      ],
+      "slo_latency_p95_ms": 8000.0,
+      "slo_throughput_ops_s": 0.1,
+      "throughput_ops_s": 9.731,
+      "total_duration_s": 0.308,
+      "total_operations": 3
+    },
+    {
+      "category": "burst",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-web-server",
+        "preflight_rotates_oversized_wal_and_bounds_backup_count",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "webserver-burst-preflight-rotation",
+      "iterations": 4,
+      "latency_growth_limit_pct": 250.0,
+      "latency_growth_pct": -15.084,
+      "max_latency_ms": 118.988,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 106.513,
+      "p95_latency_ms": 117.938,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": -0.436,
+      "runs": [
+        {
+          "duration_ms": 118.988,
+          "returncode": 0,
+          "rss_kib": 48840704,
+          "run": 1
+        },
+        {
+          "duration_ms": 111.987,
+          "returncode": 0,
+          "rss_kib": 48283648,
+          "run": 2
+        },
+        {
+          "duration_ms": 95.78,
+          "returncode": 0,
+          "rss_kib": 48742400,
+          "run": 3
+        },
+        {
+          "duration_ms": 101.039,
+          "returncode": 0,
+          "rss_kib": 48627712,
+          "run": 4
+        }
+      ],
+      "slo_latency_p95_ms": 3500.0,
+      "slo_throughput_ops_s": 0.2,
+      "throughput_ops_s": 9.35,
+      "total_duration_s": 0.428,
+      "total_operations": 4
+    },
+    {
+      "category": "sustained",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "dicom-workflow-server",
+        "auth_mode_defaults_to_deny_all",
+        "--",
+        "--exact"
+      ],
+      "error_budget_pct": 0.0,
+      "error_rate_pct": 0.0,
+      "id": "workflow-sustained-auth-default",
+      "iterations": 6,
+      "latency_growth_limit_pct": 250.0,
+      "latency_growth_pct": 41.229,
+      "max_latency_ms": 188.088,
+      "operations_per_iteration": 1,
+      "p50_latency_ms": 131.547,
+      "p95_latency_ms": 174.819,
+      "rss_growth_limit_pct": 150.0,
+      "rss_growth_pct": -0.993,
+      "runs": [
+        {
+          "duration_ms": 95.598,
+          "returncode": 0,
+          "rss_kib": 47824896,
+          "run": 1
+        },
+        {
+          "duration_ms": 127.778,
+          "returncode": 0,
+          "rss_kib": 47366144,
+          "run": 2
+        },
+        {
+          "duration_ms": 129.079,
+          "returncode": 0,
+          "rss_kib": 47579136,
+          "run": 3
+        },
+        {
+          "duration_ms": 134.016,
+          "returncode": 0,
+          "rss_kib": 47333376,
+          "run": 4
+        },
+        {
+          "duration_ms": 188.088,
+          "returncode": 0,
+          "rss_kib": 47300608,
+          "run": 5
+        },
+        {
+          "duration_ms": 135.012,
+          "returncode": 0,
+          "rss_kib": 47349760,
+          "run": 6
+        }
+      ],
+      "slo_latency_p95_ms": 2500.0,
+      "slo_throughput_ops_s": 0.25,
+      "throughput_ops_s": 7.411,
+      "total_duration_s": 0.81,
+      "total_operations": 6
+    }
+  ]
+}

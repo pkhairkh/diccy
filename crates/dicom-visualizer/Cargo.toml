@@ -1,0 +1,12 @@
+[package]
+name = "dicom-visualizer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core", features = ["tier1-deflate", "codec-jpegls", "codec-j2k", "gsps", "modality-pet", "modality-mg", "modality-xr", "pack-enhanced", "pack-us", "pack-nm", "pack-xa", "pack-seg", "pack-rt", "pack-sr"] }
+dicom-io = { path = "../dicom-io", features = ["tier1-deflate", "codec-jpegls", "codec-j2k", "codec-mpeg2", "codec-h264", "codec-hevc"] }
+dicom-pixel = { path = "../dicom-pixel", features = ["codec-jpegls", "codec-j2k", "codec-mpeg2", "codec-h264", "codec-hevc", "pack-enhanced"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+sha2 = "0.10"

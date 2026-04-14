@@ -1,0 +1,127 @@
+[package]
+name = "rdvf-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[[bin]]
+name = "dicom_io_p10"
+path = "fuzz_targets/dicom_io_p10.rs"
+
+[[bin]]
+name = "dimse_pdu"
+path = "fuzz_targets/dimse_pdu.rs"
+
+[[bin]]
+name = "dimse_command"
+path = "fuzz_targets/dimse_command.rs"
+
+[[bin]]
+name = "dicomweb_request"
+path = "fuzz_targets/dicomweb_request.rs"
+
+[[bin]]
+name = "storage_index_metadata"
+path = "fuzz_targets/storage_index_metadata.rs"
+
+[[bin]]
+name = "dicom_pixel_j2k"
+path = "fuzz_targets/dicom_pixel_j2k.rs"
+
+[[bin]]
+name = "dicom_pixel_jpeg_baseline"
+path = "fuzz_targets/dicom_pixel_jpeg_baseline.rs"
+
+[[bin]]
+name = "dicom_pixel_jpegls"
+path = "fuzz_targets/dicom_pixel_jpegls.rs"
+
+[[bin]]
+name = "dicom_pixel_pipeline"
+path = "fuzz_targets/dicom_pixel_pipeline.rs"
+
+[[bin]]
+name = "dicom_pixel_rle"
+path = "fuzz_targets/dicom_pixel_rle.rs"
+
+[[bin]]
+name = "pack_enhanced_groups"
+path = "fuzz_targets/pack_enhanced_groups.rs"
+
+[[bin]]
+name = "pack_gsps"
+path = "fuzz_targets/pack_gsps.rs"
+
+[[bin]]
+name = "pack_gsps_graphics"
+path = "fuzz_targets/pack_gsps_graphics.rs"
+
+[[bin]]
+name = "pack_seg"
+path = "fuzz_targets/pack_seg.rs"
+
+[[bin]]
+name = "pack_rt_dose"
+path = "fuzz_targets/pack_rt_dose.rs"
+
+[[bin]]
+name = "pack_rt_structure"
+path = "fuzz_targets/pack_rt_structure.rs"
+
+[[bin]]
+name = "pack_rt_plan"
+path = "fuzz_targets/pack_rt_plan.rs"
+
+[[bin]]
+name = "pack_sr"
+path = "fuzz_targets/pack_sr.rs"
+
+[[bin]]
+name = "pack_us"
+path = "fuzz_targets/pack_us.rs"
+
+[[bin]]
+name = "pack_nm"
+path = "fuzz_targets/pack_nm.rs"
+
+[[bin]]
+name = "pack_xa"
+path = "fuzz_targets/pack_xa.rs"
+
+[[bin]]
+name = "viewer_core_volume_mpr"
+path = "fuzz_targets/viewer_core_volume_mpr.rs"
+
+[[bin]]
+name = "modality_pet_fusion"
+path = "fuzz_targets/modality_pet_fusion.rs"
+
+[[bin]]
+name = "workflow_sr_store"
+path = "fuzz_targets/workflow_sr_store.rs"
+
+[dependencies]
+libfuzzer-sys = "0.4"
+dicom-core = { path = "../crates/dicom-core" }
+dicom-net = { path = "../crates/dicom-net" }
+dicom-dimse = { path = "../crates/dicom-dimse" }
+dicom-web = { path = "../crates/dicom-web", features = ["qido", "wado", "stow"] }
+dicom-io = { path = "../crates/dicom-io", features = ["tier1-deflate", "codec-jpegls", "codec-j2k"] }
+dicom-index = { path = "../crates/dicom-index" }
+dicom-pixel = { path = "../crates/dicom-pixel", features = ["codec-jpegls", "codec-j2k"] }
+pack-enhanced = { path = "../crates/pack-enhanced", features = ["pack-enhanced"] }
+pack-gsps = { path = "../crates/pack-gsps", features = ["gsps"] }
+pack-us = { path = "../crates/pack-us", features = ["pack-us"] }
+pack-nm = { path = "../crates/pack-nm", features = ["pack-nm"] }
+pack-xa = { path = "../crates/pack-xa", features = ["pack-xa"] }
+pack-seg = { path = "../crates/pack-seg", features = ["pack-seg"] }
+pack-rt = { path = "../crates/pack-rt", features = ["pack-rt"] }
+pack-sr = { path = "../crates/pack-sr", features = ["pack-sr"] }
+viewer-core = { path = "../crates/viewer-core" }
+modality-pet = { path = "../crates/modality-pet" }
+dicom-workflow-server = { path = "../crates/dicom-workflow-server" }
+
+[workspace]

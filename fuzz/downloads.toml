@@ -1,0 +1,13 @@
+[[artifact]]
+name = "rust-toolchain-nightly"
+source = "rustup"
+version = "1.95.0-nightly"
+commit = "6efa357bf"
+notes = "Installed via `rustup toolchain install nightly` to enable cargo-fuzz with sanitizer flags."
+
+[[artifact]]
+name = "cargo-fuzz"
+source = "crates.io"
+version = "0.13.1"
+checksum = "990e4e600e695b730ae23c2f4e6336ee63e9efe6527273f557f86d37eac724e7"
+notes = "Checksum from crates.io index cache; installed via `cargo install cargo-fuzz`."

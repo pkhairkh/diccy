@@ -1,0 +1,24 @@
+{
+  "id": "browser-scenario-pack-RC-2026.02.22",
+  "description": "Browser performance scenario pack aligned to competitor-comparable workloads.",
+  "scenarios": [
+    {
+      "id": "baseline-512",
+      "width": 512,
+      "height": 512,
+      "interactions": 50
+    },
+    {
+      "id": "stress-768",
+      "width": 768,
+      "height": 768,
+      "interactions": 80
+    },
+    {
+      "id": "fallback-pressure-1024",
+      "width": 1024,
+      "height": 1024,
+      "interactions": 120
+    }
+  ]
+}

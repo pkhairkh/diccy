@@ -1,0 +1,85 @@
+{
+  "capture_digest_sha256": "38baa51649aa927ed1be33f8c449828cf806eedbd538738c41e460c5ffd0d174",
+  "generated_at_utc": "2026-02-11T21:24:49Z",
+  "release_id": "RC-2026.02.11",
+  "rows": [
+    {
+      "case_id": "IOP-S11-DIM-001",
+      "evidence_ref": "DIMSE-C-ECHO",
+      "interface_id": "IFS-DIMSE-ECHO-003",
+      "note": "local dimse echo",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "response_hash": "sha256:abababababababababababababababababababababababababababababababab",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DIM-002",
+      "evidence_ref": "DIMSE-C-STORE",
+      "interface_id": "IFS-DIMSE-STORE-004",
+      "note": "local dimse store/query",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      "response_hash": "sha256:bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc",
+      "target_system": "TGT-002",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DIM-003",
+      "evidence_ref": "ORTHANC-DIMSE-ECHO",
+      "interface_id": "IFS-DIMSE-ECHO-PEER-001",
+      "note": "peer profile replay echo",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      "response_hash": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "target_system": "TGT-004",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DIM-004",
+      "evidence_ref": "DCM4CHEE-DIMSE-STORE",
+      "interface_id": "IFS-DIMSE-STORE-PEER-002",
+      "note": "enterprise peer profile replay store",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "response_hash": "sha256:dededededededededededededededededededededededededededededededede",
+      "target_system": "TGT-005",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DIM-005",
+      "evidence_ref": "DCMTK-ECHO",
+      "interface_id": "IFS-DIMSE-ECHO-MOD-003",
+      "note": "modality gateway echo",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "response_hash": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+      "target_system": "TGT-006",
+      "verdict": "PASS"
+    },
+    {
+      "case_id": "IOP-S11-DIM-006",
+      "evidence_ref": "DCMTK-STORE",
+      "interface_id": "IFS-DIMSE-STORE-MOD-004",
+      "note": "modality gateway store",
+      "phase": "positive",
+      "protocol": "DIMSE",
+      "request_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "response_hash": "sha256:fafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
+      "target_system": "TGT-006",
+      "verdict": "PASS"
+    }
+  ],
+  "total_rows": 6,
+  "verdict_counts": {
+    "BLOCKED": 0,
+    "FAIL": 0,
+    "PASS": 6
+  }
+}

@@ -1,0 +1,849 @@
+{
+  "contract_count": 3,
+  "contracts": [
+    {
+      "code_env_var_refs": {
+        "DICOM_WEB_ACCEPT_QUEUE_DEPTH": {
+          "line": 1199,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_AUTH_MODE": {
+          "line": 92,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_BIND": {
+          "line": 148,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_ENABLE_DELETE": {
+          "line": 1115,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_ENABLE_QIDO": {
+          "line": 1112,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_ENABLE_STOW": {
+          "line": 1114,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_ENABLE_WADO": {
+          "line": 1113,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_LOG_LEVEL": {
+          "line": 1941,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_PROVIDER_PROFILE": {
+          "line": 1100,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_QIDO_P95_LATENCY_MS": {
+          "line": 2204,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_QIDO_P99_LATENCY_MS": {
+          "line": 79,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_STORAGE_WAL": {
+          "line": 167,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_STORAGE_WAL_MAX_BYTES": {
+          "line": 172,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_STORAGE_WAL_MAX_ROTATED_FILES": {
+          "line": 178,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_STOW_P95_LATENCY_MS": {
+          "line": 80,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_STOW_P99_LATENCY_MS": {
+          "line": 2208,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_TELEMETRY_ENABLED": {
+          "line": 85,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_TELEMETRY_SAFE_SUBSET": {
+          "line": 86,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_TEST_STORAGE_BYTES": {
+          "line": 1848,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_TEST_WORKERS": {
+          "line": 1895,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_TLS_POLICY": {
+          "line": 149,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_TRANSPORT_SECURITY": {
+          "line": 153,
+          "path": "crates/dicom-web-server/src/main.rs"
+        },
+        "DICOM_WEB_WADO_P95_LATENCY_MS": {
+          "line": 89,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_WADO_P99_LATENCY_MS": {
+          "line": 90,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WEB_WORKERS": {
+          "line": 1197,
+          "path": "crates/dicom-web-server/src/main.rs"
+        }
+      },
+      "code_env_vars": [
+        "DICOM_WEB_ACCEPT_QUEUE_DEPTH",
+        "DICOM_WEB_AUTH_MODE",
+        "DICOM_WEB_BIND",
+        "DICOM_WEB_ENABLE_DELETE",
+        "DICOM_WEB_ENABLE_QIDO",
+        "DICOM_WEB_ENABLE_STOW",
+        "DICOM_WEB_ENABLE_WADO",
+        "DICOM_WEB_LOG_LEVEL",
+        "DICOM_WEB_PROVIDER_PROFILE",
+        "DICOM_WEB_QIDO_P95_LATENCY_MS",
+        "DICOM_WEB_QIDO_P99_LATENCY_MS",
+        "DICOM_WEB_STORAGE_WAL",
+        "DICOM_WEB_STORAGE_WAL_MAX_BYTES",
+        "DICOM_WEB_STORAGE_WAL_MAX_ROTATED_FILES",
+        "DICOM_WEB_STOW_P95_LATENCY_MS",
+        "DICOM_WEB_STOW_P99_LATENCY_MS",
+        "DICOM_WEB_TELEMETRY_ENABLED",
+        "DICOM_WEB_TELEMETRY_SAFE_SUBSET",
+        "DICOM_WEB_TEST_STORAGE_BYTES",
+        "DICOM_WEB_TEST_WORKERS",
+        "DICOM_WEB_TLS_POLICY",
+        "DICOM_WEB_TRANSPORT_SECURITY",
+        "DICOM_WEB_WADO_P95_LATENCY_MS",
+        "DICOM_WEB_WADO_P99_LATENCY_MS",
+        "DICOM_WEB_WORKERS"
+      ],
+      "code_files": [
+        "crates/dicom-web-server/src/main.rs",
+        "crates/dicom-env-contract/src/lib.rs"
+      ],
+      "component": "dicom-web-server",
+      "docs_env_vars": [
+        "DICOM_WEB_ACCEPT_QUEUE_DEPTH",
+        "DICOM_WEB_AUTH_MODE",
+        "DICOM_WEB_BIND",
+        "DICOM_WEB_ENABLE_QIDO",
+        "DICOM_WEB_ENABLE_STOW",
+        "DICOM_WEB_ENABLE_WADO",
+        "DICOM_WEB_LOG_LEVEL",
+        "DICOM_WEB_QIDO_P95_LATENCY_MS",
+        "DICOM_WEB_QIDO_P99_LATENCY_MS",
+        "DICOM_WEB_STORAGE_WAL",
+        "DICOM_WEB_STORAGE_WAL_MAX_BYTES",
+        "DICOM_WEB_STORAGE_WAL_MAX_ROTATED_FILES",
+        "DICOM_WEB_STOW_P95_LATENCY_MS",
+        "DICOM_WEB_STOW_P99_LATENCY_MS",
+        "DICOM_WEB_TELEMETRY_ENABLED",
+        "DICOM_WEB_TELEMETRY_SAFE_SUBSET",
+        "DICOM_WEB_TEST_STORAGE_BYTES",
+        "DICOM_WEB_TEST_WORKERS",
+        "DICOM_WEB_TLS_POLICY",
+        "DICOM_WEB_TRANSPORT_SECURITY",
+        "DICOM_WEB_WADO_P95_LATENCY_MS",
+        "DICOM_WEB_WADO_P99_LATENCY_MS",
+        "DICOM_WEB_WORKERS"
+      ],
+      "docs_file": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "docs_heading": "### `dicom-web-server` (env-contract)",
+      "documented_not_in_code": [],
+      "missing_in_docs": [
+        "DICOM_WEB_ENABLE_DELETE",
+        "DICOM_WEB_PROVIDER_PROFILE"
+      ],
+      "prefix": "DICOM_WEB_"
+    },
+    {
+      "code_env_var_refs": {
+        "DICOM_WORKFLOW_ANOMALY_ALERT_THRESHOLD": {
+          "line": 175,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_AUDIT_EXPORT_LIMIT": {
+          "line": 9724,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_AUDIT_MAX_BYTES": {
+          "line": 177,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_AUDIT_MAX_ROTATED_FILES": {
+          "line": 178,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_AUDIT_PATH": {
+          "line": 179,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_AUTH_MODE": {
+          "line": 559,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_AUTH_TOKEN": {
+          "line": 220,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_AUTH_TOKEN_PATH": {
+          "line": 181,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_BIND": {
+          "line": 182,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_DENYLIST_PATHS": {
+          "line": 9725,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_FHIR_INGEST_ENABLED": {
+          "line": 5562,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CALLBACK_BASE_BACKOFF_MS": {
+          "line": 112,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CALLBACK_CIRCUIT_FAILURE_THRESHOLD": {
+          "line": 111,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_ATTEMPTS": {
+          "line": 109,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_BACKOFF_MS": {
+          "line": 113,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MAX_ENTERPRISE_HIS": {
+          "line": 10405,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MIN_ENTERPRISE_HIS": {
+          "line": 10401,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP": {
+          "line": 10295,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A": {
+          "line": 10299,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A1_STAR": {
+          "line": 10315,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_AX_STAR": {
+          "line": 10311,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A_STAR": {
+          "line": 10307,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_EAST_STAR": {
+          "line": 10319,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_STAR": {
+          "line": 10303,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ENTERPRISE_HIS": {
+          "line": 10521,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_FEATURE_ENTERPRISE_HIS": {
+          "line": 10525,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_PLUGIN_ENTERPRISE_HIS": {
+          "line": 10393,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ROLLOUT_ENTERPRISE_HIS": {
+          "line": 10529,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_CONNECTOR_VERSION_ENTERPRISE_HIS": {
+          "line": 10397,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DIR": {
+          "line": 1675,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DONE_DIR": {
+          "line": 1690,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_FILE_DROP_ERROR_DIR": {
+          "line": 1706,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_FILE_DROP_POLL_INTERVAL_MS": {
+          "line": 1733,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_MLLP_BIND": {
+          "line": 1663,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_HL7_MLLP_ENABLED": {
+          "line": 1660,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_LOG_LEVEL": {
+          "line": 9764,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_MPPS_STATE_PATH": {
+          "line": 192,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_MUTATION_RATE_LIMIT": {
+          "line": 9723,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_PROVIDER_PROFILE": {
+          "line": 2297,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_QUERY_RATE_LIMIT": {
+          "line": 9722,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_RATE_LIMIT_WINDOW_MS": {
+          "line": 195,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_SECRET_DIR": {
+          "line": 200,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_BYTES": {
+          "line": 201,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_ROTATED_FILES": {
+          "line": 202,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_SR_AUDIT_PATH": {
+          "line": 203,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_SR_STATE_PATH": {
+          "line": 204,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_TENANT_SUBSCRIPTION_QUOTA_TENANT_A": {
+          "line": 16005,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_TENANT_TASK_QUOTA_TENANT_A": {
+          "line": 16004,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_TEST_RATE_LIMIT": {
+          "line": 9528,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_TEST_ROTATIONS": {
+          "line": 9626,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_TLS_CERT_PATH": {
+          "line": 205,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_TLS_KEY_PATH": {
+          "line": 206,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_TRANSPORT_SECURITY": {
+          "line": 207,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_UPLOAD_CAP_BYTES": {
+          "line": 208,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_SHARED_SECRET": {
+          "line": 121,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_STRATEGY": {
+          "line": 120,
+          "path": "crates/dicom-workflow-server/src/main.rs"
+        },
+        "DICOM_WORKFLOW_WORKLIST_STATE_PATH": {
+          "line": 209,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        }
+      },
+      "code_env_vars": [
+        "DICOM_WORKFLOW_ANOMALY_ALERT_THRESHOLD",
+        "DICOM_WORKFLOW_AUDIT_EXPORT_LIMIT",
+        "DICOM_WORKFLOW_AUDIT_MAX_BYTES",
+        "DICOM_WORKFLOW_AUDIT_MAX_ROTATED_FILES",
+        "DICOM_WORKFLOW_AUDIT_PATH",
+        "DICOM_WORKFLOW_AUTH_MODE",
+        "DICOM_WORKFLOW_AUTH_TOKEN",
+        "DICOM_WORKFLOW_AUTH_TOKEN_PATH",
+        "DICOM_WORKFLOW_BIND",
+        "DICOM_WORKFLOW_DENYLIST_PATHS",
+        "DICOM_WORKFLOW_FHIR_INGEST_ENABLED",
+        "DICOM_WORKFLOW_HL7_CALLBACK_BASE_BACKOFF_MS",
+        "DICOM_WORKFLOW_HL7_CALLBACK_CIRCUIT_FAILURE_THRESHOLD",
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_ATTEMPTS",
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_BACKOFF_MS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MAX_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MIN_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A1_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_AX_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_EAST_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_FEATURE_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_PLUGIN_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ROLLOUT_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_VERSION_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DONE_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_ERROR_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_POLL_INTERVAL_MS",
+        "DICOM_WORKFLOW_HL7_MLLP_BIND",
+        "DICOM_WORKFLOW_HL7_MLLP_ENABLED",
+        "DICOM_WORKFLOW_LOG_LEVEL",
+        "DICOM_WORKFLOW_MPPS_STATE_PATH",
+        "DICOM_WORKFLOW_MUTATION_RATE_LIMIT",
+        "DICOM_WORKFLOW_PROVIDER_PROFILE",
+        "DICOM_WORKFLOW_QUERY_RATE_LIMIT",
+        "DICOM_WORKFLOW_RATE_LIMIT_WINDOW_MS",
+        "DICOM_WORKFLOW_SECRET_DIR",
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_BYTES",
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_ROTATED_FILES",
+        "DICOM_WORKFLOW_SR_AUDIT_PATH",
+        "DICOM_WORKFLOW_SR_STATE_PATH",
+        "DICOM_WORKFLOW_TENANT_SUBSCRIPTION_QUOTA_TENANT_A",
+        "DICOM_WORKFLOW_TENANT_TASK_QUOTA_TENANT_A",
+        "DICOM_WORKFLOW_TEST_RATE_LIMIT",
+        "DICOM_WORKFLOW_TEST_ROTATIONS",
+        "DICOM_WORKFLOW_TLS_CERT_PATH",
+        "DICOM_WORKFLOW_TLS_KEY_PATH",
+        "DICOM_WORKFLOW_TRANSPORT_SECURITY",
+        "DICOM_WORKFLOW_UPLOAD_CAP_BYTES",
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_SHARED_SECRET",
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_STRATEGY",
+        "DICOM_WORKFLOW_WORKLIST_STATE_PATH"
+      ],
+      "code_files": [
+        "crates/dicom-workflow-server/src/main.rs",
+        "crates/dicom-env-contract/src/lib.rs"
+      ],
+      "component": "dicom-workflow-server",
+      "docs_env_vars": [
+        "DICOM_WORKFLOW_ANOMALY_ALERT_THRESHOLD",
+        "DICOM_WORKFLOW_AUDIT_EXPORT_LIMIT",
+        "DICOM_WORKFLOW_AUDIT_MAX_BYTES",
+        "DICOM_WORKFLOW_AUDIT_MAX_ROTATED_FILES",
+        "DICOM_WORKFLOW_AUDIT_PATH",
+        "DICOM_WORKFLOW_AUTH_MODE",
+        "DICOM_WORKFLOW_AUTH_TOKEN",
+        "DICOM_WORKFLOW_AUTH_TOKEN_PATH",
+        "DICOM_WORKFLOW_BIND",
+        "DICOM_WORKFLOW_DENYLIST_PATHS",
+        "DICOM_WORKFLOW_FHIR_INGEST_ENABLED",
+        "DICOM_WORKFLOW_HL7_CALLBACK_BASE_BACKOFF_MS",
+        "DICOM_WORKFLOW_HL7_CALLBACK_CIRCUIT_FAILURE_THRESHOLD",
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_ATTEMPTS",
+        "DICOM_WORKFLOW_HL7_CALLBACK_MAX_BACKOFF_MS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MAX_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_COMPAT_MIN_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A1_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_AX_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_A_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_EAST_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_CORP_STAR",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_FEATURE_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_PLUGIN_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_ROLLOUT_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_CONNECTOR_VERSION_ENTERPRISE_HIS",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_DONE_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_ERROR_DIR",
+        "DICOM_WORKFLOW_HL7_FILE_DROP_POLL_INTERVAL_MS",
+        "DICOM_WORKFLOW_HL7_MLLP_BIND",
+        "DICOM_WORKFLOW_HL7_MLLP_ENABLED",
+        "DICOM_WORKFLOW_LOG_LEVEL",
+        "DICOM_WORKFLOW_MPPS_STATE_PATH",
+        "DICOM_WORKFLOW_MUTATION_RATE_LIMIT",
+        "DICOM_WORKFLOW_QUERY_RATE_LIMIT",
+        "DICOM_WORKFLOW_RATE_LIMIT_WINDOW_MS",
+        "DICOM_WORKFLOW_SECRET_DIR",
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_BYTES",
+        "DICOM_WORKFLOW_SNAPSHOT_MAX_ROTATED_FILES",
+        "DICOM_WORKFLOW_SR_AUDIT_PATH",
+        "DICOM_WORKFLOW_SR_STATE_PATH",
+        "DICOM_WORKFLOW_TENANT_SUBSCRIPTION_QUOTA_TENANT_A",
+        "DICOM_WORKFLOW_TENANT_TASK_QUOTA_TENANT_A",
+        "DICOM_WORKFLOW_TEST_RATE_LIMIT",
+        "DICOM_WORKFLOW_TEST_ROTATIONS",
+        "DICOM_WORKFLOW_TLS_CERT_PATH",
+        "DICOM_WORKFLOW_TLS_KEY_PATH",
+        "DICOM_WORKFLOW_TRANSPORT_SECURITY",
+        "DICOM_WORKFLOW_UPLOAD_CAP_BYTES",
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_SHARED_SECRET",
+        "DICOM_WORKFLOW_WEBHOOK_AUTH_STRATEGY",
+        "DICOM_WORKFLOW_WORKLIST_STATE_PATH"
+      ],
+      "docs_file": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "docs_heading": "### `dicom-workflow-server` (env-contract)",
+      "documented_not_in_code": [],
+      "missing_in_docs": [
+        "DICOM_WORKFLOW_PROVIDER_PROFILE"
+      ],
+      "prefix": "DICOM_WORKFLOW_"
+    },
+    {
+      "code_env_var_refs": {
+        "DICOM_DIMSE_ALLOWED_HOSTS": {
+          "line": 271,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_AUTH_MODE": {
+          "line": 43,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_BIND": {
+          "line": 193,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_CALLED_AE": {
+          "line": 265,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_HEALTH_BIND": {
+          "line": 268,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_LOG_LEVEL": {
+          "line": 368,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_DIMSE_MAX_CACHE_BYTES": {
+          "line": 749,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_COMMAND_BYTES": {
+          "line": 783,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_CONNECTIONS": {
+          "line": 208,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_C_ECHO_DATA_SET_BYTES": {
+          "line": 815,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_C_FIND_DATA_SET_BYTES": {
+          "line": 827,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_C_GET_DATA_SET_BYTES": {
+          "line": 839,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_C_MOVE_DATA_SET_BYTES": {
+          "line": 833,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_C_STORE_DATA_SET_BYTES": {
+          "line": 821,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_DATASET_ELEMENTS": {
+          "line": 701,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_DECOMPRESSED_BYTES": {
+          "line": 737,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_ELEMENT_VL_BYTES": {
+          "line": 719,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_FRAMES_PER_INSTANCE": {
+          "line": 725,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_GPU_TEXTURE_BYTES": {
+          "line": 743,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_INPUT_BYTES": {
+          "line": 695,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_IN_FLIGHT_ASSOCIATIONS": {
+          "line": 202,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_IN_FLIGHT_OPERATIONS": {
+          "line": 214,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_PDU_BYTES": {
+          "line": 760,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_PDV_BYTES": {
+          "line": 766,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_PIXELS_PER_FRAME": {
+          "line": 731,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_PRESENTATION_CONTEXTS": {
+          "line": 772,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_QUERY_RESPONSE_COUNT": {
+          "line": 220,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_SEQUENCE_DEPTH": {
+          "line": 707,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_MAX_STRING_BYTES": {
+          "line": 713,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_READ_TIMEOUT_SECS": {
+          "line": 198,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_ROLE_C_ECHO_ENABLED": {
+          "line": 802,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_ROLE_C_FIND_ENABLED": {
+          "line": 804,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_ROLE_C_GET_ENABLED": {
+          "line": 806,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_ROLE_C_MOVE_ENABLED": {
+          "line": 805,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_ROLE_C_STORE_ENABLED": {
+          "line": 803,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_STORAGE_WAL": {
+          "line": 250,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_STORAGE_WAL_MAX_BYTES": {
+          "line": 255,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_STORAGE_WAL_MAX_ROTATED_FILES": {
+          "line": 261,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TELEMETRY_ENABLED": {
+          "line": 401,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_DIMSE_TELEMETRY_SAFE_SUBSET": {
+          "line": 402,
+          "path": "crates/dicom-env-contract/src/lib.rs"
+        },
+        "DICOM_DIMSE_TEST_MAX_BYTES": {
+          "line": 1165,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TEST_OPTIONAL_SECONDS": {
+          "line": 1211,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TLS_CA_BUNDLE_PATH": {
+          "line": 232,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TLS_CERT_PATH": {
+          "line": 229,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TLS_CERT_ROTATION_INTERVAL_SECS": {
+          "line": 235,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TLS_KEY_PATH": {
+          "line": 230,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TLS_POLICY": {
+          "line": 224,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_TRANSPORT_SECURITY": {
+          "line": 226,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        },
+        "DICOM_DIMSE_WRITE_TIMEOUT_SECS": {
+          "line": 199,
+          "path": "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs"
+        }
+      },
+      "code_env_vars": [
+        "DICOM_DIMSE_ALLOWED_HOSTS",
+        "DICOM_DIMSE_AUTH_MODE",
+        "DICOM_DIMSE_BIND",
+        "DICOM_DIMSE_CALLED_AE",
+        "DICOM_DIMSE_HEALTH_BIND",
+        "DICOM_DIMSE_LOG_LEVEL",
+        "DICOM_DIMSE_MAX_CACHE_BYTES",
+        "DICOM_DIMSE_MAX_COMMAND_BYTES",
+        "DICOM_DIMSE_MAX_CONNECTIONS",
+        "DICOM_DIMSE_MAX_C_ECHO_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_FIND_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_GET_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_MOVE_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_STORE_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_DATASET_ELEMENTS",
+        "DICOM_DIMSE_MAX_DECOMPRESSED_BYTES",
+        "DICOM_DIMSE_MAX_ELEMENT_VL_BYTES",
+        "DICOM_DIMSE_MAX_FRAMES_PER_INSTANCE",
+        "DICOM_DIMSE_MAX_GPU_TEXTURE_BYTES",
+        "DICOM_DIMSE_MAX_INPUT_BYTES",
+        "DICOM_DIMSE_MAX_IN_FLIGHT_ASSOCIATIONS",
+        "DICOM_DIMSE_MAX_IN_FLIGHT_OPERATIONS",
+        "DICOM_DIMSE_MAX_PDU_BYTES",
+        "DICOM_DIMSE_MAX_PDV_BYTES",
+        "DICOM_DIMSE_MAX_PIXELS_PER_FRAME",
+        "DICOM_DIMSE_MAX_PRESENTATION_CONTEXTS",
+        "DICOM_DIMSE_MAX_QUERY_RESPONSE_COUNT",
+        "DICOM_DIMSE_MAX_SEQUENCE_DEPTH",
+        "DICOM_DIMSE_MAX_STRING_BYTES",
+        "DICOM_DIMSE_READ_TIMEOUT_SECS",
+        "DICOM_DIMSE_ROLE_C_ECHO_ENABLED",
+        "DICOM_DIMSE_ROLE_C_FIND_ENABLED",
+        "DICOM_DIMSE_ROLE_C_GET_ENABLED",
+        "DICOM_DIMSE_ROLE_C_MOVE_ENABLED",
+        "DICOM_DIMSE_ROLE_C_STORE_ENABLED",
+        "DICOM_DIMSE_STORAGE_WAL",
+        "DICOM_DIMSE_STORAGE_WAL_MAX_BYTES",
+        "DICOM_DIMSE_STORAGE_WAL_MAX_ROTATED_FILES",
+        "DICOM_DIMSE_TELEMETRY_ENABLED",
+        "DICOM_DIMSE_TELEMETRY_SAFE_SUBSET",
+        "DICOM_DIMSE_TEST_MAX_BYTES",
+        "DICOM_DIMSE_TEST_OPTIONAL_SECONDS",
+        "DICOM_DIMSE_TLS_CA_BUNDLE_PATH",
+        "DICOM_DIMSE_TLS_CERT_PATH",
+        "DICOM_DIMSE_TLS_CERT_ROTATION_INTERVAL_SECS",
+        "DICOM_DIMSE_TLS_KEY_PATH",
+        "DICOM_DIMSE_TLS_POLICY",
+        "DICOM_DIMSE_TRANSPORT_SECURITY",
+        "DICOM_DIMSE_WRITE_TIMEOUT_SECS"
+      ],
+      "code_files": [
+        "crates/dicom-dimse-service/src/bin/dicom-dimse-service.rs",
+        "crates/dicom-env-contract/src/lib.rs"
+      ],
+      "component": "dicom-dimse-service",
+      "docs_env_vars": [
+        "DICOM_DIMSE_ALLOWED_HOSTS",
+        "DICOM_DIMSE_AUTH_MODE",
+        "DICOM_DIMSE_BIND",
+        "DICOM_DIMSE_CALLED_AE",
+        "DICOM_DIMSE_HEALTH_BIND",
+        "DICOM_DIMSE_LOG_LEVEL",
+        "DICOM_DIMSE_MAX_CACHE_BYTES",
+        "DICOM_DIMSE_MAX_COMMAND_BYTES",
+        "DICOM_DIMSE_MAX_CONNECTIONS",
+        "DICOM_DIMSE_MAX_C_ECHO_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_FIND_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_GET_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_MOVE_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_C_STORE_DATA_SET_BYTES",
+        "DICOM_DIMSE_MAX_DATASET_ELEMENTS",
+        "DICOM_DIMSE_MAX_DECOMPRESSED_BYTES",
+        "DICOM_DIMSE_MAX_ELEMENT_VL_BYTES",
+        "DICOM_DIMSE_MAX_FRAMES_PER_INSTANCE",
+        "DICOM_DIMSE_MAX_GPU_TEXTURE_BYTES",
+        "DICOM_DIMSE_MAX_INPUT_BYTES",
+        "DICOM_DIMSE_MAX_IN_FLIGHT_ASSOCIATIONS",
+        "DICOM_DIMSE_MAX_IN_FLIGHT_OPERATIONS",
+        "DICOM_DIMSE_MAX_PDU_BYTES",
+        "DICOM_DIMSE_MAX_PDV_BYTES",
+        "DICOM_DIMSE_MAX_PIXELS_PER_FRAME",
+        "DICOM_DIMSE_MAX_PRESENTATION_CONTEXTS",
+        "DICOM_DIMSE_MAX_QUERY_RESPONSE_COUNT",
+        "DICOM_DIMSE_MAX_SEQUENCE_DEPTH",
+        "DICOM_DIMSE_MAX_STRING_BYTES",
+        "DICOM_DIMSE_READ_TIMEOUT_SECS",
+        "DICOM_DIMSE_ROLE_C_ECHO_ENABLED",
+        "DICOM_DIMSE_ROLE_C_FIND_ENABLED",
+        "DICOM_DIMSE_ROLE_C_GET_ENABLED",
+        "DICOM_DIMSE_ROLE_C_MOVE_ENABLED",
+        "DICOM_DIMSE_ROLE_C_STORE_ENABLED",
+        "DICOM_DIMSE_STORAGE_WAL",
+        "DICOM_DIMSE_STORAGE_WAL_MAX_BYTES",
+        "DICOM_DIMSE_STORAGE_WAL_MAX_ROTATED_FILES",
+        "DICOM_DIMSE_TELEMETRY_ENABLED",
+        "DICOM_DIMSE_TELEMETRY_SAFE_SUBSET",
+        "DICOM_DIMSE_TEST_MAX_BYTES",
+        "DICOM_DIMSE_TEST_OPTIONAL_SECONDS",
+        "DICOM_DIMSE_TLS_CA_BUNDLE_PATH",
+        "DICOM_DIMSE_TLS_CERT_PATH",
+        "DICOM_DIMSE_TLS_CERT_ROTATION_INTERVAL_SECS",
+        "DICOM_DIMSE_TLS_KEY_PATH",
+        "DICOM_DIMSE_TLS_POLICY",
+        "DICOM_DIMSE_TRANSPORT_SECURITY",
+        "DICOM_DIMSE_WRITE_TIMEOUT_SECS"
+      ],
+      "docs_file": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "docs_heading": "### `dicom-dimse-service` (env-contract)",
+      "documented_not_in_code": [],
+      "missing_in_docs": [],
+      "prefix": "DICOM_DIMSE_"
+    }
+  ],
+  "repo_root": ".",
+  "status": "FAIL"
+}

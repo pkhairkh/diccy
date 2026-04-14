@@ -1,0 +1,14 @@
+{
+  "cpu_p95_latency_ms": {
+    "default": 20000.0,
+    "qido-budget-probe": 250.0,
+    "wado-budget-probe": 400.0,
+    "stow-budget-probe": 1200.0
+  },
+  "memory_rss_growth_pct": {
+    "default": 150.0
+  },
+  "gpu_cache_bytes": {
+    "default": 268435456.0
+  }
+}

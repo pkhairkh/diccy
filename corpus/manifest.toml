@@ -1,0 +1,406 @@
+version = 1
+hash_algorithm = "sha256"
+
+[[samples]]
+id = "external-jpeg2000-lossless"
+sha256 = "4e3d51df7bc66cf367162acfff88b0889d2b2c79ea8d99d93b2d2bd165398deb"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.90"
+source_kind = "external"
+feature = "codec-j2k"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Rgba8"
+sha256 = "fd1d5a0686a0867dd1a5de2dc5c82da8f80ea4b10d463e09f565c163fd0afd9a"
+
+[[samples]]
+id = "external-jpeg2000-lossy"
+sha256 = "4e3d51df7bc66cf367162acfff88b0889d2b2c79ea8d99d93b2d2bd165398deb"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.91"
+source_kind = "external"
+feature = "codec-j2k"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Rgba8"
+sha256 = "fd1d5a0686a0867dd1a5de2dc5c82da8f80ea4b10d463e09f565c163fd0afd9a"
+
+[[samples]]
+id = "reject-promoted-sop-class-cr-when-inactive"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.1"
+transfer_syntax_uid = "1.2.840.10008.1.2.1"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-sop-class-v1"
+frame_index = 0
+format = "UnsupportedSopClass"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+
+[[samples]]
+id = "reject-promoted-sop-class-dx-when-inactive"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.1.1"
+transfer_syntax_uid = "1.2.840.10008.1.2.1"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-sop-class-v1"
+frame_index = 0
+format = "UnsupportedSopClass"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+
+[[samples]]
+id = "reject-promoted-sop-class-pet-when-inactive"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.128"
+transfer_syntax_uid = "1.2.840.10008.1.2.1"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-sop-class-v1"
+frame_index = 0
+format = "UnsupportedSopClass"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+
+[[samples]]
+id = "reject-promoted-transfer-syntax-deflated-when-inactive"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.1.99"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-transfer-syntax-v1"
+frame_index = 0
+format = "UnsupportedTransferSyntax"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+
+[[samples]]
+id = "reject-promoted-transfer-syntax-jpeg2000-when-inactive"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.90"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-transfer-syntax-v1"
+frame_index = 0
+format = "UnsupportedTransferSyntax"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+
+[[samples]]
+id = "reject-promoted-transfer-syntax-jpegls-when-inactive"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.80"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-promoted-transfer-syntax-v1"
+frame_index = 0
+format = "UnsupportedTransferSyntax"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+
+[[samples]]
+id = "reject-unsupported-sop-class-out-of-envelope"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+sop_class_uid = "1.2.3.4.5.6.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-unsupported-sop-class-v1"
+frame_index = 0
+format = "UnsupportedSopClass"
+sha256 = "a8c13a07d73a3bd664e7ae0b33875da656cc25bebb2e3438406af6eea2cc13fa"
+
+[[samples]]
+id = "reject-unsupported-transfer-syntax-big-endian"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.2"
+source_kind = "synthetic"
+feature = "conformance-rejects"
+
+[[samples.expected_outputs]]
+config_id = "reject-unsupported-transfer-syntax-v1"
+frame_index = 0
+format = "UnsupportedTransferSyntax"
+sha256 = "041cd21d969dc56f799a48d01fe38f3a9327ed170daa3140839dfef56c1b1194"
+
+[[samples]]
+id = "synthetic-cr-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.1"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-ct-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.2"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-dx-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.1.1"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-enhanced-multiframe"
+sha256 = "52f749919bcd4d5c47828049011c2e9ede7a6d53742f6841d3aeec66e5e226fb"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.2.1"
+transfer_syntax_uid = "1.2.840.10008.1.2.1"
+source_kind = "synthetic"
+feature = "pack-enhanced"
+
+[[samples.expected_outputs]]
+config_id = "enhanced-geometry-v1"
+frame_index = 0
+format = "GeometryHash"
+sha256 = "b0a425eba948e40297f41fe8db65a1055620ba5d8536bf5c3ecc09c98ad9f4fe"
+
+[[samples]]
+id = "synthetic-mono1-rescale-inversion"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "modality-rescale-mono1-v1"
+frame_index = 0
+format = "Luma8"
+sha256 = "443dfdc875e929afe665a9ea69b02a30d65193c192eef344133982cca4919efc"
+
+[[samples]]
+id = "synthetic-mono16-auto-padding"
+sha256 = "c9ba617738ec1f65dc7e12031410804ab7cf26f3e6ade6ad3a1df76d6740aefd"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "auto-window-padding16-v1"
+frame_index = 0
+format = "Luma8"
+sha256 = "bf4571113cd8c2262425e5bc5c38ace8909f4215569f49ad115f87445d596d02"
+
+[[samples]]
+id = "synthetic-mono16-rescale-calibrated"
+sha256 = "21257f07ec63b38dac0d8b9c0703d9feb2374b50891c340eaa1515c382434e98"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "modality-rescale-calibrated16-v1"
+frame_index = 0
+format = "Luma8"
+sha256 = "f8cdc3196774c52619963fcebb9fa0db684bf108e4e75ab93ae77bd49ae06262"
+
+[[samples]]
+id = "synthetic-mono8-deflated"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.1.99"
+source_kind = "synthetic"
+feature = "tier1-deflate"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-mono8-explicit-vr"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.1"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-mono8-jpegls"
+sha256 = "ed3ccc694c6efecc9764df0411fbcc7eb41aaec88242736bd6936b854e4120a5"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.80"
+source_kind = "synthetic"
+feature = "codec-jpegls"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89"
+
+[[samples]]
+id = "synthetic-mono8-jpegls-near"
+sha256 = "ed3ccc694c6efecc9764df0411fbcc7eb41aaec88242736bd6936b854e4120a5"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.81"
+source_kind = "synthetic"
+feature = "codec-jpegls"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89"
+
+[[samples]]
+id = "synthetic-mono8-rle"
+sha256 = "bd9e683ab832400a230f3b9be07f05b0c3b5c33c732bf6a55c9d75a0e82a46b7"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.5"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-mono8-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-mr-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.4"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-pet-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.128"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-rgb8-jpeg-baseline"
+sha256 = "f66af9cc43183206ca179daa9af371235de4c44057a941503b7de91e1998df60"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.50"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Rgba8"
+sha256 = "6079f650de774750f9049cf813d5ada16d783617bf41d1c406b6c3b8f4332055"
+
+[[samples]]
+id = "synthetic-sc-multiframe-byte-uncompressed"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7.2"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Luma8"
+sha256 = "81f9456ee0bb909b7fb7c887c21c21f9fc45430e881dd5d92450609410fc3936"
+
+[[samples]]
+id = "synthetic-sc-multiframe-truecolor-jpeg-baseline"
+sha256 = "f66af9cc43183206ca179daa9af371235de4c44057a941503b7de91e1998df60"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7.4"
+transfer_syntax_uid = "1.2.840.10008.1.2.4.50"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "wl-explicit"
+frame_index = 0
+format = "Rgba8"
+sha256 = "6079f650de774750f9049cf813d5ada16d783617bf41d1c406b6c3b8f4332055"
+
+[[samples]]
+id = "synthetic-sc-multiframe-word-uncompressed"
+sha256 = "c9ba617738ec1f65dc7e12031410804ab7cf26f3e6ade6ad3a1df76d6740aefd"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7.3"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "auto-window-padding16-v1"
+frame_index = 0
+format = "Luma8"
+sha256 = "bf4571113cd8c2262425e5bc5c38ace8909f4215569f49ad115f87445d596d02"
+
+[[samples]]
+id = "synthetic-ybr422-uncompressed"
+sha256 = "8447fb3dfba042522773e382b4c5256eb31def4d79fad78a94d89e164845cb02"
+sop_class_uid = "1.2.840.10008.5.1.4.1.1.7"
+transfer_syntax_uid = "1.2.840.10008.1.2"
+source_kind = "synthetic"
+
+[[samples.expected_outputs]]
+config_id = "color-ybr422-v1"
+frame_index = 0
+format = "Rgba8"
+sha256 = "8f02786fc1da72269604c936d7ad4fbbdd9bea1d8ede2264ca3053b22de567fc"

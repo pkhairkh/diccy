@@ -1,0 +1,26 @@
+[package]
+name = "dicom-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+
+[features]
+default = []
+tier1-deflate = []
+codec-jpegls = []
+codec-j2k = []
+raster-io = []
+gsps = []
+modality-ct = []
+modality-pet = []
+modality-mg = []
+modality-xr = []
+pack-enhanced = []
+pack-us = []
+pack-nm = []
+pack-xa = []
+pack-seg = []
+pack-rt = []
+pack-sr = []

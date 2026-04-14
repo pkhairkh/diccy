@@ -1,0 +1,37 @@
+{
+  "claims": [
+    {
+      "claim_id": "API-CLM-WF-001",
+      "owner": "Workflow API",
+      "source_doc": "docs/12-API-Surface-and-Crate-Boundaries.md",
+      "implementation_evidence_paths": [
+        "crates/dicom-workflow-server/src/main.rs"
+      ],
+      "test_evidence_paths": [
+        "crates/dicom-workflow-server/tests/interop_reconciliation_jobs.rs"
+      ]
+    },
+    {
+      "claim_id": "API-CLM-WF-002",
+      "owner": "Conformance Envelope",
+      "source_doc": "docs/03-DICOM-Conformance-Envelope.md",
+      "implementation_evidence_paths": [
+        "crates/dicom-workflow-server/src/main.rs"
+      ],
+      "test_evidence_paths": [
+        "crates/dicom-workflow-server/tests/hi_workflow_runtime_contract.rs"
+      ]
+    },
+    {
+      "claim_id": "API-CLM-WEB-003",
+      "owner": "Service Runtime",
+      "source_doc": "docs/54-Enterprise-Integration-Readiness-Checklist.md",
+      "implementation_evidence_paths": [
+        "crates/dicom-web-server/src/main.rs"
+      ],
+      "test_evidence_paths": [
+        "crates/dicom-web-server/tests/readiness_contract.rs"
+      ]
+    }
+  ]
+}

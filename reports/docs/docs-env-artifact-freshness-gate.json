@@ -1,0 +1,11 @@
+{
+  "checked_artifacts": [
+    "reports/docs/runtime-env-contract-check.json",
+    "reports/docs/drift-report.json",
+    "reports/docs/docs-env-review-gate.json"
+  ],
+  "docs_env_review_status": "PASS",
+  "runtime_env_contract_status": "PASS",
+  "status": "PASS",
+  "violations": []
+}
