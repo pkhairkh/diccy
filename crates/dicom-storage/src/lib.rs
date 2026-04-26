@@ -1098,7 +1098,7 @@ mod tests {
         let err = storage
             .register_storage_commitment_request(request)
             .expect_err("duplicate must fail");
-        assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
+        assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
     }
 
     #[test]
@@ -1197,7 +1197,7 @@ mod tests {
         let err = storage
             .queue_storage_commitment_event_report("1.2.840.10008.1.20.45", 2)
             .expect_err("expected queue limit");
-        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]

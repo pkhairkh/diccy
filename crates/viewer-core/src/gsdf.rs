@@ -650,4 +650,85 @@ mod tests {
             "perfect display conformance error should be small, got {max_error}"
         );
     }
+
+    // =======================================================================
+    // Sprint 3 Extended Tests: GSDF Calibration
+    // =======================================================================
+
+    #[test]
+    fn gsdf_jnd_to_luminance_and_back_roundtrip() {
+        // For a range of JND values, verify luminance→JND→luminance roundtrip
+        for jnd in [1.0, 50.0, 256.0, 512.0, 800.0, 1023.0] {
+            let lum = jnd_to_luminance(jnd);
+            let jnd_back = luminance_to_jnd(lum);
+            assert!(
+                (jnd_back - jnd).abs() < 2.0,
+                "roundtrip JND={jnd}: lum={lum}, jnd_back={jnd_back}, diff too large"
+            );
+        }
+    }
+
+    #[test]
+    fn gsdf_lut_10bit_depth() {
+        let config = DisplayCalibrationConfig {
+            luminance_min: 0.5,
+            luminance_max: 400.0,
+            ambient_light: 0.0,
+            bit_depth: 10,
+        };
+        let lut = generate_gsdf_lut(&config).expect("10-bit LUT");
+        // 10-bit produces (2^10 - 1) = 1023 entries (one per P-value step)
+        assert!(lut.luminance_values.len() >= 1023, "10-bit should produce ~1024 entries, got {}", lut.luminance_values.len());
+        // Should still be monotonic
+        let mut prev = 0.0f64;
+        for (i, &l) in lut.luminance_values.iter().enumerate() {
+            assert!(l > prev, "10-bit LUT not monotonic at index {i}");
+            prev = l;
+        }
+    }
+
+    #[test]
+    fn gsdf_lut_high_dynamic_range() {
+        let config = DisplayCalibrationConfig {
+            luminance_min: 0.01,
+            luminance_max: 4000.0,
+            ambient_light: 0.0,
+            bit_depth: 8,
+        };
+        let lut = generate_gsdf_lut(&config).expect("HDR LUT");
+        assert!(lut.luminance_values[0] > 0.0);
+        // With high luminance max, the last entry should be very high
+        let last = lut.luminance_values[lut.luminance_values.len() - 1];
+        assert!(last > 100.0, "HDR max should be high, got {last}");
+    }
+
+    #[test]
+    fn calibration_table_roundtrip() {
+        let config = DisplayCalibrationConfig::default();
+        let table = generate_calibration_table(&config).expect("table");
+        assert_eq!(table.len(), 256);
+        // Apply calibration to each pvalue and verify the result is within valid range
+        for i in 0u16..256 {
+            let result = apply_calibration(&table, i).expect("apply");
+            // Output should be a valid u16
+            assert!(result < 256, "calibrated value should be in 8-bit range");
+        }
+    }
+
+    #[test]
+    fn conformance_with_poor_display() {
+        let config = DisplayCalibrationConfig {
+            luminance_min: 0.5,
+            luminance_max: 400.0,
+            ambient_light: 0.0,
+            bit_depth: 8,
+        };
+        // Create a deliberately poor measured luminance (linear instead of GSDF)
+        let measured: Vec<f64> = (0..256)
+            .map(|i| 0.5 + (400.0 - 0.5) * (i as f64 / 255.0))
+            .collect();
+        let max_error = compute_conformance(&config, &measured).expect("conformance");
+        // A linear display should have worse conformance than a perfect one
+        assert!(max_error > 0.0, "poor display should have non-zero conformance error");
+    }
 }

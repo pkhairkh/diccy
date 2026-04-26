@@ -7,9 +7,9 @@
 //! HL7 DICOM-SR on FHIR Implementation Guide.
 
 use dicom_audit::{AuditEvent, AuditEventKind, AuditField, AuditValue};
-use dicom_core::{Dataset, Element, Error, ErrorKind, Limits, Result, Tag, Value};
+use dicom_core::{Dataset, Error, ErrorKind, Result, Tag};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+
 use std::fmt;
 use std::sync::Arc;
 
@@ -680,7 +680,7 @@ fn missing_tag_error(tag: Tag) -> Box<Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dicom_core::Vr;
+    use dicom_core::{Element, Limits, Value, Vr};
 
     fn limits() -> Limits {
         Limits::default()

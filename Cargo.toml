@@ -40,4 +40,6 @@ members = [
   "crates/pack-xa",
   "crates/dicom-fhir",
   "crates/dicom-hl7",
+  "crates/dicom-registration",
+  "crates/dicom-inference",
 ]

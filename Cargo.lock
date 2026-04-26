@@ -396,6 +396,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-inference"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dicom-io"
 version = "0.1.0"
 dependencies = [
@@ -438,6 +448,14 @@ dependencies = [
 name = "dicom-query"
 version = "0.1.0"
 dependencies = [
+ "dicom-core",
+]
+
+[[package]]
+name = "dicom-registration"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
  "dicom-core",
 ]
 

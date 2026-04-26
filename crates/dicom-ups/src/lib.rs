@@ -299,7 +299,7 @@ mod tests {
             .create(uid.clone(), "MR Brain".to_string())
             .expect("create");
         let err = adapter.complete(&uid).expect_err("invalid transition");
-        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
     }
 
     #[test]

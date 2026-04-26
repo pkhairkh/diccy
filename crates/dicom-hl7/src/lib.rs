@@ -9,16 +9,19 @@
 use dicom_audit::{AuditEvent, AuditEventKind, AuditField, AuditValue};
 use dicom_core::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
 
 // --- HL7 v2 Segment Field Separator ---
 
 const HL7_FIELD_SEP: char = '|';
+#[allow(dead_code)]
 const HL7_COMPONENT_SEP: char = '^';
+#[allow(dead_code)]
 const HL7_REPEAT_SEP: char = '~';
+#[allow(dead_code)]
 const HL7_ESCAPE_CHAR: char = '\\';
+#[allow(dead_code)]
 const HL7_SUBCOMPONENT_SEP: char = '&';
 
 // --- HL7 v2 Message Types ---

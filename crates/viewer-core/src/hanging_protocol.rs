@@ -1094,4 +1094,251 @@ mod tests {
         // CT chest/abdomen has more criteria so should score higher
         assert_eq!(result.protocol_id, "builtin.ct_chest_abdomen");
     }
+
+    // =======================================================================
+    // Sprint 3 Extended Tests: Hanging Protocol Engine
+    // =======================================================================
+
+    #[test]
+    fn protocol_with_multiple_image_sets() {
+        let mut engine = HangingProtocolEngine::new();
+        let protocol = HangingProtocol {
+            protocol_id: "multi_image_set".to_string(),
+            name: "Multi Image Set".to_string(),
+            priority: 10,
+            match_criteria: vec![MatchCriterion::Modality { code: "MG".to_string() }],
+            image_sets: vec![
+                ImageSetDefinition {
+                    set_id: "current_cc".to_string(),
+                    criteria: vec![
+                        MatchCriterion::Modality { code: "MG".to_string() },
+                        MatchCriterion::Laterality { code: "L".to_string() },
+                    ],
+                    time_perspective: TimePerspective::Current,
+                },
+                ImageSetDefinition {
+                    set_id: "prior_cc".to_string(),
+                    criteria: vec![
+                        MatchCriterion::Modality { code: "MG".to_string() },
+                        MatchCriterion::Laterality { code: "L".to_string() },
+                    ],
+                    time_perspective: TimePerspective::Prior,
+                },
+            ],
+            display_sets: vec![DisplaySetAssignment {
+                set_id: "ds1".to_string(),
+                image_set_id: "current_cc".to_string(),
+                row: 0,
+                column: 0,
+                window_center: None,
+                window_width: None,
+                rotation_degrees: None,
+                flip_horizontal: false,
+                flip_vertical: false,
+            }],
+            rows: 1,
+            columns: 1,
+            is_fallback: false,
+        };
+        engine.register(protocol).expect("register");
+        let context = StudyMatchContext {
+            modalities: vec!["MG".to_string()],
+            body_part: None,
+            laterality: Some("L".to_string()),
+            study_description: None,
+            sop_classes: vec![],
+            series_count: 1,
+            prior_count: 1,
+        };
+        let result = engine.match_protocol(&context).expect("match");
+        assert_eq!(result.protocol_id, "multi_image_set");
+    }
+
+    #[test]
+    fn protocol_unregister_removes_from_matching() {
+        let mut engine = HangingProtocolEngine::new();
+        let protocol = HangingProtocol {
+            protocol_id: "temp_protocol".to_string(),
+            name: "Temp".to_string(),
+            priority: 10,
+            match_criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+            image_sets: vec![ImageSetDefinition {
+                set_id: "is1".to_string(),
+                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                time_perspective: TimePerspective::Current,
+            }],
+            display_sets: vec![DisplaySetAssignment {
+                set_id: "ds1".to_string(),
+                image_set_id: "is1".to_string(),
+                row: 0,
+                column: 0,
+                window_center: None,
+                window_width: None,
+                rotation_degrees: None,
+                flip_horizontal: false,
+                flip_vertical: false,
+            }],
+            rows: 1,
+            columns: 1,
+            is_fallback: false,
+        };
+        engine.register(protocol).expect("register");
+        engine.unregister("temp_protocol");
+        let context = StudyMatchContext {
+            modalities: vec!["CT".to_string()],
+            body_part: None,
+            laterality: None,
+            study_description: None,
+            sop_classes: vec![],
+            series_count: 1,
+            prior_count: 0,
+        };
+        assert!(engine.match_protocol(&context).is_err());
+    }
+
+    #[test]
+    fn display_set_with_window_level_presets() {
+        let mut engine = HangingProtocolEngine::new();
+        let protocol = HangingProtocol {
+            protocol_id: "wl_preset".to_string(),
+            name: "W/L Preset".to_string(),
+            priority: 10,
+            match_criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+            image_sets: vec![ImageSetDefinition {
+                set_id: "ct_lung".to_string(),
+                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                time_perspective: TimePerspective::Current,
+            }],
+            display_sets: vec![
+                DisplaySetAssignment {
+                    set_id: "lung_wnd".to_string(),
+                    image_set_id: "ct_lung".to_string(),
+                    row: 0,
+                    column: 0,
+                    window_center: Some(-600.0),
+                    window_width: Some(1500.0),
+                    rotation_degrees: None,
+                    flip_horizontal: false,
+                    flip_vertical: false,
+                },
+                DisplaySetAssignment {
+                    set_id: "bone_wnd".to_string(),
+                    image_set_id: "ct_lung".to_string(),
+                    row: 0,
+                    column: 1,
+                    window_center: Some(300.0),
+                    window_width: Some(2000.0),
+                    rotation_degrees: None,
+                    flip_horizontal: false,
+                    flip_vertical: false,
+                },
+            ],
+            rows: 1,
+            columns: 2,
+            is_fallback: false,
+        };
+        engine.register(protocol).expect("register");
+        let context = StudyMatchContext {
+            modalities: vec!["CT".to_string()],
+            body_part: None,
+            laterality: None,
+            study_description: None,
+            sop_classes: vec![],
+            series_count: 1,
+            prior_count: 0,
+        };
+        let result = engine.match_protocol(&context).expect("match");
+        assert_eq!(result.display_sets.len(), 2);
+        assert_eq!(result.display_sets[0].window_center, Some(-600.0));
+        assert_eq!(result.display_sets[1].window_center, Some(300.0));
+    }
+
+    #[test]
+    fn match_with_no_body_part_in_context() {
+        let mut engine = HangingProtocolEngine::new();
+        let protocol = HangingProtocol {
+            protocol_id: "body_part_req".to_string(),
+            name: "Body Part Required".to_string(),
+            priority: 10,
+            match_criteria: vec![
+                MatchCriterion::Modality { code: "CT".to_string() },
+                MatchCriterion::BodyPart { code: "CHEST".to_string() },
+            ],
+            image_sets: vec![ImageSetDefinition {
+                set_id: "is1".to_string(),
+                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                time_perspective: TimePerspective::Current,
+            }],
+            display_sets: vec![DisplaySetAssignment {
+                set_id: "ds1".to_string(),
+                image_set_id: "is1".to_string(),
+                row: 0,
+                column: 0,
+                window_center: None,
+                window_width: None,
+                rotation_degrees: None,
+                flip_horizontal: false,
+                flip_vertical: false,
+            }],
+            rows: 1,
+            columns: 1,
+            is_fallback: false,
+        };
+        engine.register(protocol).expect("register");
+        // Context without body part should not match the body part criterion
+        let context = StudyMatchContext {
+            modalities: vec!["CT".to_string()],
+            body_part: None,
+            laterality: None,
+            study_description: None,
+            sop_classes: vec![],
+            series_count: 1,
+            prior_count: 0,
+        };
+        // Should not match because body part criterion fails when missing
+        assert!(engine.match_protocol(&context).is_err());
+    }
+
+    #[test]
+    fn study_description_pattern_partial_match() {
+        let mut engine = HangingProtocolEngine::new();
+        let protocol = HangingProtocol {
+            protocol_id: "desc_match".to_string(),
+            name: "Description Match".to_string(),
+            priority: 10,
+            match_criteria: vec![MatchCriterion::StudyDescription { pattern: "BRAIN".to_string() }],
+            image_sets: vec![ImageSetDefinition {
+                set_id: "is1".to_string(),
+                criteria: vec![MatchCriterion::StudyDescription { pattern: "BRAIN".to_string() }],
+                time_perspective: TimePerspective::Current,
+            }],
+            display_sets: vec![DisplaySetAssignment {
+                set_id: "ds1".to_string(),
+                image_set_id: "is1".to_string(),
+                row: 0,
+                column: 0,
+                window_center: None,
+                window_width: None,
+                rotation_degrees: None,
+                flip_horizontal: false,
+                flip_vertical: false,
+            }],
+            rows: 1,
+            columns: 1,
+            is_fallback: false,
+        };
+        engine.register(protocol).expect("register");
+        // "BRAIN" is a substring of "MRI BRAIN WITH CONTRAST"
+        let context = StudyMatchContext {
+            modalities: vec!["MR".to_string()],
+            body_part: None,
+            laterality: None,
+            study_description: Some("MRI BRAIN WITH CONTRAST".to_string()),
+            sop_classes: vec![],
+            series_count: 1,
+            prior_count: 0,
+        };
+        let result = engine.match_protocol(&context).expect("match");
+        assert_eq!(result.protocol_id, "desc_match");
+    }
 }
