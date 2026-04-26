@@ -68,11 +68,11 @@ fn metadata_view_is_controlled_and_claim_safe() {
 
     view.intended_purpose = "Diagnostic workstation - FDA cleared".to_string();
     let err = validate_system_metadata_view(&view, &policy).expect_err("claim text must fail");
-    assert_eq!(err.code(), "DVF.DICOM.DECODE_ERROR");
+    assert_eq!(err.code(), "DVF.AUTH.POLICY");
 
     let claim_err =
         validate_release_text_input("ce marked diagnostic mode").expect_err("claim must fail");
-    assert_eq!(claim_err.code(), "DVF.DICOM.DECODE_ERROR");
+    assert_eq!(claim_err.code(), "DVF.AUTH.POLICY");
 }
 
 #[test]
@@ -313,11 +313,7 @@ fn privacy_copy_export_and_suspicious_session_controls_are_enforced() {
     })
     .expect("removable media authorization");
 
-    let _policy = SessionPolicy {
-        inactivity_timeout_secs: 300,
-        warning_window_secs: 60,
-        max_failures: 3,
-    };
+    let _policy = SessionPolicy::new(300, 60, 3).unwrap();
     let mut session = SessionStatus::new(1_700_006_000);
     let state = force_reauthentication_for_suspicious_session(&mut session);
     assert_eq!(state, SessionState::Locked);

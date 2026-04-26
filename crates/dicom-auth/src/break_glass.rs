@@ -78,17 +78,19 @@ pub fn activate_break_glass_access(
         || request.scope.trim().is_empty()
         || request.approved_by.trim().is_empty()
     {
-        return Err(hi_decode_error(
+        return Err(auth_denied(
+            "break_glass",
             "break-glass activation requires principal, reason, scope, and approver",
         ));
     }
     if request.expires_epoch_secs <= request.now_epoch_secs {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "break_glass_expiry",
             "break-glass expiry must be after activation time",
         ));
     }
     if request.expires_epoch_secs - request.now_epoch_secs > max_duration_secs.max(1) {
-        return Err(hi_decode_error("break-glass duration exceeds policy bound"));
+        return Err(policy_violation("break_glass_duration", "break-glass duration exceeds policy bound"));
     }
     Ok(BreakGlassGrant {
         principal: request.principal.clone(),
@@ -140,18 +142,21 @@ pub fn activate_secure_default_override(
         || request.approved_by.trim().is_empty()
         || request.reason_code.trim().is_empty()
     {
-        return Err(hi_decode_error(
+        return Err(auth_denied(
+            "secure_default_override",
             "secure-default override requires requestor, approver, and reason code",
         ));
     }
     if request.expires_epoch_secs <= request.now_epoch_secs {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "secure_default_override_expiry",
             "secure-default override expiry must be after activation time",
         ));
     }
     let duration = request.expires_epoch_secs - request.now_epoch_secs;
     if duration > max_duration_secs.max(1) {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "secure_default_override_duration",
             "secure-default override duration exceeds policy bound",
         ));
     }
@@ -164,13 +169,24 @@ pub fn activate_secure_default_override(
     })
 }
 
-fn hi_decode_error(detail: impl Into<String>) -> Box<Error> {
+fn policy_violation(policy: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-auth".to_string(),
+        ErrorKind::PolicyViolation {
+            policy: policy.into(),
             detail: detail.into(),
         },
-        "human-interface policy error",
+        "policy violation",
+    )
+    .into()
+}
+
+fn auth_denied(resource: impl Into<String>, reason: impl Into<String>) -> Box<Error> {
+    Error::from_kind(
+        ErrorKind::AuthorizationDenied {
+            resource: resource.into(),
+            reason: reason.into(),
+        },
+        "authorization denied",
     )
     .into()
 }

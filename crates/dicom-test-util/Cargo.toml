@@ -1,9 +1,10 @@
 [package]
-name = "dicom-net"
+name = "dicom-test-util"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
-dicom-util = { path = "../dicom-util" }
+
+[dev-dependencies]

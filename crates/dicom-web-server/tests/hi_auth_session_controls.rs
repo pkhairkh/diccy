@@ -17,11 +17,7 @@ fn service(policy: WebPolicy, auth: WebAuthConfig) -> DicomWebService {
 #[test]
 fn session_timeout_and_lock_transitions_are_deterministic() {
     // REQ-HI-119, REQ-HI-120, REQ-HI-127
-    let policy = SessionPolicy {
-        inactivity_timeout_secs: 120,
-        warning_window_secs: 30,
-        max_failures: 2,
-    };
+    let policy = SessionPolicy::new(120, 30, 2).unwrap();
     let mut session = SessionStatus::new(1_000);
 
     assert_eq!(session.state_at(1_089, policy), SessionState::Active);

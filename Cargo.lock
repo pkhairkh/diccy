@@ -335,6 +335,7 @@ name = "dicom-auth"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "dicom-util",
 ]
 
 [[package]]
@@ -367,6 +368,7 @@ version = "0.1.0"
 dependencies = [
  "dicom-core",
  "dicom-net",
+ "dicom-util",
 ]
 
 [[package]]
@@ -382,6 +384,7 @@ dependencies = [
  "dicom-net",
  "dicom-query",
  "dicom-storage",
+ "dicom-util",
 ]
 
 [[package]]
@@ -450,6 +453,7 @@ name = "dicom-io"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "dicom-util",
  "flate2",
 ]
 
@@ -476,6 +480,7 @@ name = "dicom-net"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "dicom-util",
 ]
 
 [[package]]
@@ -524,6 +529,8 @@ dependencies = [
  "dicom-core",
  "dicom-index",
  "dicom-io",
+ "dicom-util",
+ "secrecy",
  "serde",
  "sha2",
 ]
@@ -539,7 +546,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-test-util"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+]
+
+[[package]]
 name = "dicom-ups"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+]
+
+[[package]]
+name = "dicom-util"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
@@ -1197,6 +1218,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
+name = "pack-calibration-shared"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+]
+
+[[package]]
 name = "pack-enhanced"
 version = "0.1.0"
 dependencies = [
@@ -1467,6 +1495,15 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "secrecy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+dependencies = [
+ "zeroize",
+]
 
 [[package]]
 name = "serde"
@@ -2143,6 +2180,12 @@ dependencies = [
  "quote",
  "syn 2.0.114",
 ]
+
+[[package]]
+name = "zeroize"
+version = "1.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
 
 [[package]]
 name = "zmij"

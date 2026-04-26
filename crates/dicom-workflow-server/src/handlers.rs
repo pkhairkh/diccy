@@ -33,10 +33,10 @@ pub fn store_append_workflow_audit(
         anomaly,
     };
     let _ = append_workflow_audit_event(
-        &state.audit_path,
-        state.audit_max_bytes,
-        state.audit_max_rotated_files,
-        state.audit_export_limit,
+        &state.health.read().audit_path,
+        state.health.read().audit_max_bytes,
+        state.health.read().audit_max_rotated_files,
+        state.health.read().audit_export_limit,
         &event,
     );
 }
@@ -356,9 +356,9 @@ pub fn handle_workflow_tenant_quotas(
                 DEFAULT_TENANT_TASK_QUOTA,
                 DEFAULT_TENANT_SUBSCRIPTION_QUOTA,
                 tenants.join(","),
-                store.query_rate_limit,
-                store.mutation_rate_limit,
-                store.upload_cap_bytes,
+                store.health.read().query_rate_limit,
+                store.health.read().mutation_rate_limit,
+                store.health.read().upload_cap_bytes,
                 rate_rows.join(","),
             ),
         ));
@@ -377,9 +377,9 @@ pub fn handle_workflow_tenant_quotas(
             effective.task_quota,
             effective.subscription_quota,
             render_tenant_quota_override_json(override_limits),
-            store.query_rate_limit,
-            store.mutation_rate_limit,
-            store.upload_cap_bytes,
+            store.health.read().query_rate_limit,
+            store.health.read().mutation_rate_limit,
+            store.health.read().upload_cap_bytes,
             effective.query_rate_limit,
             effective.mutation_rate_limit,
             effective.upload_cap_bytes,
@@ -429,9 +429,9 @@ pub fn handle_workflow_tenant_quota_snapshot(
             DEFAULT_TENANT_TASK_QUOTA,
             DEFAULT_TENANT_SUBSCRIPTION_QUOTA,
             rows.join(","),
-            store.query_rate_limit,
-            store.mutation_rate_limit,
-            store.upload_cap_bytes,
+            store.health.read().query_rate_limit,
+            store.health.read().mutation_rate_limit,
+            store.health.read().upload_cap_bytes,
             rate_rows.join(","),
         ),
     ))
@@ -459,10 +459,10 @@ pub fn handle_workflow_metrics(
         let store = state
             .lock()
             .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-        let anomaly_alert_threshold = store.anomaly_alert_threshold;
+        let anomaly_alert_threshold = store.health.read().anomaly_alert_threshold;
         if tenant_filter == "*" || tenant_filter == "all" {
             let tenants: Vec<_> = store
-                .metrics
+                .tenant.lock().metrics
                 .iter()
                 .map(|(tenant, counters)| {
                     format!(
@@ -483,7 +483,8 @@ pub fn handle_workflow_metrics(
                 anomaly_alert_threshold,
             )
         } else {
-            let counters = store.metrics.get(&tenant_filter);
+            let tenant_data = store.tenant.lock();
+            let counters = tenant_data.metrics.get(&tenant_filter);
             let counters = counters.cloned().unwrap_or_default();
             format!(
                 "{{\"tenant\":\"{}\",\"read_operations\":{},\"query_operations\":{},\"mutation_operations\":{},\"anomaly_operations\":{},\"denied_operations\":{},\"anomaly_alert_threshold\":{},\"alerts\":{}}}",
@@ -548,13 +549,13 @@ pub fn handle_workflow_audit(
             let store = state
                 .lock()
                 .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-            store.audit_export_limit
+            let x = store.health.read().audit_export_limit; x
         });
     let path = {
         let store = state
             .lock()
             .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-        store.audit_path.clone()
+        let x = store.health.read().audit_path.clone(); x
     };
     let all_lines: Vec<String> = fs::read_to_string(&path)
         .unwrap_or_default()
@@ -1146,9 +1147,9 @@ pub fn handle_task_list(
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let mut tasks: Vec<ProcedureTask> = store
-        .tasks
+        .worker.lock().tasks
         .iter()
-        .filter(|(task_id, _)| actor_has_resource_access(&actor, &store.tenant_tasks, task_id))
+        .filter(|(task_id, _)| actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, task_id))
         .map(|(_, task)| task.clone())
         .collect();
     drop(store);
@@ -1203,10 +1204,11 @@ pub fn handle_task_get(
     let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    let Some(task) = store.tasks.get(task_id) else {
+    let worker = store.worker.lock();
+    let Some(task) = worker.tasks.get(task_id) else {
         return Err(task_not_found_error());
     };
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, task_id) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, task_id) {
         return Err(auth_denied_error("task belongs to another tenant"));
     }
     Ok(WorkflowResponse::Json(200, render_task_json(task)))
@@ -1222,10 +1224,11 @@ pub fn handle_task_control(
     let mut store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, task_id) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, task_id) {
         return Err(auth_denied_error("task belongs to another tenant"));
     }
-    let Some(existing) = store.tasks.get(task_id) else {
+    let worker = store.worker.lock();
+    let Some(existing) = worker.tasks.get(task_id) else {
         return Err(task_not_found_error());
     };
     let target_status = match action {
@@ -1242,6 +1245,7 @@ pub fn handle_task_control(
         return Err(task_status_invalid_transition_error());
     }
     let previous_status = existing.status;
+    drop(worker);
     if previous_status == target_status {
         return Ok(WorkflowResponse::Json(
             200,
@@ -1259,7 +1263,7 @@ pub fn handle_task_control(
         .get("x-task-worker")
         .or_else(|| request.headers.get("x-sr-principal"))
         .map(ToString::to_string);
-    if let Some(task) = store.tasks.get_mut(task_id) {
+    if let Some(task) = store.worker.lock().tasks.get_mut(task_id) {
         task.status = target_status;
         if let Some(worker) = worker {
             task.worker = Some(worker);
@@ -1423,8 +1427,8 @@ pub fn handle_workitem_list(
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let mut items: Vec<String> = Vec::new();
-    for item in store.hl7.ups.store().workitems() {
-        if !actor_has_resource_access(&actor, &store.tenant_tasks, &item.ups_instance_uid) {
+    for item in store.hl7.lock().ups.store().workitems() {
+        if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, &item.ups_instance_uid) {
             continue;
         }
         if let Some(filter) = &state_filter {
@@ -1464,10 +1468,10 @@ pub fn handle_workitem_create(
         .unwrap_or_default();
     let cache_key = format!("ups-create:{ups_instance_uid}:{idempotency_key}");
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if let Some(entry) = store.task_idempotency.get(&cache_key) {
+    if let Some(entry) = store.worker.lock().task_idempotency.get(&cache_key) {
         if entry.signature == request_signature {
             return Ok(WorkflowResponse::Json(200, entry.response.clone()));
         }
@@ -1476,26 +1480,28 @@ pub fn handle_workitem_create(
 
     let created = store
         .hl7
+        .lock()
         .ups
         .create(ups_instance_uid.clone(), procedure_step_label)?;
-    route_id_to_tenant_index(&mut store.tenant_tasks, &actor.tenant, &ups_instance_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_tasks, &actor.tenant, &ups_instance_uid);
     if let Some(correlation_id) = correlation_id {
         let key = tenant_scoped_key(&actor.tenant, &correlation_id);
         let _ = store
             .hl7
+            .lock()
             .hl7_ups_correlation
             .insert(key, ups_instance_uid.clone());
     }
 
     let body = render_ups_workitem_json(&created);
-    let _ = store.task_idempotency.insert(
+    let _ = store.worker.lock().task_idempotency.insert(
         cache_key,
         CachedMppsRequest {
             signature: request_signature,
             response: body.clone(),
         },
     );
-    task_idempotency_limit(&mut store.task_idempotency);
+    task_idempotency_limit(&mut store.worker.lock().task_idempotency);
     Ok(WorkflowResponse::Json(200, body))
 }
 
@@ -1508,10 +1514,10 @@ pub fn handle_workitem_get(
     let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, workitem_uid) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, workitem_uid) {
         return Err(auth_denied_error("ups workitem belongs to another tenant"));
     }
-    let item = store.hl7.ups.get(workitem_uid)?;
+    let item = store.hl7.lock().ups.get(workitem_uid)?;
     Ok(WorkflowResponse::Json(200, render_ups_workitem_json(&item)))
 }
 
@@ -1525,13 +1531,13 @@ pub fn handle_workitem_update(
     let params = parse_form_map(&request.body, limits)?;
     let new_label = required_param(&params, "procedure_step_label")?.to_string();
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, workitem_uid) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, workitem_uid) {
         return Err(auth_denied_error("ups workitem belongs to another tenant"));
     }
-    let item = store.hl7.ups.update(workitem_uid, new_label)?;
+    let item = store.hl7.lock().ups.update(workitem_uid, new_label)?;
     Ok(WorkflowResponse::Json(200, render_ups_workitem_json(&item)))
 }
 
@@ -1544,10 +1550,10 @@ pub fn handle_workitem_state_get(
     let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, workitem_uid) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, workitem_uid) {
         return Err(auth_denied_error("ups workitem belongs to another tenant"));
     }
-    let item = store.hl7.ups.get(workitem_uid)?;
+    let item = store.hl7.lock().ups.get(workitem_uid)?;
     Ok(WorkflowResponse::Json(
         200,
         format!(
@@ -1570,17 +1576,17 @@ pub fn handle_workitem_state_update(
     let action = required_param(&params, "action")?;
     let transition = parse_ups_transition(action)?;
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, workitem_uid) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, workitem_uid) {
         return Err(auth_denied_error("ups workitem belongs to another tenant"));
     }
     let item = match transition {
-        UpsTransition::Start => store.hl7.ups.start(workitem_uid)?,
-        UpsTransition::Cancel => store.hl7.ups.cancel(workitem_uid)?,
-        UpsTransition::Complete => store.hl7.ups.complete(workitem_uid)?,
-        UpsTransition::Fail => store.hl7.ups.fail(workitem_uid)?,
+        UpsTransition::Start => store.hl7.lock().ups.start(workitem_uid)?,
+        UpsTransition::Cancel => store.hl7.lock().ups.cancel(workitem_uid)?,
+        UpsTransition::Complete => store.hl7.lock().ups.complete(workitem_uid)?,
+        UpsTransition::Fail => store.hl7.lock().ups.fail(workitem_uid)?,
     };
     Ok(WorkflowResponse::Json(200, render_ups_workitem_json(&item)))
 }
@@ -1591,13 +1597,13 @@ pub fn handle_workitem_cancel(
     state: &Arc<Mutex<RuntimeState>>,
 ) -> Result<WorkflowResponse, Box<Error>> {
     let actor = workflow_actor_context(&request.headers);
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(&actor, &store.tenant_tasks, workitem_uid) {
+    if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, workitem_uid) {
         return Err(auth_denied_error("ups workitem belongs to another tenant"));
     }
-    let item = store.hl7.ups.cancel(workitem_uid)?;
+    let item = store.hl7.lock().ups.cancel(workitem_uid)?;
     Ok(WorkflowResponse::Json(200, render_ups_workitem_json(&item)))
 }
 
@@ -1611,7 +1617,7 @@ pub fn handle_ian_list(
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let mut payload = String::from("[");
     let mut first = true;
-    for (key, record) in &store.hl7.ian_events {
+    for (key, record) in &store.hl7.lock().ian_events {
         let Some(event_id) = tenant_scoped_suffix(key, &actor.tenant) else {
             continue;
         };
@@ -1642,17 +1648,18 @@ pub fn handle_ian_ingest(
     let sop_instance_uid = normalize_ups_uid(required_param(&params, "sop_instance_uid")?)?;
     let outcome = parse_completion_outcome(required_param(&params, "outcome")?)?;
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let inserted =
         store
             .hl7
+            .lock()
             .completion
             .ingest_ian(event_id.clone(), sop_instance_uid.clone(), outcome);
     if inserted {
         let key = tenant_scoped_key(&actor.tenant, &event_id);
-        let _ = store.hl7.ian_events.insert(
+        let _ = store.hl7.lock().ian_events.insert(
             key,
             IanEventRecord {
                 event_id,
@@ -1682,7 +1689,7 @@ pub fn handle_storage_commitment_status_list(
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let mut payload = String::from("[");
     let mut first = true;
-    for (key, record) in &store.hl7.storage_commitment_status {
+    for (key, record) in &store.hl7.lock().storage_commitment_status {
         let Some(transaction_uid) = tenant_scoped_suffix(key, &actor.tenant) else {
             continue;
         };
@@ -1712,16 +1719,20 @@ pub fn handle_storage_commitment_status_get(
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let key = tenant_scoped_key(&actor.tenant, transaction_uid);
-    let Some(record) = store.hl7.storage_commitment_status.get(&key) else {
+    let hl7 = store.hl7.lock();
+    let Some(record) = hl7.storage_commitment_status.get(&key) else {
         return Err(decode_error("storage commitment status not found"));
     };
+    let outcome = record.outcome;
+    let updated_at_ms = record.updated_at_ms;
+    drop(hl7);
     Ok(WorkflowResponse::Json(
         200,
         format!(
             "{{\"transaction_uid\":\"{}\",\"outcome\":\"{}\",\"updated_at_ms\":{}}}",
             escape_json(transaction_uid),
-            completion_outcome_label(record.outcome),
-            record.updated_at_ms,
+            completion_outcome_label(outcome),
+            updated_at_ms,
         ),
     ))
 }
@@ -1736,17 +1747,18 @@ pub fn handle_storage_commitment_status_upsert(
     let transaction_uid = normalize_ups_uid(required_param(&params, "transaction_uid")?)?;
     let outcome = parse_completion_outcome(required_param(&params, "outcome")?)?;
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let event_id = format!("stgc:{}", transaction_uid);
     let _ =
         store
             .hl7
+            .lock()
             .completion
             .ingest_storage_commitment(event_id, transaction_uid.clone(), outcome);
     let key = tenant_scoped_key(&actor.tenant, &transaction_uid);
-    let _ = store.hl7.storage_commitment_status.insert(
+    let _ = store.hl7.lock().storage_commitment_status.insert(
         key,
         StorageCommitmentStatusRecord {
             transaction_uid: transaction_uid.clone(),
@@ -1774,7 +1786,7 @@ pub fn handle_hl7_ups_correlation_list(
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let mut payload = String::from("[");
     let mut first = true;
-    for (key, ups_uid) in &store.hl7.hl7_ups_correlation {
+    for (key, ups_uid) in &store.hl7.lock().hl7_ups_correlation {
         let Some(correlation_id) = tenant_scoped_suffix(key, &actor.tenant) else {
             continue;
         };
@@ -1802,12 +1814,13 @@ pub fn handle_hl7_ups_correlation_upsert(
     let correlation_id = required_param(&params, "correlation_id")?.to_string();
     let ups_instance_uid = normalize_ups_uid(required_param(&params, "ups_instance_uid")?)?;
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let key = tenant_scoped_key(&actor.tenant, &correlation_id);
     let _ = store
         .hl7
+        .lock()
         .hl7_ups_correlation
         .insert(key, ups_instance_uid.clone());
     Ok(WorkflowResponse::Json(
@@ -1849,11 +1862,11 @@ pub fn handle_task_create(
         Some(format!("task-create:{idempotency_key}"))
     };
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     if let Some(key) = &cache_key {
-        if let Some(entry) = store.task_idempotency.get(key) {
+        if let Some(entry) = store.worker.lock().task_idempotency.get(key) {
             if entry.signature == request_signature {
                 return Ok(WorkflowResponse::Json(200, entry.response.clone()));
             }
@@ -1861,17 +1874,17 @@ pub fn handle_task_create(
         }
     }
 
-    let task_id = provided_task_id.unwrap_or_else(|| task_next_id(&mut store.task_id_sequence));
+    let task_id = provided_task_id.unwrap_or_else(|| task_next_id(&mut store.worker.lock().task_id_sequence));
     let now = now_epoch_millis();
     let policy = tenant_policy(&store, &actor.tenant);
 
-    if let Some(_task) = store.tasks.get(&task_id) {
-        if !actor_has_resource_access(&actor, &store.tenant_tasks, &task_id) {
+    if let Some(_task) = store.worker.lock().tasks.get(&task_id) {
+        if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_tasks, &task_id) {
             return Err(auth_denied_error("task belongs to another tenant"));
         }
     } else {
         let existing = store
-            .tenant_tasks
+            .tenant.lock().tenant_tasks
             .get(&actor.tenant)
             .map(|ids| ids.len())
             .unwrap_or_default();
@@ -1884,7 +1897,7 @@ pub fn handle_task_create(
         }
     }
 
-    let outcome = if let Some(task) = store.tasks.get_mut(&task_id) {
+    let outcome = if let Some(task) = store.worker.lock().tasks.get_mut(&task_id) {
         task.scheduled_step_id = scheduled_step_id.clone();
         task.requested_procedure_id = requested_procedure_id.clone();
         task.status = status;
@@ -1892,7 +1905,7 @@ pub fn handle_task_create(
         task.updated_at_ms = now;
         "updated"
     } else {
-        store.tasks.insert(
+        store.worker.lock().tasks.insert(
             task_id.clone(),
             ProcedureTask {
                 task_id: task_id.clone(),
@@ -1905,7 +1918,7 @@ pub fn handle_task_create(
                 updated_at_ms: now,
             },
         );
-        route_id_to_tenant_index(&mut store.tenant_tasks, &actor.tenant, &task_id);
+        route_id_to_tenant_index(&mut store.tenant.lock().tenant_tasks, &actor.tenant, &task_id);
         "inserted"
     };
 
@@ -1915,14 +1928,14 @@ pub fn handle_task_create(
     );
 
     if let Some(key) = cache_key {
-        store.task_idempotency.insert(
+        store.worker.lock().task_idempotency.insert(
             key,
             CachedMppsRequest {
                 signature: request_signature,
                 response: body.clone(),
             },
         );
-        task_idempotency_limit(&mut store.task_idempotency);
+        task_idempotency_limit(&mut store.worker.lock().task_idempotency);
     }
 
     Ok(WorkflowResponse::Json(200, body))
@@ -1953,7 +1966,7 @@ pub fn handle_worklist_query(
         let mpps = store.mpps.all_updates();
         let mut status_by_step = BTreeMap::new();
         for update in mpps {
-            if !actor_has_resource_access(&actor, &store.tenant_mpps, &update.sop_instance_uid) {
+            if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_mpps, &update.sop_instance_uid) {
                 continue;
             }
             let status = mpps_status_label(update.status).to_string();
@@ -1983,7 +1996,7 @@ pub fn handle_worklist_query(
             let store = state
                 .lock()
                 .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-            if !actor_has_resource_access(&actor, &store.tenant_worklist, &item.scheduled_step_id) {
+            if !actor_has_resource_access(&actor, &store.tenant.lock().tenant_worklist, &item.scheduled_step_id) {
                 continue;
             }
         }
@@ -2216,14 +2229,14 @@ pub fn handle_worklist_upsert(
     let mut store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if let Some(owner_tenant) = tenant_of_id(&store.tenant_worklist, &scheduled_step_id) {
+    if let Some(owner_tenant) = tenant_of_id(&store.tenant.lock().tenant_worklist, &scheduled_step_id) {
         if owner_tenant != actor.tenant {
             return Err(auth_denied_error("worklist item belongs to another tenant"));
         }
     }
     let outcome = store.worklist.upsert_dataset(&dataset)?;
     route_id_to_tenant_index(
-        &mut store.tenant_worklist,
+        &mut store.tenant.lock().tenant_worklist,
         &actor.tenant,
         &scheduled_step_id,
     );
@@ -2258,7 +2271,7 @@ pub fn handle_mpps_get_single(
     let Some(update) = store.mpps.get(sop_uid) else {
         return Err(mpps_not_found_error());
     };
-    if !actor_has_resource_access(actor, &store.tenant_mpps, sop_uid) {
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_mpps, sop_uid) {
         return Err(auth_denied_error("mpps belongs to another tenant"));
     }
     Ok(WorkflowResponse::Json(200, render_mpps_update_json(update)))
@@ -2275,7 +2288,7 @@ pub fn handle_mpps_get_status(
     let Some(update) = store.mpps.get(sop_uid) else {
         return Err(mpps_not_found_error());
     };
-    if !actor_has_resource_access(actor, &store.tenant_mpps, sop_uid) {
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_mpps, sop_uid) {
         return Err(auth_denied_error("mpps belongs to another tenant"));
     }
     Ok(WorkflowResponse::Json(200, render_mpps_update_json(update)))
@@ -2310,11 +2323,11 @@ pub fn handle_mpps_update_status(
     let Some(current) = store.mpps.get(sop_uid).cloned() else {
         return Err(mpps_not_found_error());
     };
-    if !actor_has_resource_access(actor, &store.tenant_mpps, sop_uid) {
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_mpps, sop_uid) {
         return Err(auth_denied_error("mpps belongs to another tenant"));
     }
     if let Some(key) = &cache_key {
-        if let Some(entry) = store.mpps_idempotency.get(key) {
+        if let Some(entry) = store.worker.lock().mpps_idempotency.get(key) {
             if entry.signature == payload_signature {
                 return Ok(WorkflowResponse::Json(200, entry.response.clone()));
             }
@@ -2378,17 +2391,17 @@ pub fn handle_mpps_update_status(
             &correlation_id,
         );
     }
-    route_id_to_tenant_index(&mut store.tenant_mpps, &actor.tenant, sop_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_mpps, &actor.tenant, sop_uid);
     let body = render_mpps_ingest_outcome_json(&outcome);
     if let Some(key) = cache_key {
-        store.mpps_idempotency.insert(
+        store.worker.lock().mpps_idempotency.insert(
             key,
             CachedMppsRequest {
                 signature: payload_signature,
                 response: body.clone(),
             },
         );
-        enforce_mpps_idempotency_capacity(&mut store.mpps_idempotency);
+        enforce_mpps_idempotency_capacity(&mut store.worker.lock().mpps_idempotency);
     }
     Ok(WorkflowResponse::Json(200, body))
 }
@@ -2413,7 +2426,7 @@ pub fn handle_mpps_list(
             store.mpps.all_updates()
         };
         updates.retain(|update| {
-            actor_has_resource_access(actor, &store.tenant_mpps, &update.sop_instance_uid)
+            actor_has_resource_access(actor, &store.tenant.lock().tenant_mpps, &update.sop_instance_uid)
         });
         updates
     };

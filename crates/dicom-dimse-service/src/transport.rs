@@ -31,8 +31,8 @@ use crate::{
 };
 use dicom_audit::{AuditEvent, AuditEventKind, AuditField, AuditValue};
 use dicom_auth::{
-    AllowAll, AuthAction, AuthDecision, AuthDenyReason, AuthRequest, AuthResource, AuthScope,
-    AuthSubject, Authorizer, DenyAll,
+    AllowAll, AuthAction, AuthDecision, AuthDenyReason, AuthRequest, AuthResource, AuthResourceKey,
+    AuthScope, AuthSubject, Authorizer, DenyAll,
 };
 use dicom_core::{Limits, Result};
 use dicom_dimse::{
@@ -1549,6 +1549,7 @@ fn authorize_dimse_request(
             study_uid: None,
             series_uid: None,
             instance_uid: sop_instance_uid,
+            key: AuthResourceKey::Instance,
         },
     };
     authorize_and_audit(
@@ -1830,9 +1831,9 @@ fn build_client_context_map(
         if let Some(req) = request
             .presentation_contexts
             .iter()
-            .find(|ctx| ctx.id == accepted.id)
+            .find(|ctx| ctx.id() == accepted.id)
         {
-            map.insert(req.abstract_syntax.clone(), accepted.id);
+            map.insert(req.abstract_syntax().to_string(), accepted.id);
         }
     }
     map
@@ -1854,9 +1855,9 @@ fn build_server_context_map(
         if let Some(req) = request
             .presentation_contexts
             .iter()
-            .find(|ctx| ctx.id == accepted.id)
+            .find(|ctx| ctx.id() == accepted.id)
         {
-            map.insert(accepted.id, (req.abstract_syntax.clone(), transfer_syntax));
+            map.insert(accepted.id, (req.abstract_syntax().to_string(), transfer_syntax));
         }
     }
     map
@@ -2006,11 +2007,11 @@ fn build_associate_request(
     let mut contexts = Vec::new();
     let mut id = 1u8;
     for abstract_syntax in &policy.supported_abstract_syntaxes {
-        contexts.push(dicom_net::PresentationContext {
+        contexts.push(dicom_net::PresentationContext::new(
             id,
-            abstract_syntax: abstract_syntax.clone(),
-            transfer_syntaxes: policy.supported_transfer_syntaxes.clone(),
-        });
+            abstract_syntax.clone(),
+            policy.supported_transfer_syntaxes.clone(),
+        )?);
         id = id.saturating_add(2);
     }
     Ok(AssociationRequest {

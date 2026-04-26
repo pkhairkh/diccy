@@ -538,6 +538,8 @@ pub fn status_for_error(error: &Error) -> (u16, &'static str) {
         | ErrorKind::InvalidGeometry { .. }
         | ErrorKind::InvalidPixelTransform { .. } => (400, "Bad Request"),
         ErrorKind::IntegrityError { .. } => (409, "Conflict"),
+        ErrorKind::AuthorizationDenied { .. } | ErrorKind::PolicyViolation { .. } => (403, "Forbidden"),
+        ErrorKind::SessionError { .. } | ErrorKind::CollaborationError { .. } => (500, "Internal Server Error"),
         ErrorKind::IoError { .. } | ErrorKind::InternalError { .. } => {
             (500, "Internal Server Error")
         }

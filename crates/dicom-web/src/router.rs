@@ -413,6 +413,10 @@ pub fn dicomweb_status_for_error(error: &Error) -> (u16, &'static str) {
         ErrorKind::IoError { .. } | ErrorKind::InternalError { .. } => {
             (500, "Internal Server Error")
         }
+        ErrorKind::AuthorizationDenied { .. }
+        | ErrorKind::PolicyViolation { .. }
+        | ErrorKind::SessionError { .. } => (403, "Forbidden"),
+        ErrorKind::CollaborationError { .. } => (500, "Internal Server Error"),
     }
 }
 

@@ -6,3 +6,4 @@ publish = false
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
+dicom-util = { path = "../dicom-util" }

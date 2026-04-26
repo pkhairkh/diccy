@@ -3,13 +3,15 @@
 //! Contains S3 configuration, simulated backend, and multipart upload types.
 
 use dicom_core::{Error, ErrorKind, Result};
+use secrecy::{ExposeSecret, SecretString};
 use std::collections::BTreeMap;
 
 /// S3 backend configuration for object storage.
 ///
-/// Secret fields (`access_key_id`, `secret_access_key`) are private with
-/// redacted Debug and getter representations to prevent credential leakage.
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// Secret fields (`access_key_id`, `secret_access_key`) are stored as
+/// `SecretString` from the `secrecy` crate to prevent accidental leakage
+/// via Debug, serialization, or log output.
+#[derive(Clone)]
 pub struct S3Config {
     /// S3 endpoint URL (e.g., "https://s3.amazonaws.com" or MinIO endpoint).
     pub endpoint: String,
@@ -17,10 +19,10 @@ pub struct S3Config {
     pub bucket: String,
     /// AWS region.
     pub region: String,
-    /// Access key ID.
-    access_key_id: String,
-    /// Secret access key.
-    secret_access_key: String,
+    /// Access key ID (protected by `SecretString`).
+    access_key_id: SecretString,
+    /// Secret access key (protected by `SecretString`).
+    secret_access_key: SecretString,
     /// Whether to use path-style addressing (required for MinIO).
     pub path_style: bool,
     /// Multipart upload threshold in bytes (default: 100 MB).
@@ -29,17 +31,27 @@ pub struct S3Config {
     pub multipart_part_size_bytes: u64,
 }
 
+impl PartialEq for S3Config {
+    fn eq(&self, other: &Self) -> bool {
+        self.endpoint == other.endpoint
+            && self.bucket == other.bucket
+            && self.region == other.region
+            && self.access_key_id.expose_secret() == other.access_key_id.expose_secret()
+            && self.secret_access_key.expose_secret() == other.secret_access_key.expose_secret()
+            && self.path_style == other.path_style
+            && self.multipart_threshold_bytes == other.multipart_threshold_bytes
+            && self.multipart_part_size_bytes == other.multipart_part_size_bytes
+    }
+}
+
 impl std::fmt::Debug for S3Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("S3Config")
+            .field("access_key_id", &"[REDACTED]")
+            .field("secret_access_key", &"[REDACTED]")
             .field("endpoint", &self.endpoint)
             .field("bucket", &self.bucket)
             .field("region", &self.region)
-            .field("access_key_id", &"[REDACTED]")
-            .field("secret_access_key", &"[REDACTED]")
-            .field("path_style", &self.path_style)
-            .field("multipart_threshold_bytes", &self.multipart_threshold_bytes)
-            .field("multipart_part_size_bytes", &self.multipart_part_size_bytes)
             .finish()
     }
 }
@@ -50,8 +62,8 @@ impl Default for S3Config {
             endpoint: String::new(),
             bucket: String::new(),
             region: "us-east-1".to_string(),
-            access_key_id: String::new(),
-            secret_access_key: String::new(),
+            access_key_id: SecretString::new(String::new().into()),
+            secret_access_key: SecretString::new(String::new().into()),
             path_style: false,
             multipart_threshold_bytes: 100 * 1024 * 1024,
             multipart_part_size_bytes: 10 * 1024 * 1024,
@@ -70,20 +82,20 @@ impl S3Config {
         }
     }
 
-    /// Return the access key ID (redacted: only first 4 chars visible).
+    /// Return the access key ID (exposed from SecretString; use with caution).
     pub fn access_key_id(&self) -> &str {
-        &self.access_key_id
+        self.access_key_id.expose_secret()
     }
 
     /// Return a redacted representation of the access key ID.
     /// Shows at most the first 4 characters followed by `***`.
     pub fn access_key_id_redacted(&self) -> String {
-        redact_secret(&self.access_key_id)
+        redact_secret(self.access_key_id.expose_secret())
     }
 
-    /// Return the secret access key (full value, use with caution).
+    /// Return the secret access key (exposed from SecretString; use with caution).
     pub fn secret_access_key(&self) -> &str {
-        &self.secret_access_key
+        self.secret_access_key.expose_secret()
     }
 
     /// Return a redacted representation of the secret access key.
@@ -92,14 +104,14 @@ impl S3Config {
         "[REDACTED]"
     }
 
-    /// Set the access key ID.
+    /// Set the access key ID (wrapped in SecretString).
     pub fn set_access_key_id(&mut self, value: impl Into<String>) {
-        self.access_key_id = value.into();
+        self.access_key_id = SecretString::new(value.into().into());
     }
 
-    /// Set the secret access key.
+    /// Set the secret access key (wrapped in SecretString).
     pub fn set_secret_access_key(&mut self, value: impl Into<String>) {
-        self.secret_access_key = value.into();
+        self.secret_access_key = SecretString::new(value.into().into());
     }
 
     /// Validate the S3 configuration.

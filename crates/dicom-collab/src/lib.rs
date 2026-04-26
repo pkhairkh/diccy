@@ -522,7 +522,7 @@ impl CollabSession {
     /// Add a user to the collaboration session.
     pub fn join(&mut self, user_id: UserId, display_name: String) -> Result<()> {
         if self.users.contains_key(&user_id) {
-            return Err(collab_error("user already in session"));
+            return Err(collab_error(&self.session_id, "user already in session"));
         }
         let color_index = self.users.len();
         let mut presence = UserPresence::new(user_id.clone(), display_name, color_index);
@@ -536,7 +536,7 @@ impl CollabSession {
     /// Remove a user from the collaboration session.
     pub fn leave(&mut self, user_id: &UserId) -> Result<()> {
         if !self.users.contains_key(user_id) {
-            return Err(collab_error("user not in session"));
+            return Err(collab_error(&self.session_id, "user not in session"));
         }
         self.users.remove(user_id);
         self.record_audit("leave", user_id);
@@ -547,7 +547,7 @@ impl CollabSession {
     pub fn apply_operation(&mut self, operation: CollabOperation) -> Result<()> {
         let user_id = operation.user_id().clone();
         if !self.users.contains_key(&user_id) {
-            return Err(collab_error("operation from unknown user"));
+            return Err(collab_error(&self.session_id, "operation from unknown user"));
         }
 
         // Advance vector clock
@@ -661,7 +661,7 @@ impl CollabSession {
             vector_clock: self.vector_clock.clone(),
             users: self.users.values().cloned().collect(),
         };
-        serde_json::to_string(&state).map_err(|e| collab_error(&format!("serialization failed: {e}")))
+        serde_json::to_string(&state).map_err(|e| collab_error(&self.session_id, format!("serialization failed: {e}")))
     }
 
     fn record_audit(&self, operation: &'static str, subject_id: &str) {
@@ -705,10 +705,10 @@ pub struct CollabSessionState {
 // Shared: Error helpers
 // ---------------------------------------------------------------------------
 
-fn collab_error(detail: impl Into<String>) -> Box<Error> {
+fn collab_error(session_id: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-collab".to_string(),
+        ErrorKind::CollaborationError {
+            session_id: session_id.into(),
             detail: detail.into(),
         },
         "collaboration error",

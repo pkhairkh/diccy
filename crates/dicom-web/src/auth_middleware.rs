@@ -6,7 +6,7 @@ use dicom_audit::{AuditEventKind, AuditField, AuditValue};
 use dicom_auth::{AuthDenyReason, AuthDecision};
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
-use dicom_auth::{enforce_tenant_scope, AuthAction, AuthRequest, AuthResource, AuthSubject};
+use dicom_auth::{enforce_tenant_scope, AuthAction, AuthRequest, AuthResource, AuthResourceKey, AuthSubject};
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
 use super::{
@@ -137,30 +137,35 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: None,
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "qido")]
         DicomWebRequest::QidoAllSeries { .. } => AuthResource {
             study_uid: None,
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "qido")]
         DicomWebRequest::QidoAllInstances { .. } => AuthResource {
             study_uid: None,
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "qido")]
         DicomWebRequest::QidoSeries { study_uid, .. } => AuthResource {
             study_uid: Some(study_uid.as_str()),
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "qido")]
         DicomWebRequest::QidoStudyInstances { study_uid, .. } => AuthResource {
             study_uid: Some(study_uid.as_str()),
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "qido")]
         DicomWebRequest::QidoInstances {
@@ -171,6 +176,7 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: Some(series_uid.as_str()),
             instance_uid: None,
+            key: AuthResourceKey::Series,
         },
         #[cfg(feature = "wado")]
         DicomWebRequest::WadoInstance {
@@ -200,6 +206,7 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: Some(series_uid.as_str()),
             instance_uid: Some(instance_uid.as_str()),
+            key: AuthResourceKey::Instance,
         },
         #[cfg(feature = "wado")]
         DicomWebRequest::WadoStudyRetrieve { study_uid, .. }
@@ -207,6 +214,7 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         #[cfg(feature = "wado")]
         DicomWebRequest::WadoSeriesRetrieve {
@@ -222,17 +230,20 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: Some(series_uid.as_str()),
             instance_uid: None,
+            key: AuthResourceKey::Series,
         },
         #[cfg(feature = "stow")]
         DicomWebRequest::Stow { study_uid, .. } => AuthResource {
             study_uid: study_uid.as_deref(),
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         DicomWebRequest::DeleteStudy { study_uid, .. } => AuthResource {
             study_uid: Some(study_uid.as_str()),
             series_uid: None,
             instance_uid: None,
+            key: AuthResourceKey::Study,
         },
         DicomWebRequest::DeleteSeries {
             study_uid,
@@ -242,6 +253,7 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: Some(series_uid.as_str()),
             instance_uid: None,
+            key: AuthResourceKey::Series,
         },
         DicomWebRequest::DeleteInstance {
             study_uid,
@@ -252,6 +264,7 @@ fn auth_resource_for_request<'a>(request: &'a DicomWebRequest) -> AuthResource<'
             study_uid: Some(study_uid.as_str()),
             series_uid: Some(series_uid.as_str()),
             instance_uid: Some(instance_uid.as_str()),
+            key: AuthResourceKey::Instance,
         },
         #[allow(unreachable_patterns)]
         _ => AuthResource::none(),

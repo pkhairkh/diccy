@@ -523,7 +523,7 @@ pub fn run_hl7_ingest_payload(
     let mut state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if let Some(entry) = state.hl7.replay_cache.get(&replay_key) {
+    if let Some(entry) = state.hl7.lock().replay_cache.get(&replay_key) {
         if entry.signature == payload_signature.as_str() {
             return Ok(entry.response.clone());
         }
@@ -581,14 +581,14 @@ pub fn run_hl7_ingest_payload(
                 sequence,
                 &correlation_id,
             );
-            state.hl7.replay_cache.insert(
+            state.hl7.lock().replay_cache.insert(
                 replay_key,
                 CachedMppsRequest {
                     signature: payload_signature,
                     response: response.clone(),
                 },
             );
-            hl7_replay_cache_limit(&mut state.hl7.replay_cache);
+            hl7_replay_cache_limit(&mut state.hl7.lock().replay_cache);
             response
         }
         Err(err) => {
@@ -787,7 +787,8 @@ pub fn handle_hl7_failures(state: &Arc<Mutex<RuntimeState>>) -> Result<WorkflowR
     let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    let mut records: Vec<&Hl7FailureRecord> = state.hl7.failures.iter().collect();
+    let records: Vec<Hl7FailureRecord> = state.hl7.lock().failures.iter().cloned().collect();
+    let mut records = records;
     records.reverse();
     let mut json = String::from("[");
     for (index, record) in records.iter().enumerate() {
@@ -832,7 +833,7 @@ pub fn handle_hl7_connector_status_dashboard(
     let mut wildcard_subscriptions = 0u64;
     let mut subscription_to_connector: BTreeMap<String, String> = BTreeMap::new();
 
-    for subscription in state.hl7.subscriptions.values() {
+    for subscription in state.hl7.lock().subscriptions.values() {
         match &subscription.sink.kind {
             Hl7SinkKind::Custom(connector_alias) => {
                 custom_connector_subscriptions = custom_connector_subscriptions.saturating_add(1);
@@ -870,7 +871,7 @@ pub fn handle_hl7_connector_status_dashboard(
     let mut failure_total = 0u64;
     let mut failure_ingest = 0u64;
     let mut failure_callback = 0u64;
-    for failure in state.hl7.failures.iter() {
+    for failure in state.hl7.lock().failures.iter() {
         failure_total = failure_total.saturating_add(1);
         match failure.scope.as_str() {
             "ingest" => {
@@ -941,7 +942,7 @@ pub fn handle_hl7_connector_status_dashboard(
     json.push_str(&format!(
         "\"generated_at_ms\":{},\"connector_count\":{},",
         now_epoch_millis(),
-        state.hl7.connector_registry.len()
+        state.hl7.lock().connector_registry.len()
     ));
     json.push_str("\"connectors\":[");
     for (index, connector) in connectors.iter().enumerate() {
@@ -953,7 +954,7 @@ pub fn handle_hl7_connector_status_dashboard(
     json.push_str("]");
     json.push_str(&format!(
         "\"summary\":{{\"subscription_count\":{},\"custom_connector_subscriptions\":{},\"webhook_subscriptions\":{},\"message_bus_subscriptions\":{},\"wildcard_subscriptions\":{},\"failures\":{{\"total\":{},\"ingest\":{},\"callback\":{}}}}}",
-        state.hl7.subscriptions.len(),
+        state.hl7.lock().subscriptions.len(),
         custom_connector_subscriptions,
         webhook_connector_subscriptions,
         message_bus_connector_subscriptions,
@@ -978,9 +979,9 @@ pub fn handle_hl7_connector_features(
         let alias = &descriptor.alias;
         let target = &descriptor.target;
         let feature_enabled =
-            resolve_hl7_connector_feature_flag(&state.hl7.connector_feature_flags, alias);
+            resolve_hl7_connector_feature_flag(&state.hl7.lock().connector_feature_flags, alias);
         let rollout_percent =
-            resolve_hl7_connector_rollout_percent(&state.hl7.connector_rollout_percent, alias);
+            resolve_hl7_connector_rollout_percent(&state.hl7.lock().connector_rollout_percent, alias);
         let plugin_json = descriptor.plugin.as_ref().map_or_else(
             || "null".to_string(),
             |plugin| {
@@ -1009,7 +1010,7 @@ pub fn handle_hl7_connector_features(
     json.push_str(&format!(
         "\"generated_at_ms\":{},\"connector_count\":{},",
         now_epoch_millis(),
-        state.hl7.connector_registry.len()
+        state.hl7.lock().connector_registry.len()
     ));
     json.push_str("\"connectors\":[");
     for (index, connector) in connectors.iter().enumerate() {
@@ -1032,7 +1033,7 @@ pub fn handle_hl7_connector_rollout_list(
     let mut connectors = Vec::new();
     for descriptor in normalized_connector_descriptors(&state) {
         let rollout_percent = resolve_hl7_connector_rollout_percent(
-            &state.hl7.connector_rollout_percent,
+            &state.hl7.lock().connector_rollout_percent,
             &descriptor.alias,
         );
         connectors.push(format!(
@@ -1047,7 +1048,7 @@ pub fn handle_hl7_connector_rollout_list(
         format!(
             "{{\"generated_at_ms\":{},\"connector_count\":{},\"connectors\":[{}]}}",
             now_epoch_millis(),
-            state.hl7.connector_registry.len(),
+            state.hl7.lock().connector_registry.len(),
             connectors.join(","),
         ),
     ))
@@ -1082,20 +1083,17 @@ pub fn handle_hl7_connector_rollout_update(
         return Err(decode_error("rollout_percent must be within 0..=100"));
     }
 
-    let mut store = state
+    let store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !store.hl7.connector_registry.contains_key(&alias) {
+    if !store.hl7.lock().connector_registry.contains_key(&alias) {
         return Err(decode_error("unknown connector alias"));
     }
-    let _ = store
-        .hl7
-        .connector_rollout_percent
-        .insert(alias.clone(), rollout_percent);
-    let rollout_snapshot_path = connector_rollout_snapshot_path(&store.audit_path);
+    store.hl7.lock().connector_rollout_percent.insert(alias.clone(), rollout_percent);
+    let rollout_snapshot_path = connector_rollout_snapshot_path(&store.health.read().audit_path);
     persist_hl7_connector_rollout_state(
         &rollout_snapshot_path,
-        &store.hl7.connector_rollout_percent,
+        &store.hl7.lock().connector_rollout_percent,
     );
     Ok(WorkflowResponse::Json(
         200,
@@ -1143,7 +1141,7 @@ pub fn handle_hl7_connector_capabilities(
         format!(
             "{{\"generated_at_ms\":{},\"connector_count\":{},\"connectors\":[{}]}}",
             now_epoch_millis(),
-            state.hl7.connector_registry.len(),
+            state.hl7.lock().connector_registry.len(),
             connectors.join(","),
         ),
     ))
@@ -1176,14 +1174,14 @@ pub fn handle_hl7_connector_health(
         ));
     }
     let mut subscription_to_connector: BTreeMap<String, String> = BTreeMap::new();
-    for subscription in state.hl7.subscriptions.values() {
+    for subscription in state.hl7.lock().subscriptions.values() {
         if let Hl7SinkKind::Custom(connector_alias) = &subscription.sink.kind {
             let _ =
                 subscription_to_connector.insert(subscription.id.clone(), connector_alias.clone());
         }
     }
     let mut downstream_timeout_connectors: BTreeMap<String, bool> = BTreeMap::new();
-    for failure in &state.hl7.failures {
+    for failure in &state.hl7.lock().failures {
         if failure.scope != "callback" {
             continue;
         }
@@ -1233,7 +1231,8 @@ pub fn handle_hl7_subscriptions_list(
     let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    let mut subscriptions: Vec<&Hl7Subscription> = state.hl7.subscriptions.values().collect();
+    let subscriptions: Vec<Hl7Subscription> = state.hl7.lock().subscriptions.values().cloned().collect();
+    let mut subscriptions = subscriptions;
     subscriptions.sort_by(|a, b| a.id.cmp(&b.id));
     let mut json = String::from("[");
     for (index, subscription) in subscriptions.iter().enumerate() {
@@ -1287,7 +1286,8 @@ pub fn handle_hl7_subscriptions_create(
                 let state = state
                     .lock()
                     .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-                resolve_hl7_connector_alias(&state.hl7.connector_registry, &connector).is_some()
+                let registry = state.hl7.lock().connector_registry.clone();
+                resolve_hl7_connector_alias(&registry, &connector).is_some()
             };
             if !registered {
                 return Err(decode_error("unknown sink connector"));
@@ -1317,15 +1317,16 @@ pub fn handle_hl7_subscriptions_create(
         return Err(decode_error("missing required hl7 event filter"));
     }
 
-    let mut state = state
+    let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let policy = tenant_policy(&state, TENANT_ID_DEFAULT);
-    if state.hl7.subscriptions.len() >= MAX_HL7_SUBSCRIPTIONS {
+    if state.hl7.lock().subscriptions.len() >= MAX_HL7_SUBSCRIPTIONS {
         return Err(decode_error("subscription capacity exceeded"));
     }
     let source_subscriptions = state
         .hl7
+        .lock()
         .subscriptions
         .values()
         .filter(|entry| entry.source == source || source == "*")
@@ -1337,8 +1338,11 @@ pub fn handle_hl7_subscriptions_create(
             policy.subscription_quota as u64,
         ));
     }
-    state.hl7.subscription_seq = state.hl7.subscription_seq.saturating_add(1);
-    let id = format!("sub-{0:05}", state.hl7.subscription_seq);
+    let id = {
+        let mut hl7 = state.hl7.lock();
+        hl7.subscription_seq = hl7.subscription_seq.saturating_add(1);
+        format!("sub-{0:05}", hl7.subscription_seq)
+    };
     let created_at_ms = now_epoch_millis();
     let subscription = Hl7Subscription {
         id: id.clone(),
@@ -1354,6 +1358,7 @@ pub fn handle_hl7_subscriptions_create(
     };
     state
         .hl7
+        .lock()
         .subscriptions
         .insert(id.clone(), subscription.clone());
 
@@ -1392,17 +1397,13 @@ pub fn handle_reconciliation_jobs_list(
     let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    let mut jobs: Vec<&StudyReconciliationJob> = state
-        .hl7
-        .reconciliation_jobs
-        .values()
-        .filter(|job| {
-            if tenant_filter == "*" || tenant_filter == "all" {
-                return is_admin;
-            }
-            job.tenant == tenant_filter
-        })
-        .collect();
+    let jobs: Vec<StudyReconciliationJob> = state.hl7.lock().reconciliation_jobs.values().cloned().filter(|job| {
+        if tenant_filter == "*" || tenant_filter == "all" {
+            return is_admin;
+        }
+        job.tenant == tenant_filter
+    }).collect();
+    let mut jobs = jobs;
     jobs.sort_by(|a, b| a.id.cmp(&b.id));
     let mut json = String::from("[");
     for (index, job) in jobs.iter().enumerate() {
@@ -1461,18 +1462,19 @@ pub fn handle_reconciliation_jobs_create(
     }
     let interval_seconds =
         parse_reconciliation_interval(params.get("interval_seconds").map(String::as_str))?;
-    let mut state = state
+    let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if state.hl7.reconciliation_jobs.len() >= MAX_RECONCILIATION_JOBS {
+    if state.hl7.lock().reconciliation_jobs.len() >= MAX_RECONCILIATION_JOBS {
         return Err(limit_exceeded(
             "workflow_reconciliation_jobs",
-            state.hl7.reconciliation_jobs.len() as u64,
+            state.hl7.lock().reconciliation_jobs.len() as u64,
             MAX_RECONCILIATION_JOBS as u64,
         ));
     }
     let tenant_jobs = state
         .hl7
+        .lock()
         .reconciliation_jobs
         .values()
         .filter(|job| job.tenant == actor.tenant)
@@ -1484,8 +1486,11 @@ pub fn handle_reconciliation_jobs_create(
             MAX_RECONCILIATION_JOBS_PER_TENANT as u64,
         ));
     }
-    state.hl7.reconciliation_seq = state.hl7.reconciliation_seq.saturating_add(1);
-    let id = format!("recon-{0:05}", state.hl7.reconciliation_seq);
+    let id = {
+        let mut hl7 = state.hl7.lock();
+        hl7.reconciliation_seq = hl7.reconciliation_seq.saturating_add(1);
+        format!("recon-{0:05}", hl7.reconciliation_seq)
+    };
     let now_ms = now_epoch_millis();
     let job = StudyReconciliationJob {
         id: id.clone(),
@@ -1501,6 +1506,7 @@ pub fn handle_reconciliation_jobs_create(
     };
     state
         .hl7
+        .lock()
         .reconciliation_jobs
         .insert(id.clone(), job.clone());
     Ok(WorkflowResponse::Json(
@@ -1532,14 +1538,14 @@ pub fn handle_reconciliation_jobs_run(
     if idempotency_key.is_empty() {
         return Err(decode_error("missing required x-idempotency-key header"));
     }
-    let mut state = state
+    let state = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
     let idempotency_cache_key = format!(
         "{RECONCILIATION_RUN_IDEMPOTENCY_PREFIX}{}:{}:{}",
         actor.tenant, id, idempotency_key
     );
-    if let Some(cached) = state.task_idempotency.get(&idempotency_cache_key) {
+    if let Some(cached) = state.worker.lock().task_idempotency.get(&idempotency_cache_key) {
         let replay = cached.response.replacen(
             "\"idempotency_replay\":false",
             "\"idempotency_replay\":true",
@@ -1547,8 +1553,8 @@ pub fn handle_reconciliation_jobs_run(
         );
         return Ok(WorkflowResponse::Json(200, replay));
     }
-    let job = state
-        .hl7
+    let mut hl7 = state.hl7.lock();
+    let job = hl7
         .reconciliation_jobs
         .get_mut(&id)
         .ok_or_else(|| decode_error("reconciliation job not found"))?;
@@ -1574,19 +1580,19 @@ pub fn handle_reconciliation_jobs_run(
         "{}|{}|{}|{}|{}",
         job.id, job.runs_enqueued, job.runs_completed, job.last_run_at_ms, actor.tenant
     ));
-    let _ = state.task_idempotency.insert(
+    let _ = state.worker.lock().task_idempotency.insert(
         idempotency_cache_key,
         CachedMppsRequest {
             signature: response_signature,
             response: response.clone(),
         },
     );
-    task_idempotency_limit(&mut state.task_idempotency);
+    task_idempotency_limit(&mut state.worker.lock().task_idempotency);
     let reconciliation_idempotency_path =
-        reconciliation_run_idempotency_snapshot_path(&state.audit_path);
+        reconciliation_run_idempotency_snapshot_path(&state.health.read().audit_path);
     persist_reconciliation_run_idempotency_cache(
         &reconciliation_idempotency_path,
-        &state.task_idempotency,
+        &state.worker.lock().task_idempotency,
     );
     Ok(WorkflowResponse::Json(200, response))
 }
@@ -1636,32 +1642,37 @@ pub fn publish_hl7_failure_record(
     } else {
         raw_body
     };
-    state.hl7.failure_seq = state.hl7.failure_seq.saturating_add(1);
-    state.hl7.failures.push_front(Hl7FailureRecord {
-        id: format!("hl7-fail-{0:06}", state.hl7.failure_seq),
-        source: normalize_identifier(source),
-        message_type: normalize_identifier(message_type),
-        reason: normalize_identifier(reason),
-        payload_excerpt: excerpt.to_string(),
-        created_at_ms: now_epoch_millis(),
-        scope: normalize_identifier(scope),
-        subscription_id: normalize_identifier(subscription_id),
-        event_id: normalize_identifier(event_id),
-        correlation_id: normalize_identifier(correlation_id),
-        sequence,
-        attempt,
-        max_attempts,
-    });
-    while state.hl7.failures.len() > MAX_HL7_FAILURES {
-        let _ = state.hl7.failures.pop_back();
+    {
+        let mut hl7 = state.hl7.lock();
+        hl7.failure_seq = hl7.failure_seq.saturating_add(1);
+        let failure_seq = hl7.failure_seq;
+        hl7.failures.push_front(Hl7FailureRecord {
+            id: format!("hl7-fail-{0:06}", failure_seq),
+            source: normalize_identifier(source),
+            message_type: normalize_identifier(message_type),
+            reason: normalize_identifier(reason),
+            payload_excerpt: excerpt.to_string(),
+            created_at_ms: now_epoch_millis(),
+            scope: normalize_identifier(scope),
+            subscription_id: normalize_identifier(subscription_id),
+            event_id: normalize_identifier(event_id),
+            correlation_id: normalize_identifier(correlation_id),
+            sequence,
+            attempt,
+            max_attempts,
+        });
+        while hl7.failures.len() > MAX_HL7_FAILURES {
+            let _ = hl7.failures.pop_back();
+        }
+        let audit_path = state.health.read().audit_path.clone();
+        let failure_queue_path = hl7_failure_queue_snapshot_path(&audit_path);
+        persist_hl7_failure_queue(&failure_queue_path, &hl7.failures);
     }
-    let failure_queue_path = hl7_failure_queue_snapshot_path(&state.audit_path);
-    persist_hl7_failure_queue(&failure_queue_path, &state.hl7.failures);
 }
 
 pub fn next_hl7_event_id_with_sequence(state: &mut RuntimeState) -> (String, u64) {
-    let next = state.hl7.event_seq.saturating_add(1);
-    state.hl7.event_seq = next;
+    let next = state.hl7.lock().event_seq.saturating_add(1);
+    state.hl7.lock().event_seq = next;
     (format!("HL7-{0:06}", next), next)
 }
 
@@ -1812,15 +1823,15 @@ pub fn publish_hl7_event(
     let message_type = normalize_identifier(message_type).to_ascii_lowercase();
     let now_ms = now_epoch_millis();
     hl7_callback_idempotency_prune(
-        &mut state.hl7.callback_delivery_idempotency,
+        &mut state.hl7.lock().callback_delivery_idempotency,
         now_ms,
-        state.hl7.callback_idempotency_ttl_ms,
+        state.hl7.lock().callback_idempotency_ttl_ms,
     );
     persist_hl7_callback_idempotency_cache(
-        &state.hl7.callback_idempotency_path,
-        &state.hl7.callback_delivery_idempotency,
+        &state.hl7.lock().callback_idempotency_path,
+        &state.hl7.lock().callback_delivery_idempotency,
     );
-    let subscriptions: Vec<Hl7Subscription> = state.hl7.subscriptions.values().cloned().collect();
+    let subscriptions: Vec<Hl7Subscription> = state.hl7.lock().subscriptions.values().cloned().collect();
     for subscription in subscriptions {
         if !subscription.event_filter.iter().any(|candidate| {
             candidate == "all"
@@ -1837,6 +1848,7 @@ pub fn publish_hl7_event(
         let callback_idempotency_key = format!("{event_id}|{}", subscription.id);
         if state
             .hl7
+            .lock()
             .callback_delivery_idempotency
             .contains_key(&callback_idempotency_key)
         {
@@ -1849,6 +1861,7 @@ pub fn publish_hl7_event(
         if let Some(alias) = connector_alias.as_deref() {
             if let Some(open_until_ms) = state
                 .hl7
+                .lock()
                 .connector_circuit_open_until_ms
                 .get(alias)
                 .copied()
@@ -1856,21 +1869,22 @@ pub fn publish_hl7_event(
                 if open_until_ms > now_ms {
                     continue;
                 }
-                state.hl7.connector_circuit_open_until_ms.remove(alias);
+                state.hl7.lock().connector_circuit_open_until_ms.remove(alias);
             }
             let feature_enabled =
-                resolve_hl7_connector_feature_flag(&state.hl7.connector_feature_flags, alias);
+                resolve_hl7_connector_feature_flag(&state.hl7.lock().connector_feature_flags, alias);
             if !feature_enabled {
                 continue;
             }
             let rollout_percent =
-                resolve_hl7_connector_rollout_percent(&state.hl7.connector_rollout_percent, alias);
+                resolve_hl7_connector_rollout_percent(&state.hl7.lock().connector_rollout_percent, alias);
             if !hl7_connector_rollout_allows(event_id, alias, rollout_percent) {
                 continue;
             }
         }
+        let callback_max_attempts = state.hl7.lock().callback_max_attempts;
         let mut delivered = false;
-        for attempt in 1..=state.hl7.callback_max_attempts {
+        for attempt in 1..=callback_max_attempts {
             if publish_hl7_event_attempt(
                 &subscription,
                 message_type.as_str(),
@@ -1884,7 +1898,7 @@ pub fn publish_hl7_event(
                 delivered = true;
                 break;
             }
-            if attempt == state.hl7.callback_max_attempts {
+            if attempt == callback_max_attempts {
                 publish_hl7_callback_failure(
                     state,
                     &subscription,
@@ -1894,24 +1908,24 @@ pub fn publish_hl7_event(
                     correlation_id,
                     sequence,
                     attempt,
-                    state.hl7.callback_max_attempts,
+                    callback_max_attempts,
                 );
                 if let Some(alias) = connector_alias.as_deref() {
-                    let failure_streak = state
-                        .hl7
-                        .connector_callback_failure_streak
-                        .entry(alias.to_string())
-                        .or_insert(0);
-                    *failure_streak = failure_streak.saturating_add(1);
-                    if *failure_streak >= state.hl7.callback_circuit_breaker_failure_threshold {
+                    let mut hl7 = state.hl7.lock();
+                    let threshold = hl7.callback_circuit_breaker_failure_threshold;
+                    let base_backoff = hl7.callback_circuit_breaker_base_backoff_ms;
+                    let max_backoff = hl7.callback_circuit_breaker_max_backoff_ms;
+                    let current_streak = hl7.connector_callback_failure_streak.get(alias).copied().unwrap_or(0);
+                    let new_streak = current_streak.saturating_add(1);
+                    hl7.connector_callback_failure_streak.insert(alias.to_string(), new_streak);
+                    if new_streak >= threshold {
                         let backoff_ms = callback_circuit_breaker_backoff_ms(
-                            *failure_streak,
-                            state.hl7.callback_circuit_breaker_failure_threshold,
-                            state.hl7.callback_circuit_breaker_base_backoff_ms,
-                            state.hl7.callback_circuit_breaker_max_backoff_ms,
+                            new_streak,
+                            threshold,
+                            base_backoff,
+                            max_backoff,
                         );
-                        let _ = state
-                            .hl7
+                        let _ = hl7
                             .connector_circuit_open_until_ms
                             .insert(alias.to_string(), now_ms.saturating_add(backoff_ms));
                     }
@@ -1920,26 +1934,27 @@ pub fn publish_hl7_event(
         }
         if delivered {
             if let Some(alias) = connector_alias.as_deref() {
-                state.hl7.connector_callback_failure_streak.remove(alias);
-                state.hl7.connector_circuit_open_until_ms.remove(alias);
+                state.hl7.lock().connector_callback_failure_streak.remove(alias);
+                state.hl7.lock().connector_circuit_open_until_ms.remove(alias);
             }
-            if let Some(subscription_state) = state.hl7.subscriptions.get_mut(&subscription.id) {
+            if let Some(subscription_state) = state.hl7.lock().subscriptions.get_mut(&subscription.id) {
                 subscription_state.delivered_events =
                     subscription_state.delivered_events.saturating_add(1);
                 subscription_state.last_event_ms = now_ms;
             }
             state
                 .hl7
+                .lock()
                 .callback_delivery_idempotency
                 .insert(callback_idempotency_key, now_ms);
             hl7_callback_idempotency_prune(
-                &mut state.hl7.callback_delivery_idempotency,
+                &mut state.hl7.lock().callback_delivery_idempotency,
                 now_ms,
-                state.hl7.callback_idempotency_ttl_ms,
+                state.hl7.lock().callback_idempotency_ttl_ms,
             );
             persist_hl7_callback_idempotency_cache(
-                &state.hl7.callback_idempotency_path,
-                &state.hl7.callback_delivery_idempotency,
+                &state.hl7.lock().callback_idempotency_path,
+                &state.hl7.lock().callback_delivery_idempotency,
             );
         }
     }

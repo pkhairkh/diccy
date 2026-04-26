@@ -9,11 +9,11 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RetentionPolicy {
     /// Tenant identifier.
-    pub tenant_id: String,
+    tenant_id: String,
     /// Minimum retention period in days.
-    pub min_retention_days: u32,
+    min_retention_days: u32,
     /// Maximum retention period in days.
-    pub max_retention_days: u32,
+    max_retention_days: u32,
     /// Whether legal hold is active.
     pub legal_hold: bool,
     /// Study types this policy applies to (empty = all).
@@ -21,15 +21,37 @@ pub struct RetentionPolicy {
 }
 
 impl RetentionPolicy {
-    /// Create a new retention policy.
-    pub fn new(tenant_id: &str, min_days: u32, max_days: u32) -> Self {
-        Self {
+    /// Create a new retention policy with validation.
+    ///
+    /// Validates that `min_retention_days <= max_retention_days`.
+    pub fn new(tenant_id: &str, min_days: u32, max_days: u32) -> Result<Self> {
+        if min_days > max_days {
+            return Err(vna_error(
+                "min_retention_days must be <= max_retention_days",
+            ));
+        }
+        Ok(Self {
             tenant_id: tenant_id.to_string(),
             min_retention_days: min_days,
             max_retention_days: max_days,
             legal_hold: false,
             study_types: Vec::new(),
-        }
+        })
+    }
+
+    /// Return the tenant identifier.
+    pub fn tenant_id(&self) -> &str {
+        &self.tenant_id
+    }
+
+    /// Return the minimum retention days.
+    pub fn min_retention_days(&self) -> u32 {
+        self.min_retention_days
+    }
+
+    /// Return the maximum retention days.
+    pub fn max_retention_days(&self) -> u32 {
+        self.max_retention_days
     }
 
     /// Check if a study can be purged based on this policy.
@@ -104,7 +126,7 @@ impl VnaEngine {
 
     /// Set a retention policy for a tenant.
     pub fn set_retention_policy(&mut self, policy: RetentionPolicy) {
-        self.policies.insert(policy.tenant_id.clone(), policy);
+        self.policies.insert(policy.tenant_id().to_string(), policy);
     }
 
     /// Apply legal hold to a study.
@@ -182,15 +204,15 @@ impl VnaEngine {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LifecyclePolicy {
     /// Days before transitioning to infrequent access storage.
-    pub ia_transition_days: u32,
+    ia_transition_days: u32,
     /// Days before transitioning to glacier storage.
-    pub glacier_transition_days: u32,
+    glacier_transition_days: u32,
     /// Days before expiration (permanent deletion).
-    pub expiration_days: u32,
+    expiration_days: u32,
     /// Whether to enable cleanup of incomplete multipart uploads.
-    pub cleanup_multipart: bool,
+    cleanup_multipart: bool,
     /// Maximum age in days for incomplete multipart uploads.
-    pub multipart_cleanup_age_days: u32,
+    multipart_cleanup_age_days: u32,
 }
 
 impl Default for LifecyclePolicy {
@@ -206,6 +228,59 @@ impl Default for LifecyclePolicy {
 }
 
 impl LifecyclePolicy {
+    /// Create a new lifecycle policy with validation.
+    ///
+    /// Validates that `ia_transition_days <= glacier_transition_days` and
+    /// `glacier_transition_days <= expiration_days`.
+    pub fn new(
+        ia_transition_days: u32,
+        glacier_transition_days: u32,
+        expiration_days: u32,
+    ) -> Result<Self> {
+        if ia_transition_days > glacier_transition_days {
+            return Err(vna_error(
+                "ia_transition_days must be <= glacier_transition_days",
+            ));
+        }
+        if glacier_transition_days > expiration_days {
+            return Err(vna_error(
+                "glacier_transition_days must be <= expiration_days",
+            ));
+        }
+        Ok(Self {
+            ia_transition_days,
+            glacier_transition_days,
+            expiration_days,
+            cleanup_multipart: true,
+            multipart_cleanup_age_days: 7,
+        })
+    }
+
+    /// Return the IA transition days.
+    pub fn ia_transition_days(&self) -> u32 {
+        self.ia_transition_days
+    }
+
+    /// Return the glacier transition days.
+    pub fn glacier_transition_days(&self) -> u32 {
+        self.glacier_transition_days
+    }
+
+    /// Return the expiration days.
+    pub fn expiration_days(&self) -> u32 {
+        self.expiration_days
+    }
+
+    /// Return whether multipart cleanup is enabled.
+    pub fn cleanup_multipart(&self) -> bool {
+        self.cleanup_multipart
+    }
+
+    /// Return the multipart cleanup age in days.
+    pub fn multipart_cleanup_age_days(&self) -> u32 {
+        self.multipart_cleanup_age_days
+    }
+
     /// Apply lifecycle policy to stored objects (simulated).
     pub(crate) fn apply(&self, objects: &mut BTreeMap<String, Vec<u8>>) -> usize {
         // In a real implementation, this would transition objects between

@@ -9,8 +9,10 @@ dicom-core = { path = "../dicom-core" }
 dicom-io = { path = "../dicom-io" }
 dicom-index = { path = "../dicom-index" }
 dicom-audit = { path = "../dicom-audit" }
+dicom-util = { path = "../dicom-util" }
 sha2 = "0.10"
 serde = { version = "1.0", features = ["derive"] }
+secrecy = "0.8"
 
 [features]
 default = []

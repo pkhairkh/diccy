@@ -55,7 +55,8 @@ pub fn validate_removable_media_export(request: &RemovableMediaPolicy) -> Result
         || request.approved_by.trim().is_empty()
         || request.policy_authorization_code.trim().is_empty()
     {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "removable_media_export",
             "removable-media export requires explicit policy-compliant authorization",
         ));
     }
@@ -79,13 +80,13 @@ pub fn workspace_privacy_mode(clinical_mode: bool) -> WorkspacePrivacyMode {
     }
 }
 
-fn hi_decode_error(detail: impl Into<String>) -> Box<Error> {
+fn policy_violation(policy: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-auth".to_string(),
+        ErrorKind::PolicyViolation {
+            policy: policy.into(),
             detail: detail.into(),
         },
-        "human-interface policy error",
+        "policy violation",
     )
     .into()
 }

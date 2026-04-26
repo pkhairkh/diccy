@@ -38,6 +38,7 @@ members = [
   "crates/pack-us",
   "crates/pack-nm",
   "crates/pack-xa",
+  "crates/pack-calibration-shared",
   "crates/dicom-fhir",
   "crates/dicom-hl7",
   "crates/dicom-registration",
@@ -50,4 +51,6 @@ members = [
   "crates/dicom-ihe",
   "crates/dicom-mesh",
   "crates/dicom-xr",
+  "crates/dicom-util",
+  "crates/dicom-test-util",
 ]

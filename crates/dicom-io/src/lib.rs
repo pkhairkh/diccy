@@ -889,10 +889,7 @@ fn require_tag(dataset: &Dataset, tag: Tag) -> Result<&Element> {
 }
 
 fn missing_required_tag(tag: Tag) -> Box<Error> {
-    Box::new(Error::from_kind(
-        ErrorKind::MissingRequiredTag { tag },
-        "missing required tag",
-    ))
+    dicom_util::missing_required_tag(tag)
 }
 
 fn read_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<String>> {
@@ -2443,7 +2440,8 @@ mod tests {
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
+        let kind = err.kind().clone();
+        assert!(matches!(kind, ErrorKind::MissingRequiredTag { .. }), "expected MissingRequiredTag, got {:?}", kind);
     }
 
     #[test]

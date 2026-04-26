@@ -7,9 +7,174 @@
 use dicom_core::{validate_uid_strict, Error, ErrorKind, Result, Tag};
 use dicom_net::Pdv;
 use std::collections::BTreeSet;
+use std::fmt;
 
 const SOP_CLASS_VERIFICATION: &str = "1.2.840.10008.1.1";
 const TAG_UID: Tag = Tag(0x0000, 0x0002);
+
+// ===========================================================================
+// S10-T1: Domain Enums for DIMSE
+// ===========================================================================
+
+/// DIMSE status codes with named variants for common DICOM status values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DimseStatus {
+    /// Success (0x0000).
+    Success,
+    /// Warning - coerced to SOP instance (0xB000).
+    WarningCoerced,
+    /// Warning - elements discarded (0xB007).
+    WarningDiscarded,
+    /// Failure - refused (0x0122).
+    Refused,
+    /// Failure - cannot understand (0x0121).
+    CannotUnderstand,
+    /// Failure - no such object instance (0x0112).
+    NoSuchObjectInstance,
+    /// Failure - class not supported (0x0124).
+    ClassNotSupported,
+    /// Failure - dataset does not match SOP class (0x0110).
+    DatasetMismatch,
+    /// Cancel (0xFE00).
+    Cancel,
+    /// Pending (0xFF00).
+    Pending,
+    /// Pending with warnings (0xFF01).
+    PendingWarning,
+    /// Unknown/raw status value.
+    Other(u16),
+}
+
+impl DimseStatus {
+    /// Create a DimseStatus from a raw u16 status code.
+    pub fn from_u16(raw: u16) -> Self {
+        match raw {
+            0x0000 => DimseStatus::Success,
+            0xB000 => DimseStatus::WarningCoerced,
+            0xB007 => DimseStatus::WarningDiscarded,
+            0x0122 => DimseStatus::Refused,
+            0x0121 => DimseStatus::CannotUnderstand,
+            0x0112 => DimseStatus::NoSuchObjectInstance,
+            0x0124 => DimseStatus::ClassNotSupported,
+            0x0110 => DimseStatus::DatasetMismatch,
+            0xFE00 => DimseStatus::Cancel,
+            0xFF00 => DimseStatus::Pending,
+            0xFF01 => DimseStatus::PendingWarning,
+            _ => DimseStatus::Other(raw),
+        }
+    }
+
+    /// Convert the status to its raw u16 value.
+    pub fn as_u16(self) -> u16 {
+        match self {
+            DimseStatus::Success => 0x0000,
+            DimseStatus::WarningCoerced => 0xB000,
+            DimseStatus::WarningDiscarded => 0xB007,
+            DimseStatus::Refused => 0x0122,
+            DimseStatus::CannotUnderstand => 0x0121,
+            DimseStatus::NoSuchObjectInstance => 0x0112,
+            DimseStatus::ClassNotSupported => 0x0124,
+            DimseStatus::DatasetMismatch => 0x0110,
+            DimseStatus::Cancel => 0xFE00,
+            DimseStatus::Pending => 0xFF00,
+            DimseStatus::PendingWarning => 0xFF01,
+            DimseStatus::Other(raw) => raw,
+        }
+    }
+
+    /// Return true if this is a success status.
+    pub fn is_success(self) -> bool {
+        matches!(self, DimseStatus::Success)
+    }
+
+    /// Return true if this is a warning status.
+    pub fn is_warning(self) -> bool {
+        matches!(self, DimseStatus::WarningCoerced | DimseStatus::WarningDiscarded | DimseStatus::PendingWarning)
+    }
+
+    /// Return true if this is a failure status.
+    pub fn is_failure(self) -> bool {
+        matches!(
+            self,
+            DimseStatus::Refused
+                | DimseStatus::CannotUnderstand
+                | DimseStatus::NoSuchObjectInstance
+                | DimseStatus::ClassNotSupported
+                | DimseStatus::DatasetMismatch
+        )
+    }
+
+    /// Return true if this is a pending status.
+    pub fn is_pending(self) -> bool {
+        matches!(self, DimseStatus::Pending | DimseStatus::PendingWarning)
+    }
+}
+
+impl fmt::Display for DimseStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DimseStatus::Success => write!(f, "Success(0x0000)"),
+            DimseStatus::WarningCoerced => write!(f, "Warning-Coerced(0xB000)"),
+            DimseStatus::WarningDiscarded => write!(f, "Warning-Discarded(0xB007)"),
+            DimseStatus::Refused => write!(f, "Refused(0x0122)"),
+            DimseStatus::CannotUnderstand => write!(f, "CannotUnderstand(0x0121)"),
+            DimseStatus::NoSuchObjectInstance => write!(f, "NoSuchObjectInstance(0x0112)"),
+            DimseStatus::ClassNotSupported => write!(f, "ClassNotSupported(0x0124)"),
+            DimseStatus::DatasetMismatch => write!(f, "DatasetMismatch(0x0110)"),
+            DimseStatus::Cancel => write!(f, "Cancel(0xFE00)"),
+            DimseStatus::Pending => write!(f, "Pending(0xFF00)"),
+            DimseStatus::PendingWarning => write!(f, "PendingWarning(0xFF01)"),
+            DimseStatus::Other(raw) => write!(f, "Other(0x{raw:04X})"),
+        }
+    }
+}
+
+/// DIMSE message priority levels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Priority {
+    /// Low priority (0x0002).
+    Low,
+    /// Medium priority (0x0000, default).
+    Medium,
+    /// High priority (0x0001).
+    High,
+}
+
+impl Priority {
+    /// Convert to the wire format u16 value.
+    pub fn as_u16(self) -> u16 {
+        match self {
+            Priority::Low => 0x0002,
+            Priority::Medium => 0x0000,
+            Priority::High => 0x0001,
+        }
+    }
+
+    /// Convert from a wire format u16 value.
+    pub fn from_u16(raw: u16) -> Self {
+        match raw {
+            0x0002 => Priority::Low,
+            0x0001 => Priority::High,
+            _ => Priority::Medium,
+        }
+    }
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Priority::Medium
+    }
+}
+
+impl fmt::Display for Priority {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Priority::Low => write!(f, "Low(0x0002)"),
+            Priority::Medium => write!(f, "Medium(0x0000)"),
+            Priority::High => write!(f, "High(0x0001)"),
+        }
+    }
+}
 
 /// DIMSE parsing limits.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -774,14 +939,7 @@ fn write_tag(out: &mut Vec<u8>, group: u16, element: u16) {
 }
 
 fn decode_error(detail: impl Into<String>) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-dimse".to_string(),
-            detail: detail.into(),
-        },
-        "decode error",
-    )
-    .into()
+    dicom_util::decode_error("dicom-dimse", &detail.into())
 }
 
 fn unsupported_sop(uid: String) -> Box<Error> {
@@ -793,18 +951,7 @@ fn unsupported_sop(uid: String) -> Box<Error> {
 }
 
 fn enforce_limit(limit_name: &'static str, observed: u64, allowed: u64) -> Result<()> {
-    if observed > allowed {
-        return Err(Error::from_kind(
-            ErrorKind::LimitExceeded {
-                limit_name,
-                observed,
-                allowed,
-            },
-            "limit exceeded",
-        )
-        .into());
-    }
-    Ok(())
+    dicom_util::enforce_limit(limit_name, observed, allowed)
 }
 
 struct Cursor<'a> {

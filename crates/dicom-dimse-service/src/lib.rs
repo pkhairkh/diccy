@@ -52,26 +52,11 @@ pub(crate) fn io_error(err: std::io::Error) -> Box<Error> {
 }
 
 pub(crate) fn decode_error(detail: impl Into<String>) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-dimse-service".to_string(),
-            detail: detail.into(),
-        },
-        "decode error",
-    )
-    .into()
+    dicom_util::decode_error("dicom-dimse-service", &detail.into())
 }
 
 pub(crate) fn limit_exceeded(limit_name: &'static str, observed: u64, allowed: u64) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::LimitExceeded {
-            limit_name,
-            observed,
-            allowed,
-        },
-        "limit exceeded",
-    )
-    .into()
+    dicom_util::limit_exceeded(limit_name, observed, allowed)
 }
 
 // ---------------------------------------------------------------------------

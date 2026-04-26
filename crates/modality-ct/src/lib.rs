@@ -19,7 +19,7 @@ impl CtPack {
 
     /// Require the CT pack to be enabled for enhanced CT support.
     pub fn ensure_enhanced_ct_supported() -> Result<()> {
-        if dicom_core::capabilities().pack_enhanced {
+        if dicom_core::capabilities().pack_enhanced() {
             return Ok(());
         }
         Err(Box::new(Error::from_kind(
@@ -689,7 +689,7 @@ mod tests {
     #[test]
     fn enhanced_ct_requires_pack() {
         // REQ-FEAT-302, REQ-SOP-301: enhanced CT requires explicit pack feature.
-        if dicom_core::capabilities().pack_enhanced {
+        if dicom_core::capabilities().pack_enhanced() {
             CtPack::ensure_enhanced_ct_supported().expect("pack-enhanced enabled");
         } else {
             let err = CtPack::ensure_enhanced_ct_supported().unwrap_err();

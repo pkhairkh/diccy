@@ -56,7 +56,7 @@ pub struct HeadPose {
     /// Position (x, y, z) in meters.
     pub position: [f64; 3],
     /// Orientation quaternion (x, y, z, w).
-    pub orientation: [f64; 4],
+    orientation: [f64; 4],
     /// Timestamp of the pose sample in seconds since epoch.
     pub timestamp_s: f64,
 }
@@ -72,6 +72,30 @@ impl Default for HeadPose {
 }
 
 impl HeadPose {
+    /// Create a new head pose, enforcing that the orientation quaternion is approximately unit length.
+    ///
+    /// The quaternion must have a magnitude within ±0.1 of 1.0.
+    pub fn new(position: [f64; 3], orientation: [f64; 4], timestamp_s: f64) -> Result<Self> {
+        let len = (orientation[0] * orientation[0]
+            + orientation[1] * orientation[1]
+            + orientation[2] * orientation[2]
+            + orientation[3] * orientation[3])
+        .sqrt();
+        if (len - 1.0).abs() > 0.1 {
+            return Err(xr_error("head pose orientation quaternion is not unit length"));
+        }
+        Ok(Self {
+            position,
+            orientation,
+            timestamp_s,
+        })
+    }
+
+    /// Return the orientation quaternion (x, y, z, w).
+    pub fn orientation(&self) -> &[f64; 4] {
+        &self.orientation
+    }
+
     /// Validate that the orientation quaternion is approximately unit length.
     pub fn validate(&self) -> Result<()> {
         let len = (self.orientation[0] * self.orientation[0]

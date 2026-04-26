@@ -39,7 +39,8 @@ impl Default for ControlledWordingPolicy {
 /// Validate user-entered text for claim-surface safety.
 pub fn validate_release_text_input(text: &str) -> Result<()> {
     if contains_restricted_claim_terms(text) {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "claim_surface",
             "release/configuration text contains unapproved regulatory claim wording",
         ));
     }
@@ -60,17 +61,20 @@ pub struct UiStringChangeReview {
 /// Validate a UI string change review record.
 pub fn validate_ui_string_change_review(review: &UiStringChangeReview) -> Result<()> {
     if review.change_id.trim().is_empty() {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "ui_string_change",
             "UI string change record requires change_id",
         ));
     }
     if !review.claim_surface_lint_passed {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "ui_string_change",
             "UI string change review requires claim-surface lint pass",
         ));
     }
     if review.controlled_wording_approved_by.trim().is_empty() {
-        return Err(hi_decode_error(
+        return Err(policy_violation(
+            "ui_string_change",
             "UI string change review requires controlled wording approval",
         ));
     }
@@ -110,10 +114,10 @@ impl UiClaimSurface {
     /// Add a claim to the surface.
     pub fn add_claim(&mut self, claim: ClaimedRect) -> Result<()> {
         if claim.claim_id.trim().is_empty() {
-            return Err(hi_decode_error("claim_id must not be empty"));
+            return Err(policy_violation("claim_surface", "claim_id must not be empty"));
         }
         if claim.width == 0 || claim.height == 0 {
-            return Err(hi_decode_error("claimed rectangle must have non-zero dimensions"));
+            return Err(policy_violation("claim_surface", "claimed rectangle must have non-zero dimensions"));
         }
         self.claims.push(claim);
         Ok(())
@@ -160,13 +164,13 @@ fn contains_restricted_claim_terms(text: &str) -> bool {
         .any(|term| lowered.contains(term))
 }
 
-fn hi_decode_error(detail: impl Into<String>) -> Box<Error> {
+fn policy_violation(policy: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-auth".to_string(),
+        ErrorKind::PolicyViolation {
+            policy: policy.into(),
             detail: detail.into(),
         },
-        "human-interface policy error",
+        "policy violation",
     )
     .into()
 }

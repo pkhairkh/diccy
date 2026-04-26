@@ -7,6 +7,7 @@
 //! collections, so `no_std` support is not yet available (REQ-API-203).
 
 use std::fmt;
+use std::str::FromStr;
 
 const KIB: u64 = 1024;
 const MIB: u64 = 1024 * KIB;
@@ -1230,6 +1231,34 @@ pub enum ErrorKind {
         /// Human-readable detail.
         detail: String,
     },
+    /// Authorization denied (auth/collab/session failures).
+    AuthorizationDenied {
+        /// Resource that was denied access.
+        resource: String,
+        /// Reason for denial.
+        reason: String,
+    },
+    /// Policy violation.
+    PolicyViolation {
+        /// Policy identifier that was violated.
+        policy: String,
+        /// Human-readable detail.
+        detail: String,
+    },
+    /// Session error (timeout, lockout, invalid state).
+    SessionError {
+        /// Session identifier.
+        session_id: String,
+        /// Human-readable detail.
+        detail: String,
+    },
+    /// Collaboration error (sync, CRDT, presence failures).
+    CollaborationError {
+        /// Session identifier.
+        session_id: String,
+        /// Human-readable detail.
+        detail: String,
+    },
 }
 
 impl ErrorKind {
@@ -1248,6 +1277,10 @@ impl ErrorKind {
             ErrorKind::IntegrityError { .. } => "DVF.INTEGRITY.ERROR",
             ErrorKind::InternalError { .. } => "DVF.INTERNAL.ERROR",
             ErrorKind::NotFound { .. } => "DVF.WEB.NOT_FOUND",
+            ErrorKind::AuthorizationDenied { .. } => "DVF.AUTH.DENIED",
+            ErrorKind::PolicyViolation { .. } => "DVF.AUTH.POLICY",
+            ErrorKind::SessionError { .. } => "DVF.AUTH.SESSION",
+            ErrorKind::CollaborationError { .. } => "DVF.COLLAB.ERROR",
         }
     }
 }
@@ -1493,6 +1526,415 @@ fn has_whitespace(input: &str) -> bool {
 
 fn is_ascii_upper(byte: u8) -> bool {
     byte.is_ascii_uppercase()
+}
+
+// ===========================================================================
+// S10-T1: Domain Newtypes
+// ===========================================================================
+
+/// A validated DICOM UID (Unique Identifier).
+///
+/// UIDs must contain only digits ('0'-'9') and '.' characters, be at most
+/// 64 characters long, and must not start or end with '.'.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Uid(String);
+
+impl Uid {
+    /// Create a new validated UID from a string.
+    ///
+    /// Returns an error if the string is not a valid DICOM UID.
+    pub fn new(s: &str) -> Result<Self> {
+        validate_uid_standalone(s)?;
+        Ok(Self(s.to_string()))
+    }
+
+    /// Return the UID as a string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Return the length of the UID string.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Return true if the UID is empty (should not happen after validation).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl fmt::Display for Uid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for Uid {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl FromStr for Uid {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Uid::new(s)
+    }
+}
+
+fn validate_uid_standalone(input: &str) -> Result<()> {
+    if input.is_empty() || input.len() > 64 {
+        return Err(Error::from_kind(
+            ErrorKind::InvalidTagValue {
+                tag: Tag(0x0000, 0x0000),
+                detail: "UID length is invalid".to_string(),
+            },
+            "invalid UID",
+        )
+        .into());
+    }
+    if input.starts_with('.') || input.ends_with('.') {
+        return Err(Error::from_kind(
+            ErrorKind::InvalidTagValue {
+                tag: Tag(0x0000, 0x0000),
+                detail: "UID must not start or end with '.'".to_string(),
+            },
+            "invalid UID",
+        )
+        .into());
+    }
+    let mut prev_dot = false;
+    for ch in input.chars() {
+        match ch {
+            '0'..='9' => prev_dot = false,
+            '.' => {
+                if prev_dot {
+                    return Err(Error::from_kind(
+                        ErrorKind::InvalidTagValue {
+                            tag: Tag(0x0000, 0x0000),
+                            detail: "UID contains empty component".to_string(),
+                        },
+                        "invalid UID",
+                    )
+                    .into());
+                }
+                prev_dot = true;
+            }
+            _ => {
+                return Err(Error::from_kind(
+                    ErrorKind::InvalidTagValue {
+                        tag: Tag(0x0000, 0x0000),
+                        detail: "UID contains invalid characters".to_string(),
+                    },
+                    "invalid UID",
+                )
+                .into());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// A validated DICOM AE Title (Application Entity Title).
+///
+/// AE Titles must be at most 16 bytes and contain only ASCII printable characters
+/// (0x20-0x7E). They must not be empty.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct AeTitle(String);
+
+impl AeTitle {
+    /// Create a new validated AE Title from a string.
+    ///
+    /// Returns an error if the string is not a valid AE Title.
+    pub fn new(s: &str) -> Result<Self> {
+        if s.is_empty() {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "AE title must not be empty".to_string(),
+                },
+                "invalid AE title",
+            )
+            .into());
+        }
+        if s.len() > 16 {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "AE title exceeds 16 bytes".to_string(),
+                },
+                "invalid AE title",
+            )
+            .into());
+        }
+        if !s.bytes().all(|b| (0x20..=0x7e).contains(&b)) {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "AE title contains non-ASCII characters".to_string(),
+                },
+                "invalid AE title",
+            )
+            .into());
+        }
+        Ok(Self(s.to_string()))
+    }
+
+    /// Return the AE title as a string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Return the length of the AE title in bytes.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Return true if the AE title is empty (should not happen after validation).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl fmt::Display for AeTitle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for AeTitle {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        AeTitle::new(s)
+    }
+}
+
+/// A validated SOP Class UID.
+///
+/// Wraps a [`Uid`] with well-known DICOM SOP Class UID constants.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SopClassUid(Uid);
+
+impl SopClassUid {
+    /// Create a new validated SOP Class UID.
+    pub fn new(s: &str) -> Result<Self> {
+        Ok(Self(Uid::new(s)?))
+    }
+
+    /// Verification SOP Class UID.
+    pub const VERIFICATION: &'static str = "1.2.840.10008.1.1";
+    /// CT Image Storage SOP Class UID.
+    pub const CT_IMAGE_STORAGE: &'static str = "1.2.840.10008.5.1.4.1.1.2";
+    /// MR Image Storage SOP Class UID.
+    pub const MR_IMAGE_STORAGE: &'static str = "1.2.840.10008.5.1.4.1.1.4";
+    /// Ultrasound Multiframe Image Storage SOP Class UID.
+    pub const US_MULTIFRAME: &'static str = "1.2.840.10008.5.1.4.1.1.3.1";
+    /// Secondary Capture SOP Class UID.
+    pub const SECONDARY_CAPTURE: &'static str = "1.2.840.10008.5.1.4.1.1.7";
+    /// Encapsulated 3D Model SOP Class UID.
+    pub const ENCAPSULATED_3D_MODEL: &'static str = "1.2.840.10008.5.1.4.1.1.104.1";
+
+    /// Return the inner UID.
+    pub fn as_uid(&self) -> &Uid {
+        &self.0
+    }
+
+    /// Return the SOP Class UID as a string slice.
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl fmt::Display for SopClassUid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for SopClassUid {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        SopClassUid::new(s)
+    }
+}
+
+/// A validated Transfer Syntax UID.
+///
+/// Wraps a [`Uid`] with well-known DICOM Transfer Syntax UID constants.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TransferSyntaxUid(Uid);
+
+impl TransferSyntaxUid {
+    /// Create a new validated Transfer Syntax UID.
+    pub fn new(s: &str) -> Result<Self> {
+        Ok(Self(Uid::new(s)?))
+    }
+
+    /// Implicit VR Little Endian Transfer Syntax UID.
+    pub const IMPLICIT_VR_LE: &'static str = "1.2.840.10008.1.2";
+    /// Explicit VR Little Endian Transfer Syntax UID.
+    pub const EXPLICIT_VR_LE: &'static str = "1.2.840.10008.1.2.1";
+    /// Explicit VR Big Endian Transfer Syntax UID.
+    pub const EXPLICIT_VR_BE: &'static str = "1.2.840.10008.1.2.2";
+    /// Deflated Explicit VR Little Endian Transfer Syntax UID.
+    pub const DEFLATED_EXPLICIT_VR_LE: &'static str = "1.2.840.10008.1.2.1.99";
+    /// JPEG Baseline (Process 1) Transfer Syntax UID.
+    pub const JPEG_BASELINE: &'static str = "1.2.840.10008.1.2.4.50";
+    /// JPEG Lossless Transfer Syntax UID.
+    pub const JPEG_LOSSLESS: &'static str = "1.2.840.10008.1.2.4.70";
+    /// JPEG 2000 Lossless Transfer Syntax UID.
+    pub const JPEG_2000_LOSSLESS: &'static str = "1.2.840.10008.1.2.4.90";
+    /// JPEG 2000 Transfer Syntax UID.
+    pub const JPEG_2000: &'static str = "1.2.840.10008.1.2.4.91";
+    /// JPEG-LS Lossless Transfer Syntax UID.
+    pub const JPEG_LS_LOSSLESS: &'static str = "1.2.840.10008.1.2.4.80";
+
+    /// Return the inner UID.
+    pub fn as_uid(&self) -> &Uid {
+        &self.0
+    }
+
+    /// Return the Transfer Syntax UID as a string slice.
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl fmt::Display for TransferSyntaxUid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for TransferSyntaxUid {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        TransferSyntaxUid::new(s)
+    }
+}
+
+/// A validated Measurement ID with format enforcement.
+///
+/// Measurement IDs must be non-empty, at most 128 characters, and contain
+/// only alphanumeric characters, hyphens, underscores, and dots.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct MeasurementId(String);
+
+impl MeasurementId {
+    /// Create a new validated Measurement ID.
+    pub fn new(s: &str) -> Result<Self> {
+        if s.is_empty() {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "measurement ID must not be empty".to_string(),
+                },
+                "invalid measurement ID",
+            )
+            .into());
+        }
+        if s.len() > 128 {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "measurement ID exceeds 128 characters".to_string(),
+                },
+                "invalid measurement ID",
+            )
+            .into());
+        }
+        if !s.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')) {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "measurement ID contains invalid characters".to_string(),
+                },
+                "invalid measurement ID",
+            )
+            .into());
+        }
+        Ok(Self(s.to_string()))
+    }
+
+    /// Return the measurement ID as a string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for MeasurementId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for MeasurementId {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        MeasurementId::new(s)
+    }
+}
+
+/// A validated Timestamp wrapping u64 epoch seconds.
+///
+/// The value must be non-zero (epoch 0 is not a valid timestamp for
+/// clinical use).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Timestamp(u64);
+
+impl Timestamp {
+    /// Create a new validated Timestamp.
+    ///
+    /// Returns an error if the value is zero.
+    pub fn new(epoch_secs: u64) -> Result<Self> {
+        if epoch_secs == 0 {
+            return Err(Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "timestamp must be non-zero".to_string(),
+                },
+                "invalid timestamp",
+            )
+            .into());
+        }
+        Ok(Self(epoch_secs))
+    }
+
+    /// Return the epoch seconds value.
+    pub fn epoch_secs(&self) -> u64 {
+        self.0
+    }
+}
+
+impl fmt::Display for Timestamp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for Timestamp {
+    type Err = Box<Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let epoch_secs: u64 = s
+            .parse()
+            .map_err(|_| {
+                Error::from_kind(
+                    ErrorKind::InvalidTagValue {
+                        tag: Tag(0x0000, 0x0000),
+                        detail: "timestamp must be a valid u64".to_string(),
+                    },
+                    "invalid timestamp",
+                )
+            })?;
+        Timestamp::new(epoch_secs)
+    }
 }
 
 #[cfg(test)]

@@ -24,11 +24,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TriangleMesh {
     /// Mesh vertices as `(x, y, z)` triplets in millimeters.
-    pub vertices: Vec<[f64; 3]>,
+    vertices: Vec<[f64; 3]>,
     /// Triangle indices referencing the vertex array (3 indices per triangle).
-    pub triangles: Vec<[u32; 3]>,
+    triangles: Vec<[u32; 3]>,
     /// Per-vertex normals (optional, computed on demand).
-    pub normals: Option<Vec<[f64; 3]>>,
+    normals: Option<Vec<[f64; 3]>>,
     /// Patient-space origin offset `(x_offset, y_offset, z_offset)` in mm.
     pub origin_mm: [f64; 3],
     /// Descriptive label for this mesh (e.g. "bone", "liver").
@@ -36,8 +36,32 @@ pub struct TriangleMesh {
 }
 
 impl TriangleMesh {
-    /// Create an empty mesh with the given label.
-    pub fn new(label: &str) -> Self {
+    /// Create a new mesh with the given label, validating index bounds.
+    ///
+    /// All triangle indices must be within the vertex array bounds.
+    pub fn new(label: &str, vertices: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) -> Result<Self> {
+        let nv = vertices.len();
+        for (i, tri) in triangles.iter().enumerate() {
+            for (j, &idx) in tri.iter().enumerate() {
+                if idx as usize >= nv {
+                    return Err(mesh_error(&format!(
+                        "triangle {} index {} out of bounds ({} vertices)",
+                        i, j, nv
+                    )));
+                }
+            }
+        }
+        Ok(Self {
+            vertices,
+            triangles,
+            normals: None,
+            origin_mm: [0.0, 0.0, 0.0],
+            label: label.to_string(),
+        })
+    }
+
+    /// Create an empty mesh with the given label (no validation needed).
+    pub fn empty(label: &str) -> Self {
         Self {
             vertices: Vec::new(),
             triangles: Vec::new(),
@@ -45,6 +69,21 @@ impl TriangleMesh {
             origin_mm: [0.0, 0.0, 0.0],
             label: label.to_string(),
         }
+    }
+
+    /// Return the vertices.
+    pub fn vertices(&self) -> &[[f64; 3]] {
+        &self.vertices
+    }
+
+    /// Return the triangles.
+    pub fn triangles(&self) -> &[[u32; 3]] {
+        &self.triangles
+    }
+
+    /// Return the normals.
+    pub fn normals(&self) -> Option<&[[f64; 3]]> {
+        self.normals.as_deref()
     }
 
     /// Return the number of triangles in this mesh.
@@ -1475,7 +1514,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn mesh_compute_normals() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.0, 0.0]);
         mesh.vertices.push([0.0, 1.0, 0.0]);
@@ -1492,7 +1531,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn mesh_surface_area() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.0, 0.0]);
         mesh.vertices.push([0.0, 1.0, 0.0]);
@@ -1503,7 +1542,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn mesh_validate_rejects_bad_index() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.triangles.push([0, 1, 2]); // indices 1 and 2 don't exist
         assert!(mesh.validate().is_err());
@@ -1511,7 +1550,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn mesh_validate_rejects_degenerate() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.0, 0.0]);
         mesh.vertices.push([2.0, 0.0, 0.0]);
@@ -1522,7 +1561,7 @@ mod tests_mesh_generation {
     #[test]
     fn decimation_reduces_triangle_count() {
         // Create a mesh with many triangles
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         for i in 0..20u32 {
             let x = i as f64 * 0.1;
             mesh.vertices.push([x, 0.0, 0.0]);
@@ -1550,7 +1589,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn smoothing_taubin_preserves_shape() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.0, 0.0]);
         mesh.vertices.push([0.0, 1.0, 0.0]);
@@ -1571,7 +1610,7 @@ mod tests_mesh_generation {
 
     #[test]
     fn smoothing_laplacian_reduces_surface_area() {
-        let mut mesh = TriangleMesh::new("test");
+        let mut mesh = TriangleMesh::empty("test");
         // Create a small noisy mesh
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.1, 0.0]);
@@ -1630,7 +1669,7 @@ mod tests_export {
     use super::*;
 
     fn test_mesh() -> TriangleMesh {
-        let mut mesh = TriangleMesh::new("bone");
+        let mut mesh = TriangleMesh::empty("bone");
         mesh.vertices.push([0.0, 0.0, 0.0]);
         mesh.vertices.push([1.0, 0.0, 0.0]);
         mesh.vertices.push([0.0, 1.0, 0.0]);
@@ -1775,7 +1814,7 @@ mod tests_export {
 
     #[test]
     fn export_stl_rejects_invalid_mesh() {
-        let mut mesh = TriangleMesh::new("bad");
+        let mut mesh = TriangleMesh::empty("bad");
         mesh.triangles.push([0, 1, 2]); // no vertices
         assert!(export_stl(&mesh).is_err());
     }

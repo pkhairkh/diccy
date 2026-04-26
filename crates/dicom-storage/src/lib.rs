@@ -27,6 +27,156 @@ pub use vna::{
     LifecyclePolicy, RetentionPolicy, StudyLifecycleState, VnaEngine, VnaStudyRecord,
 };
 
+// ===========================================================================
+// S10-T3: BlobStore trait for dependency injection
+// ===========================================================================
+
+/// Abstract blob storage trait for dependency injection.
+///
+/// Production code may use [`InMemoryBlobStore`] for testing or
+/// [`FileBlobStore`] for filesystem persistence. S3 and other backends
+/// can implement this trait as well.
+pub trait BlobStore: Send + Sync {
+    /// Store data under the given key.
+    fn put(&self, key: &str, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>>;
+    /// Retrieve data by key.
+    fn get(&self, key: &str) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>>;
+    /// Delete data by key.
+    fn delete(&self, key: &str) -> std::result::Result<(), Box<dyn std::error::Error>>;
+    /// List keys with the given prefix.
+    fn list(&self, prefix: &str) -> std::result::Result<Vec<String>, Box<dyn std::error::Error>>;
+}
+
+// ---------------------------------------------------------------------------
+// InMemoryBlobStore — HashMap-backed, for testing
+// ---------------------------------------------------------------------------
+
+/// In-memory blob store backed by a [`std::collections::HashMap`].
+#[derive(Debug, Default)]
+pub struct InMemoryBlobStore {
+    data: std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>,
+}
+
+impl InMemoryBlobStore {
+    /// Create a new empty in-memory blob store.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl BlobStore for InMemoryBlobStore {
+    fn put(&self, key: &str, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        self.data.lock().unwrap().insert(key.to_string(), data.to_vec());
+        Ok(())
+    }
+
+    fn get(&self, key: &str) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+        self.data
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .ok_or_else(|| format!("key not found: {key}").into())
+    }
+
+    fn delete(&self, key: &str) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        self.data
+            .lock()
+            .unwrap()
+            .remove(key)
+            .map(|_| ())
+            .ok_or_else(|| format!("key not found: {key}").into())
+    }
+
+    fn list(&self, prefix: &str) -> std::result::Result<Vec<String>, Box<dyn std::error::Error>> {
+        let mut keys: Vec<String> = self
+            .data
+            .lock()
+            .unwrap()
+            .keys()
+            .filter(|k| k.starts_with(prefix))
+            .cloned()
+            .collect();
+        keys.sort();
+        Ok(keys)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FileBlobStore — filesystem-backed
+// ---------------------------------------------------------------------------
+
+/// Filesystem-backed blob store. Each key maps to a file under a root directory.
+pub struct FileBlobStore {
+    root: std::path::PathBuf,
+}
+
+impl FileBlobStore {
+    /// Create a new file blob store rooted at the given directory.
+    pub fn new(root: impl Into<std::path::PathBuf>) -> Self {
+        Self { root: root.into() }
+    }
+
+    fn key_path(&self, key: &str) -> std::path::PathBuf {
+        self.root.join(key)
+    }
+}
+
+impl BlobStore for FileBlobStore {
+    fn put(&self, key: &str, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let path = self.key_path(key);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&path, data)?;
+        Ok(())
+    }
+
+    fn get(&self, key: &str) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let path = self.key_path(key);
+        let data = std::fs::read(&path).map_err(|e| format!("key not found: {key}: {e}"))?;
+        Ok(data)
+    }
+
+    fn delete(&self, key: &str) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let path = self.key_path(key);
+        std::fs::remove_file(&path).map_err(|e| format!("key not found: {key}: {e}"))?;
+        Ok(())
+    }
+
+    fn list(&self, prefix: &str) -> std::result::Result<Vec<String>, Box<dyn std::error::Error>> {
+        let mut keys = Vec::new();
+        if self.root.exists() {
+            self.list_recursive(&self.root, prefix, &mut keys)?;
+        }
+        keys.sort();
+        Ok(keys)
+    }
+}
+
+impl FileBlobStore {
+    fn list_recursive(
+        &self,
+        dir: &std::path::Path,
+        prefix: &str,
+        keys: &mut Vec<String>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                self.list_recursive(&path, prefix, keys)?;
+            } else if let Ok(rel) = path.strip_prefix(&self.root) {
+                let key = rel.to_string_lossy().to_string();
+                if key.starts_with(prefix) {
+                    keys.push(key);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 use commitment::CommitmentEngine;
 use dicom_core::{enforce_limit, validate_uid_strict, Error, ErrorKind, Limits, Result, Tag};
 use dicom_index::{extract_indexed_instance, Index, InsertOutcome};
@@ -454,11 +604,7 @@ fn canonical_hash(bytes: &[u8]) -> String {
 }
 
 fn missing_required_tag(tag: Tag) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::MissingRequiredTag { tag },
-        "missing required tag",
-    )
-    .into()
+    dicom_util::missing_required_tag(tag)
 }
 
 fn ensure_parent_dir(path: &Path) -> Result<()> {
@@ -649,7 +795,7 @@ mod tests {
     fn vna_module_types_reexported() {
         // Verify that VNA types are accessible from the crate root
         let _engine = VnaEngine::new();
-        let _policy = RetentionPolicy::new("tenant-a", 30, 365);
+        let _policy = RetentionPolicy::new("tenant-a", 30, 365).unwrap();
         let _lifecycle = LifecyclePolicy::default();
     }
 
@@ -661,5 +807,29 @@ mod tests {
         let slices: Vec<&[u8]> = vec![&a, &b, &a2];
         let dedup = deduplicate(&slices);
         assert_eq!(dedup, vec![0, 1]);
+    }
+
+    #[test]
+    fn in_memory_blob_store_roundtrip() {
+        let store = InMemoryBlobStore::new();
+        store.put("key1", b"value1").unwrap();
+        store.put("prefix/key2", b"value2").unwrap();
+        assert_eq!(store.get("key1").unwrap(), b"value1");
+        assert_eq!(store.get("prefix/key2").unwrap(), b"value2");
+        let keys = store.list("prefix/").unwrap();
+        assert_eq!(keys, vec!["prefix/key2".to_string()]);
+        store.delete("key1").unwrap();
+        assert!(store.get("key1").is_err());
+    }
+
+    #[test]
+    fn s3_config_secrets_are_redacted_in_debug() {
+        let mut config = S3Config::default();
+        config.set_access_key_id("AKIAIOSFODNN7EXAMPLE");
+        config.set_secret_access_key("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+        let debug_str = format!("{:?}", config);
+        assert!(!debug_str.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(!debug_str.contains("wJalrXUtnFEMI"));
+        assert!(debug_str.contains("[REDACTED]"));
     }
 }

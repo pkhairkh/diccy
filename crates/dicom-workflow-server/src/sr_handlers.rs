@@ -86,7 +86,7 @@ pub fn handle_hl7_adt_event(
         .and_then(|raw| normalize_hl7_status(raw))
         .unwrap_or(TaskStatus::Scheduled);
 
-    let created = match state.tasks.entry(task_id.clone()) {
+    let created = match state.worker.lock().tasks.entry(task_id.clone()) {
         std::collections::btree_map::Entry::Occupied(mut entry) => {
             let task = entry.get_mut();
             if task.tenant != tenant {
@@ -119,11 +119,11 @@ pub fn handle_hl7_adt_event(
                 created_at_ms: now,
                 updated_at_ms: now,
             });
-            route_id_to_tenant_index(&mut state.tenant_tasks, tenant, &task_id);
+            route_id_to_tenant_index(&mut state.tenant.lock().tenant_tasks, tenant, &task_id);
             true
         }
     };
-    let status = state.tasks[&task_id].status.as_label().to_string();
+    let status = state.worker.lock().tasks[&task_id].status.as_label().to_string();
     Ok(format!(
         "{{\"ack\":\"AA\",\"event_id\":\"{}\",\"message_type\":\"ADT\",\"task_id\":\"{}\",\"task_status\":\"{}\",\"outcome\":\"{}\",\"signature\":\"{}\"}}",
         escape_json(event_id),
@@ -156,7 +156,7 @@ pub fn handle_hl7_orm_event(
         .and_then(|raw| normalize_hl7_status(raw))
         .unwrap_or(TaskStatus::Scheduled);
 
-    let created = match state.tasks.entry(task_id.clone()) {
+    let created = match state.worker.lock().tasks.entry(task_id.clone()) {
         std::collections::btree_map::Entry::Occupied(mut entry) => {
             let task = entry.get_mut();
             if task.tenant != tenant {
@@ -189,11 +189,11 @@ pub fn handle_hl7_orm_event(
                 created_at_ms: now,
                 updated_at_ms: now,
             });
-            route_id_to_tenant_index(&mut state.tenant_tasks, tenant, &task_id);
+            route_id_to_tenant_index(&mut state.tenant.lock().tenant_tasks, tenant, &task_id);
             true
         }
     };
-    let status = state.tasks[&task_id].status.as_label().to_string();
+    let status = state.worker.lock().tasks[&task_id].status.as_label().to_string();
 
     let mut mpps_outcome = None;
     if let (Some(sop_instance_uid), Some(performed_step_id), Some(start_date), Some(start_time)) = (
@@ -229,7 +229,7 @@ pub fn handle_hl7_orm_event(
         update.insert("start_time".to_string(), start_time.to_string());
         let dataset = build_mpps_dataset(&update)?;
         let outcome = state.mpps.ingest(&dataset)?;
-        route_id_to_tenant_index(&mut state.tenant_mpps, tenant, sop_instance_uid);
+        route_id_to_tenant_index(&mut state.tenant.lock().tenant_mpps, tenant, sop_instance_uid);
         mpps_outcome = Some(render_mpps_ingest_outcome_json(&outcome));
     }
 
@@ -320,7 +320,7 @@ pub fn handle_hl7_oru_event(
         SrWriteOutcomeKind::Updated => "updated",
         SrWriteOutcomeKind::Duplicate => "duplicate",
     };
-    route_id_to_tenant_index(&mut state.tenant_sr, tenant, &sop_instance_uid);
+    route_id_to_tenant_index(&mut state.tenant.lock().tenant_sr, tenant, &sop_instance_uid);
     Ok(format!(
         "{{\"ack\":\"AA\",\"event_id\":\"{}\",\"message_type\":\"ORU\",\"sop_instance_uid\":\"{}\",\"study_instance_uid\":\"{}\",\"series_instance_uid\":\"{}\",\"outcome\":\"{}\",\"version\":{},\"idempotency_replay\":{},\"signature\":\"{}\"}}",
         escape_json(event_id),
@@ -377,14 +377,14 @@ pub fn handle_mpps_ingest(
     let mut store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if let Some(owner_tenant) = tenant_of_id(&store.tenant_mpps, &sop_instance_uid) {
+    if let Some(owner_tenant) = tenant_of_id(&store.tenant.lock().tenant_mpps, &sop_instance_uid) {
         if owner_tenant != actor.tenant {
             return Err(auth_denied_error("mpps belongs to another tenant"));
         }
     }
     let dataset = build_mpps_dataset(&params)?;
     if let Some(key) = &cache_key {
-        if let Some(entry) = store.mpps_idempotency.get(key) {
+        if let Some(entry) = store.worker.lock().mpps_idempotency.get(key) {
             if entry.signature == payload_signature {
                 return Ok(WorkflowResponse::Json(200, entry.response.clone()));
             }
@@ -393,16 +393,16 @@ pub fn handle_mpps_ingest(
     }
     let outcome = store.mpps.ingest(&dataset)?;
     let body = render_mpps_ingest_outcome_json(&outcome);
-    route_id_to_tenant_index(&mut store.tenant_mpps, &actor.tenant, &sop_instance_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_mpps, &actor.tenant, &sop_instance_uid);
     if let Some(key) = cache_key {
-        store.mpps_idempotency.insert(
+        store.worker.lock().mpps_idempotency.insert(
             key,
             CachedMppsRequest {
                 signature: payload_signature,
                 response: body.clone(),
             },
         );
-        enforce_mpps_idempotency_capacity(&mut store.mpps_idempotency);
+        enforce_mpps_idempotency_capacity(&mut store.worker.lock().mpps_idempotency);
     }
     Ok(WorkflowResponse::Json(200, body))
 }
@@ -522,7 +522,7 @@ pub fn handle_sr_list(
             .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
         let mut docs: Vec<_> = Vec::new();
         for doc in store.sr.documents() {
-            if !actor_has_resource_access(actor, &store.tenant_sr, &doc.provenance.sop_instance_uid)
+            if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, &doc.provenance.sop_instance_uid)
             {
                 continue;
             }
@@ -680,7 +680,7 @@ pub fn handle_sr_get(
     let Some(doc) = store.sr.get(sop_instance_uid).cloned() else {
         return Err(sr_not_found_error());
     };
-    if !actor_has_resource_access(actor, &store.tenant_sr, sop_instance_uid) {
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, sop_instance_uid) {
         return Err(auth_denied_error("sr belongs to another tenant"));
     }
     let status = store
@@ -715,8 +715,8 @@ pub fn handle_sr_create(
         &["sop_instance_uid", "sop_uid", "SOPInstanceUID", "SOP_UID"],
         "sop_instance_uid",
     )?;
-    if !actor_has_resource_access(actor, &store.tenant_sr, &sop_instance_uid)
-        && tenant_of_id(&store.tenant_sr, &sop_instance_uid).is_some()
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, &sop_instance_uid)
+        && tenant_of_id(&store.tenant.lock().tenant_sr, &sop_instance_uid).is_some()
     {
         return Err(auth_denied_error("sr belongs to another tenant"));
     }
@@ -754,7 +754,7 @@ pub fn handle_sr_create(
         },
         &auth,
     )?;
-    route_id_to_tenant_index(&mut store.tenant_sr, &actor.tenant, &sop_instance_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_sr, &actor.tenant, &sop_instance_uid);
     Ok(WorkflowResponse::Json(
         200,
         render_sr_write_outcome_json(&outcome),
@@ -779,8 +779,8 @@ pub fn handle_sr_update(
     let mut store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(actor, &store.tenant_sr, sop_instance_uid)
-        && tenant_of_id(&store.tenant_sr, sop_instance_uid).is_some()
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, sop_instance_uid)
+        && tenant_of_id(&store.tenant.lock().tenant_sr, sop_instance_uid).is_some()
     {
         return Err(auth_denied_error("sr belongs to another tenant"));
     }
@@ -798,7 +798,7 @@ pub fn handle_sr_update(
         },
         &auth,
     )?;
-    route_id_to_tenant_index(&mut store.tenant_sr, &actor.tenant, sop_instance_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_sr, &actor.tenant, sop_instance_uid);
     Ok(WorkflowResponse::Json(
         200,
         render_sr_write_outcome_json(&outcome),
@@ -821,8 +821,8 @@ pub fn handle_sr_transition(
     let mut store = state
         .lock()
         .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
-    if !actor_has_resource_access(actor, &store.tenant_sr, sop_instance_uid)
-        && tenant_of_id(&store.tenant_sr, sop_instance_uid).is_some()
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, sop_instance_uid)
+        && tenant_of_id(&store.tenant.lock().tenant_sr, sop_instance_uid).is_some()
     {
         return Err(auth_denied_error("sr belongs to another tenant"));
     }
@@ -870,7 +870,7 @@ pub fn handle_sr_transition(
             &correlation_id,
         );
     }
-    route_id_to_tenant_index(&mut store.tenant_sr, &actor.tenant, sop_instance_uid);
+    route_id_to_tenant_index(&mut store.tenant.lock().tenant_sr, &actor.tenant, sop_instance_uid);
     Ok(WorkflowResponse::Json(
         200,
         render_sr_transition_outcome_json(&outcome),
@@ -888,7 +888,7 @@ pub fn handle_sr_history(
     if store.sr.get(sop_instance_uid).is_none() {
         return Err(sr_not_found_error());
     }
-    if !actor_has_resource_access(actor, &store.tenant_sr, sop_instance_uid) {
+    if !actor_has_resource_access(actor, &store.tenant.lock().tenant_sr, sop_instance_uid) {
         return Err(auth_denied_error("sr belongs to another tenant"));
     }
     let history = store.sr.lifecycle_history(sop_instance_uid);

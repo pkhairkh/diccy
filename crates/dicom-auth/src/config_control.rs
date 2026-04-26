@@ -54,17 +54,20 @@ impl ConfigChangeJournal {
         request: ConfigChangeRequest,
     ) -> Result<ConfigChangeJournalEntry> {
         if !request.authenticated {
-            return Err(hi_decode_error(
+            return Err(auth_denied(
+                "config_change",
                 "administrative configuration changes require authenticated identity",
             ));
         }
         if request.actor_user_id.trim().is_empty() || request.reason_code.trim().is_empty() {
-            return Err(hi_decode_error(
+            return Err(policy_violation(
+                "config_change",
                 "administrative configuration changes require actor identity and reason code",
             ));
         }
         if request.key.trim().is_empty() {
-            return Err(hi_decode_error(
+            return Err(policy_violation(
+                "config_change",
                 "configuration change key must not be empty",
             ));
         }
@@ -82,13 +85,24 @@ impl ConfigChangeJournal {
     }
 }
 
-fn hi_decode_error(detail: impl Into<String>) -> Box<Error> {
+fn auth_denied(resource: impl Into<String>, reason: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-auth".to_string(),
+        ErrorKind::AuthorizationDenied {
+            resource: resource.into(),
+            reason: reason.into(),
+        },
+        "authorization denied",
+    )
+    .into()
+}
+
+fn policy_violation(policy: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
+    Error::from_kind(
+        ErrorKind::PolicyViolation {
+            policy: policy.into(),
             detail: detail.into(),
         },
-        "human-interface policy error",
+        "policy violation",
     )
     .into()
 }

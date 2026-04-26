@@ -5,17 +5,18 @@
 
 use crate::SessionState;
 use dicom_core::{Error, ErrorKind, Result};
+use dicom_util;
 use std::collections::BTreeMap;
 
 /// Deterministic session policy for timeout and lock controls.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionPolicy {
     /// Inactivity timeout in seconds.
-    pub inactivity_timeout_secs: u64,
+    inactivity_timeout_secs: u64,
     /// Warning window before timeout in seconds.
-    pub warning_window_secs: u64,
+    warning_window_secs: u64,
     /// Authentication failures that trigger lock.
-    pub max_failures: u32,
+    max_failures: u32,
 }
 
 impl Default for SessionPolicy {
@@ -25,6 +26,37 @@ impl Default for SessionPolicy {
             warning_window_secs: 60,
             max_failures: 5,
         }
+    }
+}
+
+impl SessionPolicy {
+    /// Create a new session policy with validation.
+    ///
+    /// Validates that `inactivity_timeout_secs > 0`.
+    pub fn new(inactivity_timeout_secs: u64, warning_window_secs: u64, max_failures: u32) -> Result<Self> {
+        if inactivity_timeout_secs == 0 {
+            return Err(session_error("", "inactivity_timeout_secs must be > 0"));
+        }
+        Ok(Self {
+            inactivity_timeout_secs,
+            warning_window_secs,
+            max_failures,
+        })
+    }
+
+    /// Return the inactivity timeout in seconds.
+    pub fn inactivity_timeout_secs(&self) -> u64 {
+        self.inactivity_timeout_secs
+    }
+
+    /// Return the warning window in seconds.
+    pub fn warning_window_secs(&self) -> u64 {
+        self.warning_window_secs
+    }
+
+    /// Return the max failures before lock.
+    pub fn max_failures(&self) -> u32 {
+        self.max_failures
     }
 }
 
@@ -73,7 +105,7 @@ impl SessionStatus {
     pub fn register_failure(&mut self, now_epoch_secs: u64, policy: SessionPolicy) -> SessionState {
         self.last_activity_epoch_secs = now_epoch_secs;
         self.failed_attempts = self.failed_attempts.saturating_add(1);
-        if self.failed_attempts >= policy.max_failures.max(1) {
+        if self.failed_attempts >= policy.max_failures().max(1) {
             self.locked = true;
         }
         self.state_at(now_epoch_secs, policy)
@@ -96,6 +128,24 @@ impl SessionStatus {
         self.locked = true;
     }
 
+    /// Enforce session lockout after max_failed_attempts.
+    ///
+    /// If the session is locked (either explicitly or due to exceeding
+    /// `max_failures` in the policy), returns a `SessionError`. Otherwise
+    /// returns `Ok(())`. This is the S10-T4 session lockout enforcement hook.
+    pub fn enforce_lockout(&self, session_id: &str, policy: SessionPolicy) -> Result<()> {
+        if self.locked || self.failed_attempts >= policy.max_failures().max(1) {
+            return Err(session_error(
+                session_id,
+                format!(
+                    "session locked after {} failed attempts (max allowed: {})",
+                    self.failed_attempts, policy.max_failures()
+                ),
+            ));
+        }
+        Ok(())
+    }
+
     /// Record a failed authentication attempt and return the new failure count.
     pub fn record_failed_attempt(&mut self) -> u32 {
         self.failed_attempts = self.failed_attempts.saturating_add(1);
@@ -104,16 +154,16 @@ impl SessionStatus {
 
     /// Evaluate session state at a deterministic timestamp.
     pub fn state_at(&self, now_epoch_secs: u64, policy: SessionPolicy) -> SessionState {
-        if self.locked || self.failed_attempts >= policy.max_failures.max(1) {
+        if self.locked || self.failed_attempts >= policy.max_failures().max(1) {
             return SessionState::Locked;
         }
         let inactivity = now_epoch_secs.saturating_sub(self.last_activity_epoch_secs);
-        let timeout = policy.inactivity_timeout_secs.max(1);
+        let timeout = policy.inactivity_timeout_secs().max(1);
         if inactivity >= timeout {
             return SessionState::Locked;
         }
-        let warning_threshold = timeout.saturating_sub(policy.warning_window_secs);
-        if inactivity >= warning_threshold && policy.warning_window_secs > 0 {
+        let warning_threshold = timeout.saturating_sub(policy.warning_window_secs());
+        if inactivity >= warning_threshold && policy.warning_window_secs() > 0 {
             SessionState::Warning
         } else {
             SessionState::Active
@@ -232,21 +282,22 @@ impl SessionDirectory {
     /// Open a session if identity and token binding prerequisites are valid.
     pub fn open_session(&mut self, request: SessionOpenRequest) -> Result<()> {
         if request.session_id.trim().is_empty() {
-            return Err(hi_decode_error("session_id must not be empty"));
+            return Err(session_error("", "session_id must not be empty"));
         }
         if request.principal.trim().is_empty() || is_shared_identity(&request.principal) {
-            return Err(hi_decode_error(
+            return Err(auth_denied(
+                "session",
                 "shared credentials are not supported; provide unique user identity",
             ));
         }
         if request.security_context_hash.trim().is_empty() {
-            return Err(hi_decode_error("security_context_hash must not be empty"));
+            return Err(session_error(&request.session_id, "security_context_hash must not be empty"));
         }
         if request.expires_epoch_secs <= request.issued_epoch_secs {
-            return Err(hi_decode_error("session expiry must be after issue time"));
+            return Err(session_error(&request.session_id, "session expiry must be after issue time"));
         }
         if self.sessions.contains_key(&request.session_id) {
-            return Err(hi_decode_error("session_id already exists"));
+            return Err(session_error(&request.session_id, "session_id already exists"));
         }
         let record = SessionRecord {
             session_id: request.session_id.clone(),
@@ -286,9 +337,10 @@ impl SessionDirectory {
         let record = self
             .sessions
             .get_mut(session_id)
-            .ok_or_else(|| hi_decode_error("session not found"))?;
+            .ok_or_else(|| session_error(session_id, "session not found"))?;
         if record.principal != principal {
-            return Err(hi_decode_error(
+            return Err(auth_denied(
+                "session",
                 "session identity mismatch during revoke operation",
             ));
         }
@@ -307,18 +359,21 @@ impl SessionDirectory {
         let record = self
             .sessions
             .get(session_id)
-            .ok_or_else(|| hi_decode_error("session token not found"))?;
+            .ok_or_else(|| session_error(session_id, "session token not found"))?;
         if record.principal != principal {
-            return Err(hi_decode_error("session token principal mismatch"));
+            return Err(auth_denied(
+                "session",
+                "session token principal mismatch",
+            ));
         }
         if record.security_context_hash != security_context_hash {
-            return Err(hi_decode_error("session token security context mismatch"));
+            return Err(session_error(session_id, "session token security context mismatch"));
         }
         if record.revoked_epoch_secs.is_some() {
-            return Err(hi_decode_error("session token has been revoked"));
+            return Err(session_error(session_id, "session token has been revoked"));
         }
         if now_epoch_secs >= record.expires_epoch_secs {
-            return Err(hi_decode_error("session token expired"));
+            return Err(session_error(session_id, "session token expired"));
         }
         Ok(())
     }
@@ -328,7 +383,7 @@ impl SessionDirectory {
         let record = self
             .sessions
             .get(session_id)
-            .ok_or_else(|| hi_decode_error("session not found"))?;
+            .ok_or_else(|| session_error(session_id, "session not found"))?;
         Ok(IdentityBanner {
             principal: record.principal.clone(),
             effective_role: record.effective_role,
@@ -399,7 +454,7 @@ pub struct SecretCommitReceipt {
 /// Commit a secret-entry field and clear plaintext content.
 pub fn commit_secret_entry(secret: &mut String) -> Result<SecretCommitReceipt> {
     if secret.is_empty() {
-        return Err(hi_decode_error("secret value must not be empty"));
+        return Err(session_error("", "secret value must not be empty"));
     }
     let length = secret.chars().count();
     let masked_preview = "*".repeat(length.min(16));
@@ -415,13 +470,17 @@ fn is_shared_identity(principal: &str) -> bool {
     lowered.contains("shared")
 }
 
-fn hi_decode_error(detail: impl Into<String>) -> Box<Error> {
+fn session_error(session_id: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
+    dicom_util::decode_error("dicom-auth-session", &format!("session {}: {}", session_id.into(), detail.into()))
+}
+
+fn auth_denied(resource: impl Into<String>, reason: impl Into<String>) -> Box<Error> {
     Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-auth".to_string(),
-            detail: detail.into(),
+        ErrorKind::AuthorizationDenied {
+            resource: resource.into(),
+            reason: reason.into(),
         },
-        "human-interface policy error",
+        "authorization denied",
     )
     .into()
 }

@@ -783,7 +783,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
 
 **Tasks:**
 
-- [ ] **S10-T1** Add domain newtypes to `dicom-core`
+- [x] **S10-T1** Add domain newtypes to `dicom-core`
   - Add `Uid` newtype with `Uid::new(s: &str) -> Result<Uid>` that calls `validate_uid_strict()`
   - Add `AeTitle` newtype (16-byte max, ASCII-only validation)
   - Add `SopClassUid` newtype with known-UID registry (`SopClassUid::CT_IMAGE_STORE`, etc.)
@@ -799,7 +799,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** All newtypes compile; `cargo test -p dicom-core` passes with newtype validation tests; 42 crates updated to use `Uid` instead of `String`
   - **Estimated effort:** 7 days
 
-- [ ] **S10-T2** Extract shared utilities into `dicom-util` crate
+- [x] **S10-T2** Extract shared utilities into `dicom-util` crate
   - Create new crate `crates/dicom-util`
   - Move `decode_error()`, `enforce_limit()`, `limit_exceeded()` from all 13 crates into `dicom-util`
   - Move `missing_required_tag()`, `require_uid()` from all 11 crates into `dicom-util`
@@ -810,7 +810,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** `cargo test --workspace` passes; zero local copies of shared helpers remain; `rg "fn decode_error" crates/` returns only `dicom-util`
   - **Estimated effort:** 5 days
 
-- [ ] **S10-T3** Add dependency injection via transport and storage traits
+- [x] **S10-T3** Add dependency injection via transport and storage traits
   - Define `Transport` trait in `dicom-net`: `connect()`, `accept()`, `send()`, `recv()`
   - Implement `TcpTransport` (production, uses `TcpListener`/`TcpStream`)
   - Implement `MockTransport` (testing, uses in-memory channels)
@@ -825,7 +825,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** `DimseServer` and `DimseClient` compile with `MockTransport`; pure unit tests for C-ECHO and C-STORE pass without network access
   - **Estimated effort:** 6 days
 
-- [ ] **S10-T4** Fix credential security handling
+- [x] **S10-T4** Fix credential security handling
   - Add `secrecy` crate dependency to `dicom-storage`
   - Change `S3Config::access_key_id` and `secret_access_key` from `String` to `SecretString`
   - Implement custom `Debug` for `S3Config` that redacts secrets: `S3Config { access_key_id: [REDACTED], secret_access_key: [REDACTED], ... }`
@@ -839,7 +839,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** `S3Config` secrets never appear in debug output; `AllowAll` has deprecation warning; `RbacAuthorizer` enforces role-based access; lockout enforced after N failed attempts
   - **Estimated effort:** 5 days
 
-- [ ] **S10-T5** Consolidate pack crate parsing helpers into `pack-shared`
+- [x] **S10-T5** Consolidate pack crate parsing helpers into `pack-shared`
   - Move `read_str()`, `read_u16()`, `read_bytes()`, `missing_required_tag()`, `invalid_tag_value()`, `sequence_items()`, `first_sequence_item()`, `read_sequence()` into `pack-shared`
   - Fix `pack-sr::read_str()` to return `Result<Option<&str>>` (currently returns `Result<&str>`, inconsistent with all other packs)
   - Remove all local copies from `pack-enhanced`, `pack-gsps`, `pack-seg`, `pack-rt`, `pack-sr`
@@ -849,7 +849,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** `cargo test -p pack-shared` passes with all helpers; zero local copies remain; `pack-sr::read_str` signature matches others
   - **Estimated effort:** 5 days
 
-- [ ] **S10-T6** Create `pack-calibration-shared` for US/NM/XA type deduplication
+- [x] **S10-T6** Create `pack-calibration-shared` for US/NM/XA type deduplication
   - Create new crate `crates/pack-calibration-shared`
   - Move `CalibrationSource` enum (3 variants) to `pack-calibration-shared`
   - Move `MeasurementWarning` enum (9-variant superset from NM/XA) to `pack-calibration-shared`
@@ -860,7 +860,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** `pack_us::CalibrationSource` == `pack_nm::CalibrationSource` (same type via re-export); `cargo test --workspace` passes
   - **Estimated effort:** 3 days
 
-- [ ] **S10-T7** Add validated constructors for types with invariants (Phase 2: remaining types)
+- [x] **S10-T7** Add validated constructors for types with invariants (Phase 2: remaining types)
   - `dicom-net::PresentationContext` — validate `id` is odd per DICOM spec in `::new()`
   - `dicom-net::AssociationReject` — validate `result`, `source`, `reason` are valid DICOM values
   - `dicom-storage::LifecyclePolicy` — validate `ia_transition_days <= glacier_transition_days`
@@ -875,7 +875,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** All 10 types have private fields + validated constructors; constructing invalid states causes compile-time or runtime errors
   - **Estimated effort:** 5 days
 
-- [ ] **S10-T8** Decompose `dicom-workflow-server` RuntimeState god struct
+- [x] **S10-T8** Decompose `dicom-workflow-server` RuntimeState god struct
   - Split 25-field `RuntimeState` into focused sub-structs: `Hl7State`, `TenantState`, `ReconciliationState`, `CommitmentState`, `WorkerState`, `HealthState`
   - Each sub-struct owns its own `Mutex` or `RwLock` for fine-grained concurrent access
   - `RuntimeState` becomes a composite of these sub-structs
@@ -884,7 +884,7 @@ integer safety enforced, rendering decoupled from domain. **38 person-days**
   - **Acceptance:** No single mutex guards 25+ fields; concurrent access to different sub-states doesn't contend; `cargo test -p dicom-workflow-server` passes
   - **Estimated effort:** 4 days
 
-- [ ] **S10-T9** Add proper ErrorKind variants for semantic correctness
+- [x] **S10-T9** Add proper ErrorKind variants for semantic correctness
   - Add `ErrorKind::AuthorizationDenied` to `dicom-core::ErrorKind`
   - Add `ErrorKind::PolicyViolation` for non-authorization policy failures
   - Add `ErrorKind::SessionError` for session lifecycle failures

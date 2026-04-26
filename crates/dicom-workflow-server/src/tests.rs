@@ -499,9 +499,9 @@
 
         {
             let state = shared.lock().expect("state lock after dual-mode dedupe");
-            assert_eq!(state.hl7.event_seq, 1);
-            assert_eq!(state.hl7.replay_cache.len(), 1);
-            assert!(state.hl7.failures.is_empty());
+            assert_eq!(state.hl7.lock().event_seq, 1);
+            assert_eq!(state.hl7.lock().replay_cache.len(), 1);
+            assert!(state.hl7.lock().failures.is_empty());
         }
 
         let done_count = fs::read_dir(&done_dir)
@@ -574,8 +574,8 @@
             let state = shared
                 .lock()
                 .expect("state lock after dual-mode conflict resolution");
-            assert_eq!(state.hl7.event_seq, 1);
-            assert_eq!(state.hl7.replay_cache.len(), 1);
+            assert_eq!(state.hl7.lock().event_seq, 1);
+            assert_eq!(state.hl7.lock().replay_cache.len(), 1);
         }
 
         cleanup_with_rotations(&worklist_path, 2);
@@ -623,7 +623,7 @@
         let shared = build_sr_workflow_state(&worklist_path, &mpps_path, &sr_path, &sr_audit_path);
         {
             let mut store = shared.lock().expect("state lock");
-            store.denylist_routes = vec!["/workflow/audit".to_string()];
+            store.health.read().denylist_routes = vec!["/workflow/audit".to_string()];
         }
 
         let mut viewer_headers = BTreeMap::new();
@@ -5145,16 +5145,16 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for dashboard fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "enterprise_his".to_string(),
                 "https://connectors.enterprise-his.example/interop".to_string(),
             );
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "lab".to_string(),
                 "https://connectors.lab.example/interop".to_string(),
             );
 
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-enterprise".to_string(),
                 Hl7Subscription {
                     id: "sub-enterprise".to_string(),
@@ -5169,7 +5169,7 @@
                     last_event_ms: now_epoch_millis(),
                 },
             );
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-lab".to_string(),
                 Hl7Subscription {
                     id: "sub-lab".to_string(),
@@ -5184,7 +5184,7 @@
                     last_event_ms: now_epoch_millis(),
                 },
             );
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-webhook".to_string(),
                 Hl7Subscription {
                     id: "sub-webhook".to_string(),
@@ -5199,7 +5199,7 @@
                     last_event_ms: now_epoch_millis(),
                 },
             );
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-bus".to_string(),
                 Hl7Subscription {
                     id: "sub-bus".to_string(),
@@ -5215,7 +5215,7 @@
                 },
             );
 
-            state.hl7.failures.push_back(Hl7FailureRecord {
+            state.hl7.lock().failures.push_back(Hl7FailureRecord {
                 id: "failure-ingest-1".to_string(),
                 source: "his".to_string(),
                 message_type: "ADT".to_string(),
@@ -5230,7 +5230,7 @@
                 attempt: 3,
                 max_attempts: 5,
             });
-            state.hl7.failures.push_back(Hl7FailureRecord {
+            state.hl7.lock().failures.push_back(Hl7FailureRecord {
                 id: "failure-callback-1".to_string(),
                 source: "his".to_string(),
                 message_type: "ORU".to_string(),
@@ -5304,11 +5304,11 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for connector ordering fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "zeta".to_string(),
                 "https://connectors.example/zeta".to_string(),
             );
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "alpha".to_string(),
                 "https://connectors.example/alpha".to_string(),
             );
@@ -5371,11 +5371,11 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for features dashboard fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "enterprise_his".to_string(),
                 "https://connectors.enterprise-his.example/interop".to_string(),
             );
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "corp*".to_string(),
                 "https://connectors.example/corp/{*}".to_string(),
             );
@@ -5439,7 +5439,7 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for rollout admin fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "lab".to_string(),
                 "https://connectors.lab.example/interop".to_string(),
             );
@@ -5560,7 +5560,7 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for admin api versioning fixture");
-            let _ = state.hl7.connector_registry.insert(
+            let _ = state.hl7.lock().connector_registry.insert(
                 "enterprise_his".to_string(),
                 "https://connector.example/interop".to_string(),
             );
@@ -5642,15 +5642,15 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for capabilities fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "enterprise_his".to_string(),
                 "https://connectors.enterprise-his.example/interop".to_string(),
             );
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "dimse_bridge".to_string(),
                 "dimse://bridge.example/ingest".to_string(),
             );
-            state.hl7.connector_plugins.insert(
+            state.hl7.lock().connector_plugins.insert(
                 "enterprise_his".to_string(),
                 ConnectorPluginMetadata {
                     plugin_path: "/opt/connectors/enterprise_his.wasm".to_string(),
@@ -5721,11 +5721,11 @@
                 .hl7
                 .connector_registry
                 .insert("lab".to_string(), String::new());
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "enterprise_his".to_string(),
                 "https://connectors.enterprise-his.example/interop".to_string(),
             );
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-enterprise".to_string(),
                 Hl7Subscription {
                     id: "sub-enterprise".to_string(),
@@ -5740,7 +5740,7 @@
                     last_event_ms: 0,
                 },
             );
-            state.hl7.failures.push_back(Hl7FailureRecord {
+            state.hl7.lock().failures.push_back(Hl7FailureRecord {
                 id: "failure-timeout-1".to_string(),
                 source: "his".to_string(),
                 message_type: "ORU".to_string(),
@@ -5893,7 +5893,7 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for feature gate disabled fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "lab".to_string(),
                 "https://connectors.lab.example/interop".to_string(),
             );
@@ -5981,7 +5981,7 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for feature gate rollout fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "lab".to_string(),
                 "https://connectors.lab.example/interop".to_string(),
             );
@@ -6468,11 +6468,11 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for connector circuit fixture");
-            state.hl7.connector_registry.insert(
+            state.hl7.lock().connector_registry.insert(
                 "lab".to_string(),
                 "https://callback-fail.local/events".to_string(),
             );
-            let _ = state.hl7.subscriptions.insert(
+            let _ = state.hl7.lock().subscriptions.insert(
                 "sub-00001".to_string(),
                 Hl7Subscription {
                     id: "sub-00001".to_string(),
@@ -6497,7 +6497,7 @@
                 1,
                 "corr-circuit-1",
             );
-            assert_eq!(state.hl7.failures.len(), 1);
+            assert_eq!(state.hl7.lock().failures.len(), 1);
 
             publish_hl7_event(
                 &mut state,
@@ -6508,7 +6508,7 @@
                 2,
                 "corr-circuit-2",
             );
-            assert_eq!(state.hl7.failures.len(), 2);
+            assert_eq!(state.hl7.lock().failures.len(), 2);
             let open_until = state
                 .hl7
                 .connector_circuit_open_until_ms
@@ -6527,7 +6527,7 @@
                 "corr-circuit-3",
             );
             assert_eq!(
-                state.hl7.failures.len(),
+                state.hl7.lock().failures.len(),
                 2,
                 "circuit-open connector should not emit additional callback failures until backoff elapses"
             );
@@ -6785,10 +6785,10 @@
             let mut state = shared
                 .lock()
                 .expect("shared state lock for reconciliation cap fixture");
-            while state.hl7.reconciliation_jobs.len() < MAX_RECONCILIATION_JOBS {
-                state.hl7.reconciliation_seq = state.hl7.reconciliation_seq.saturating_add(1);
+            while state.hl7.lock().reconciliation_jobs.len() < MAX_RECONCILIATION_JOBS {
+                state.hl7.lock().reconciliation_seq = state.hl7.lock().reconciliation_seq.saturating_add(1);
                 let id = format!("recon-cap-{0:05}", state.hl7.reconciliation_seq);
-                let _ = state.hl7.reconciliation_jobs.insert(
+                let _ = state.hl7.lock().reconciliation_jobs.insert(
                     id.clone(),
                     StudyReconciliationJob {
                         id,

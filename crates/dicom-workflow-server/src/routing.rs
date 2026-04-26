@@ -79,13 +79,15 @@ pub fn route_request(
         };
         if let Some(contract) = &contract {
             touch_tenant_index(&mut store, &actor.tenant);
-            let metrics = store.metrics.entry(actor.tenant.clone()).or_default();
+            let mut tenant_data = store.tenant.lock();
+            let metrics = tenant_data.metrics.entry(actor.tenant.clone()).or_default();
             metrics.read_operations = metrics.read_operations.saturating_add(1);
             if is_mutation {
                 metrics.mutation_operations = metrics.mutation_operations.saturating_add(1);
             } else {
                 metrics.query_operations = metrics.query_operations.saturating_add(1);
             }
+            drop(tenant_data);
             let _ = contract;
         }
         policy_anomaly
@@ -103,7 +105,8 @@ pub fn route_request(
             .map_err(|_| io_error("workflow state lock poisoned", "mutex poison"))?;
         let mut outcome = "ok".to_string();
         if let Some(contract) = &contract {
-            let metrics = store.metrics.entry(actor.tenant.clone()).or_default();
+            let mut tenant_data = store.tenant.lock();
+            let metrics = tenant_data.metrics.entry(actor.tenant.clone()).or_default();
             if status == 429 {
                 metrics.anomaly_operations = metrics.anomaly_operations.saturating_add(1);
             }
@@ -111,6 +114,7 @@ pub fn route_request(
                 metrics.denied_operations = metrics.denied_operations.saturating_add(1);
                 outcome = "error".to_string();
             }
+            drop(tenant_data);
             let _ = contract;
         }
         if let Some(contract) = &contract {
@@ -527,7 +531,7 @@ pub fn enforce_route_policy(
     contract: &dicom_workflow_server::WorkflowRouteContract,
     request_path: &str,
 ) -> Result<bool, Box<Error>> {
-    if is_route_denied(&state.denylist_routes, request_path) {
+    if is_route_denied(&state.health.read().denylist_routes, request_path) {
         log_route_policy_enforcement_failure(
             actor,
             request,
@@ -648,8 +652,9 @@ pub fn enforce_rate_limit(
         route
     );
     let now_ms = now_epoch_millis();
-    let window_ms = state.audit_rate_window_ms;
-    let bucket = state
+    let mut health = state.health.write();
+    let window_ms = health.audit_rate_window_ms;
+    let bucket = health
         .rate_windows
         .entry(key)
         .or_insert_with(RequestWindow::empty);
@@ -658,23 +663,26 @@ pub fn enforce_rate_limit(
         bucket.count = 0;
     }
     bucket.count = bucket.count.saturating_add(1);
-    let anomaly = if state.anomaly_alert_threshold > 0 {
-        bucket.count >= state.anomaly_alert_threshold
+    let count = bucket.count;
+    let anomaly_alert_threshold = health.anomaly_alert_threshold;
+    drop(health);
+    let anomaly = if anomaly_alert_threshold > 0 {
+        count >= anomaly_alert_threshold
     } else {
         false
     };
-    if bucket.count > limit {
+    if count > limit {
         return Err(Error::from_kind(
             ErrorKind::LimitExceeded {
                 limit_name: "workflow_rate_limit",
-                observed: bucket.count,
+                observed: count,
                 allowed: limit,
             },
             "rate limit exceeded",
         )
         .into());
     }
-    Ok(anomaly && bucket.count < limit)
+    Ok(anomaly && count < limit)
 }
 
 pub fn route_request_scope_path(path: &str, method: &str) -> &'static str {

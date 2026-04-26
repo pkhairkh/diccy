@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
+dicom-util = { path = "../dicom-util" }
 flate2 = { version = "1.0", optional = true }
 
 [features]

@@ -526,32 +526,167 @@ impl WorkflowAuthMode {
     }
 }
 
-/// Shared workflow runtime state.
-pub struct RuntimeState {
-    pub worklist: WorklistStore,
-    pub mpps: MppsService,
-    pub sr: SrWorkflowStore,
-    pub mpps_idempotency: BTreeMap<String, CachedMppsRequest>,
-    pub tasks: BTreeMap<String, ProcedureTask>,
-    pub task_id_sequence: u64,
-    pub task_idempotency: BTreeMap<String, CachedMppsRequest>,
-    pub hl7: Hl7RuntimeState,
-    pub audit_path: String,
-    pub audit_rate_window_ms: u64,
-    pub query_rate_limit: u64,
-    pub mutation_rate_limit: u64,
-    pub upload_cap_bytes: u64,
-    pub audit_max_bytes: u64,
-    pub audit_max_rotated_files: usize,
-    pub rate_windows: BTreeMap<String, RequestWindow>,
-    pub anomaly_alert_threshold: u64,
-    pub audit_export_limit: usize,
-    pub denylist_routes: Vec<String>,
+// ===========================================================================
+// S10-T8: Decomposed sub-structs with own Mutex/RwLock
+// ===========================================================================
+
+/// HL7-related runtime state (S10-T8: owns its own Mutex).
+#[derive(Debug)]
+pub struct Hl7State {
+    inner: Mutex<Hl7RuntimeState>,
+}
+
+impl Hl7State {
+    /// Create from an existing Hl7RuntimeState.
+    pub fn new(inner: Hl7RuntimeState) -> Self { Self { inner: Mutex::new(inner) } }
+    /// Lock for exclusive access.
+    pub fn lock(&self) -> std::sync::MutexGuard<'_, Hl7RuntimeState> { self.inner.lock().unwrap() }
+}
+
+impl Default for Hl7State {
+    fn default() -> Self { Self { inner: Mutex::new(Hl7RuntimeState::default()) } }
+}
+
+/// Tenant management state (S10-T8: owns its own Mutex).
+pub struct TenantState {
+    inner: Mutex<TenantStateData>,
+}
+
+/// Inner tenant data with pub fields for handler access after locking.
+pub struct TenantStateData {
+    /// Per-tenant worklist index.
     pub tenant_worklist: BTreeMap<String, Vec<String>>,
+    /// Per-tenant MPPS index.
     pub tenant_mpps: BTreeMap<String, Vec<String>>,
+    /// Per-tenant SR index.
     pub tenant_sr: BTreeMap<String, Vec<String>>,
+    /// Per-tenant task index.
     pub tenant_tasks: BTreeMap<String, Vec<String>>,
+    /// Per-tenant operation metrics.
     pub metrics: BTreeMap<String, TenantOperationMetrics>,
+}
+
+impl TenantState {
+    /// Create empty.
+    pub fn new() -> Self {
+        Self { inner: Mutex::new(TenantStateData {
+            tenant_worklist: BTreeMap::new(),
+            tenant_mpps: BTreeMap::new(),
+            tenant_sr: BTreeMap::new(),
+            tenant_tasks: BTreeMap::new(),
+            metrics: BTreeMap::new(),
+        }) }
+    }
+    /// Lock for exclusive access.
+    pub fn lock(&self) -> std::sync::MutexGuard<'_, TenantStateData> { self.inner.lock().unwrap() }
+}
+
+/// Worker pool state (S10-T8: owns its own Mutex).
+pub struct WorkerState {
+    inner: Mutex<WorkerStateData>,
+}
+
+/// Inner worker data.
+pub struct WorkerStateData {
+    /// MPPS idempotency cache.
+    pub mpps_idempotency: BTreeMap<String, CachedMppsRequest>,
+    /// Procedure tasks indexed by task ID.
+    pub tasks: BTreeMap<String, ProcedureTask>,
+    /// Task ID sequence counter.
+    pub task_id_sequence: u64,
+    /// Task idempotency cache.
+    pub task_idempotency: BTreeMap<String, CachedMppsRequest>,
+}
+
+impl WorkerState {
+    /// Create with initial state.
+    pub fn new(task_id_sequence: u64, task_idempotency: BTreeMap<String, CachedMppsRequest>) -> Self {
+        Self { inner: Mutex::new(WorkerStateData {
+            mpps_idempotency: BTreeMap::new(),
+            tasks: BTreeMap::new(),
+            task_id_sequence,
+            task_idempotency,
+        }) }
+    }
+    /// Lock for exclusive access.
+    pub fn lock(&self) -> std::sync::MutexGuard<'_, WorkerStateData> { self.inner.lock().unwrap() }
+}
+
+/// Health check and audit state (S10-T8: owns its own RwLock).
+pub struct HealthState {
+    inner: std::sync::RwLock<HealthStateData>,
+}
+
+/// Inner health data.
+pub struct HealthStateData {
+    /// Audit file path.
+    pub audit_path: String,
+    /// Audit rate window in milliseconds.
+    pub audit_rate_window_ms: u64,
+    /// Query rate limit.
+    pub query_rate_limit: u64,
+    /// Mutation rate limit.
+    pub mutation_rate_limit: u64,
+    /// Upload cap in bytes.
+    pub upload_cap_bytes: u64,
+    /// Audit max bytes before rotation.
+    pub audit_max_bytes: u64,
+    /// Audit max rotated files.
+    pub audit_max_rotated_files: usize,
+    /// Rate windows per tenant.
+    pub rate_windows: BTreeMap<String, RequestWindow>,
+    /// Anomaly alert threshold.
+    pub anomaly_alert_threshold: u64,
+    /// Audit export limit.
+    pub audit_export_limit: usize,
+    /// Denylist routes.
+    pub denylist_routes: Vec<String>,
+}
+
+impl HealthState {
+    /// Create with the given configuration.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        audit_path: String,
+        audit_rate_window_ms: u64,
+        query_rate_limit: u64,
+        mutation_rate_limit: u64,
+        upload_cap_bytes: u64,
+        audit_max_bytes: u64,
+        audit_max_rotated_files: usize,
+        anomaly_alert_threshold: u64,
+        audit_export_limit: usize,
+        denylist_routes: Vec<String>,
+    ) -> Self {
+        Self { inner: std::sync::RwLock::new(HealthStateData {
+            audit_path, audit_rate_window_ms, query_rate_limit, mutation_rate_limit,
+            upload_cap_bytes, audit_max_bytes, audit_max_rotated_files,
+            rate_windows: BTreeMap::new(), anomaly_alert_threshold, audit_export_limit, denylist_routes,
+        }) }
+    }
+    /// Lock for read access.
+    pub fn read(&self) -> std::sync::RwLockReadGuard<'_, HealthStateData> { self.inner.read().unwrap() }
+    /// Lock for write access.
+    pub fn write(&self) -> std::sync::RwLockWriteGuard<'_, HealthStateData> { self.inner.write().unwrap() }
+}
+
+/// Shared workflow runtime state, decomposed into fine-grained sub-structs
+/// each owning its own Mutex/RwLock for reduced lock contention (S10-T8).
+pub struct RuntimeState {
+    /// Worklist store.
+    pub worklist: WorklistStore,
+    /// MPPS service.
+    pub mpps: MppsService,
+    /// SR workflow store.
+    pub sr: SrWorkflowStore,
+    /// HL7-related state.
+    pub hl7: Hl7State,
+    /// Tenant management state.
+    pub tenant: TenantState,
+    /// Worker pool state.
+    pub worker: WorkerState,
+    /// Health check and audit state.
+    pub health: HealthState,
 }
 
 #[derive(Debug, Clone)]
@@ -800,9 +935,9 @@ pub fn tenant_rate_limit_overrides_snapshot() -> BTreeMap<String, TenantRateLimi
 
 pub fn tenant_policy(state: &RuntimeState, tenant: &str) -> TenantWorkflowPolicy {
     let mut policy = TenantWorkflowPolicy {
-        query_rate_limit: state.query_rate_limit,
-        mutation_rate_limit: state.mutation_rate_limit,
-        upload_cap_bytes: state.upload_cap_bytes,
+        query_rate_limit: state.health.read().query_rate_limit,
+        mutation_rate_limit: state.health.read().mutation_rate_limit,
+        upload_cap_bytes: state.health.read().upload_cap_bytes,
         task_quota: DEFAULT_TENANT_TASK_QUOTA,
         subscription_quota: DEFAULT_TENANT_SUBSCRIPTION_QUOTA,
     };
@@ -907,36 +1042,36 @@ pub fn actor_has_resource_access(
 }
 
 pub fn touch_tenant_index(state: &mut RuntimeState, tenant: &str) {
-    let _ = state.tenant_worklist.entry(tenant.to_string()).or_default();
-    let _ = state.tenant_mpps.entry(tenant.to_string()).or_default();
-    let _ = state.tenant_sr.entry(tenant.to_string()).or_default();
-    let _ = state.tenant_tasks.entry(tenant.to_string()).or_default();
+    let _ = state.tenant.lock().tenant_worklist.entry(tenant.to_string()).or_default();
+    let _ = state.tenant.lock().tenant_mpps.entry(tenant.to_string()).or_default();
+    let _ = state.tenant.lock().tenant_sr.entry(tenant.to_string()).or_default();
+    let _ = state.tenant.lock().tenant_tasks.entry(tenant.to_string()).or_default();
 }
 
 pub fn ensure_tenant_indexes_initialized(state: &mut RuntimeState) {
-    if !state.tenant_worklist.is_empty()
-        && !state.tenant_mpps.is_empty()
-        && !state.tenant_sr.is_empty()
-        && !state.tenant_tasks.is_empty()
+    if !state.tenant.lock().tenant_worklist.is_empty()
+        && !state.tenant.lock().tenant_mpps.is_empty()
+        && !state.tenant.lock().tenant_sr.is_empty()
+        && !state.tenant.lock().tenant_tasks.is_empty()
     {
         return;
     }
 
-    state.tenant_worklist.clear();
-    state.tenant_mpps.clear();
-    state.tenant_sr.clear();
-    state.tenant_tasks.clear();
+    state.tenant.lock().tenant_worklist.clear();
+    state.tenant.lock().tenant_mpps.clear();
+    state.tenant.lock().tenant_sr.clear();
+    state.tenant.lock().tenant_tasks.clear();
 
     let default_tenant = TENANT_ID_DEFAULT.to_string();
     touch_tenant_index(state, &default_tenant);
 
-    for task in state.tasks.values() {
+    for task in state.worker.lock().tasks.values() {
         let tenant = if task.tenant.is_empty() {
             default_tenant.clone()
         } else {
             task.tenant.clone()
         };
-        route_id_to_tenant_index(&mut state.tenant_tasks, &tenant, &task.task_id);
+        route_id_to_tenant_index(&mut state.tenant.lock().tenant_tasks, &tenant, &task.task_id);
     }
 
     let worklist_ids: Vec<_> = state
@@ -959,13 +1094,13 @@ pub fn ensure_tenant_indexes_initialized(state: &mut RuntimeState) {
         })
         .unwrap_or_default();
     for step_id in worklist_ids {
-        route_id_to_tenant_index(&mut state.tenant_worklist, &default_tenant, &step_id);
+        route_id_to_tenant_index(&mut state.tenant.lock().tenant_worklist, &default_tenant, &step_id);
     }
 
     let mpps_ids = state.mpps.all_updates();
     for update in mpps_ids {
         route_id_to_tenant_index(
-            &mut state.tenant_mpps,
+            &mut state.tenant.lock().tenant_mpps,
             &default_tenant,
             &update.sop_instance_uid,
         );
@@ -973,7 +1108,7 @@ pub fn ensure_tenant_indexes_initialized(state: &mut RuntimeState) {
 
     for document in state.sr.documents() {
         route_id_to_tenant_index(
-            &mut state.tenant_sr,
+            &mut state.tenant.lock().tenant_sr,
             &default_tenant,
             &document.provenance.sop_instance_uid,
         );
@@ -1245,8 +1380,8 @@ pub fn normalize_connector_adapter_kind(alias: &str, target: &str) -> Normalized
 
 pub fn normalized_connector_descriptors(state: &RuntimeState) -> Vec<NormalizedConnectorAdapter> {
     let mut out = Vec::new();
-    for (alias, target) in &state.hl7.connector_registry {
-        let plugin = state.hl7.connector_plugins.get(alias).cloned();
+    for (alias, target) in &state.hl7.lock().connector_registry {
+        let plugin = state.hl7.lock().connector_plugins.get(alias).cloned();
         out.push(NormalizedConnectorAdapter {
             alias: alias.clone(),
             target: target.clone(),

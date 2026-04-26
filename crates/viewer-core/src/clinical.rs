@@ -78,6 +78,38 @@ pub struct MeasurementRecord {
     pub deleted: bool,
 }
 
+impl MeasurementRecord {
+    /// Soft-delete this measurement, marking it as deleted.
+    ///
+    /// Returns `Err(ClinicalError::InvalidInput)` if already deleted.
+    pub fn soft_delete(&mut self, tick: u64) -> Result<(), ClinicalError> {
+        if self.deleted {
+            return Err(ClinicalError::InvalidInput {
+                detail: "measurement is already soft-deleted".to_string(),
+            });
+        }
+        self.deleted = true;
+        self.updated_at_tick = tick;
+        self.revision = self.revision.saturating_add(1);
+        Ok(())
+    }
+
+    /// Revive a previously soft-deleted measurement.
+    ///
+    /// Returns `Err(ClinicalError::InvalidInput)` if not currently deleted.
+    pub fn revive(&mut self, tick: u64) -> Result<(), ClinicalError> {
+        if !self.deleted {
+            return Err(ClinicalError::InvalidInput {
+                detail: "measurement is not soft-deleted, cannot revive".to_string(),
+            });
+        }
+        self.deleted = false;
+        self.updated_at_tick = tick;
+        self.revision = self.revision.saturating_add(1);
+        Ok(())
+    }
+}
+
 /// Deterministic export bundle for measurement workflows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExportBundle {

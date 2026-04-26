@@ -2,12 +2,358 @@
 #![deny(clippy::cast_possible_truncation)]
 
 //! DICOM UL (Upper Layer) parsing and association negotiation primitives.
+//!
+//! ## Dependency Injection (S10-T3)
+//!
+//! The [`Transport`] and [`TransportStream`] traits allow callers to inject
+//! custom transport implementations (e.g. TLS, in-memory channels) instead of
+//! relying on hard-coded TCP sockets. Production code uses [`TcpTransport`];
+//! tests can use [`MockTransport`].
 
-use dicom_core::{validate_uid_strict, Error, ErrorKind, Result, Tag};
+use dicom_core::{validate_uid_strict, Error, Result, Tag};
 use std::collections::BTreeSet;
+use std::fmt;
+use std::io;
+use std::net::SocketAddr;
+use std::sync::mpsc;
+
+// ===========================================================================
+// S10-T3: Transport trait for dependency injection
+// ===========================================================================
+
+/// A bidirectional byte stream returned by a [`Transport`].
+///
+/// Implementations must support `Read`, `Write`, and timeout configuration.
+pub trait TransportStream: Send + Sync + io::Read + io::Write {
+    /// Set the read timeout for this stream.
+    fn set_read_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>>;
+    /// Set the write timeout for this stream.
+    fn set_write_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>>;
+}
+
+/// Abstract transport for establishing DICOM association streams.
+///
+/// Production code uses [`TcpTransport`]; tests can inject [`MockTransport`]
+/// to exercise protocol logic without real network I/O.
+pub trait Transport: Send + Sync {
+    /// Connect to the given address and return a bidirectional stream.
+    fn connect(&self, addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>>;
+    /// Accept one incoming connection, returning the stream and peer address.
+    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>>;
+}
+
+/// Type-erased transport stream box.
+pub type TransportStreamBox = Box<dyn TransportStream>;
+
+// ---------------------------------------------------------------------------
+// TcpTransport — real TCP implementation
+// ---------------------------------------------------------------------------
+
+/// Real TCP transport using [`std::net::TcpListener`] and [`std::net::TcpStream`].
+pub struct TcpTransport {
+    listener: std::net::TcpListener,
+}
+
+impl TcpTransport {
+    /// Create a TCP transport that listens on the given address.
+    pub fn bind(addr: &str) -> std::result::Result<Self, Box<dyn std::error::Error>> {
+        let listener = std::net::TcpListener::bind(addr)?;
+        Ok(Self { listener })
+    }
+
+    /// Return the local address this transport is bound to.
+    pub fn local_addr(&self) -> std::result::Result<SocketAddr, Box<dyn std::error::Error>> {
+        Ok(self.listener.local_addr()?)
+    }
+}
+
+impl Transport for TcpTransport {
+    fn connect(&self, addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
+        let stream = std::net::TcpStream::connect(addr)?;
+        Ok(Box::new(TcpStream { inner: stream }))
+    }
+
+    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
+        let (stream, addr) = self.listener.accept()?;
+        Ok((Box::new(TcpStream { inner: stream }), addr))
+    }
+}
+
+struct TcpStream {
+    inner: std::net::TcpStream,
+}
+
+impl io::Read for TcpStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl io::Write for TcpStream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl TransportStream for TcpStream {
+    fn set_read_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        Ok(self.inner.set_read_timeout(dur)?)
+    }
+
+    fn set_write_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        Ok(self.inner.set_write_timeout(dur)?)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MockTransport — in-memory channel transport for testing
+// ---------------------------------------------------------------------------
+
+/// In-memory mock transport using `mpsc` channels. Useful for unit tests.
+pub struct MockTransport {
+    receiver: std::sync::Mutex<mpsc::Receiver<(Vec<u8>, mpsc::Sender<Vec<u8>>)>>,
+    sender: mpsc::Sender<Vec<u8>>,
+}
+
+impl MockTransport {
+    /// Create a new mock transport pair: `(server, client)`.
+    pub fn pair() -> (Self, MockClient) {
+        let (to_server_tx, to_server_rx) = mpsc::channel();
+        let (to_client_tx, to_client_rx) = mpsc::channel();
+
+        let server = Self {
+            receiver: std::sync::Mutex::new(to_server_rx),
+            sender: to_client_tx,
+        };
+
+        let client = MockClient {
+            to_server: to_server_tx,
+            from_server: std::sync::Mutex::new(to_client_rx),
+        };
+
+        (server, client)
+    }
+}
+
+impl Transport for MockTransport {
+    fn connect(&self, _addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
+        // Mock transport does not support connect; use accept + MockClient
+        Err("MockTransport does not support connect; use accept with MockClient".into())
+    }
+
+    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
+        // Take the next pending write from a client and return a paired stream
+        let (data, reply_tx) = self.receiver.lock().unwrap().recv()?;
+        let stream = MockStream {
+            read_buf: std::sync::Mutex::new(data),
+            write_tx: std::sync::Mutex::new(Some(reply_tx)),
+            read_from_server: std::sync::Mutex::new(vec![]),
+        };
+        Ok((Box::new(stream), "127.0.0.1:0".parse().unwrap()))
+    }
+}
+
+/// Client side of a [`MockTransport`] pair.
+pub struct MockClient {
+    to_server: mpsc::Sender<(Vec<u8>, mpsc::Sender<Vec<u8>>)>,
+    from_server: std::sync::Mutex<mpsc::Receiver<Vec<u8>>>,
+}
+
+impl MockClient {
+    /// Send data to the server and return the response.
+    pub fn roundtrip(&self, request: &[u8]) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.to_server.send((request.to_vec(), reply_tx))?;
+        // Also send to the server's response channel
+        let response = self.from_server.lock().unwrap().recv()?;
+        Ok(response)
+    }
+}
+
+struct MockStream {
+    read_buf: std::sync::Mutex<Vec<u8>>,
+    write_tx: std::sync::Mutex<Option<mpsc::Sender<Vec<u8>>>>,
+    read_from_server: std::sync::Mutex<Vec<u8>>,
+}
+
+impl io::Read for MockStream {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut data = self.read_buf.lock().unwrap();
+        let n = std::cmp::min(buf.len(), data.len());
+        buf[..n].copy_from_slice(&data[..n]);
+        data.drain(..n);
+        Ok(n)
+    }
+}
+
+impl io::Write for MockStream {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if let Some(tx) = self.write_tx.lock().unwrap().as_ref() {
+            let _ = tx.send(buf.to_vec());
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl TransportStream for MockStream {
+    fn set_read_timeout(&self, _dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+
+    fn set_write_timeout(&self, _dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+}
 
 const APPLICATION_CONTEXT_UID: &str = "1.2.840.10008.3.1.1.1";
 const TAG_UID: Tag = Tag(0x0000, 0x0000);
+
+// ===========================================================================
+// S10-T1: Domain Enums for dicom-net
+// ===========================================================================
+
+/// Association reject reason, classifying the rejection source and cause.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RejectReason {
+    // Service-user (ASCE) rejection reasons (source = 1)
+    /// No reason given (service-user, result=1, source=1, reason=1).
+    UserNoReason,
+    /// Application context name not supported (service-user, result=1, source=1, reason=2).
+    UserApplicationContextNotSupported,
+    /// Calling AE title not recognized (service-user, result=1, source=1, reason=3).
+    UserCallingAeNotRecognized,
+    /// Called AE title not recognized (service-user, result=1, source=1, reason=7).
+    UserCalledAeNotRecognized,
+
+    // Service-provider (ACSE) rejection reasons (source = 2)
+    /// No reason given (service-provider, result=1, source=2, reason=1).
+    ProviderNoReason,
+    /// Protocol version not supported (service-provider, result=2, source=2, reason=2).
+    ProviderProtocolVersionNotSupported,
+
+    // Service-provider (presentation) rejection reasons (source = 3)
+    /// Temporary congestion (service-provider, result=2, source=3, reason=1).
+    ProviderTemporaryCongestion,
+    /// Local limit exceeded (service-provider, result=2, source=3, reason=2).
+    ProviderLocalLimitExceeded,
+
+    /// Unknown/raw reject reason values.
+    Other {
+        /// Raw result byte.
+        result: u8,
+        /// Raw source byte.
+        source: u8,
+        /// Raw reason byte.
+        reason: u8,
+    },
+}
+
+impl RejectReason {
+    /// Create a RejectReason from raw result/source/reason bytes.
+    pub fn from_bytes(result: u8, source: u8, reason: u8) -> Self {
+        match (result, source, reason) {
+            (1, 1, 1) => RejectReason::UserNoReason,
+            (1, 1, 2) => RejectReason::UserApplicationContextNotSupported,
+            (1, 1, 3) => RejectReason::UserCallingAeNotRecognized,
+            (1, 1, 7) => RejectReason::UserCalledAeNotRecognized,
+            (1, 2, 1) => RejectReason::ProviderNoReason,
+            (2, 2, 2) => RejectReason::ProviderProtocolVersionNotSupported,
+            (2, 3, 1) => RejectReason::ProviderTemporaryCongestion,
+            (2, 3, 2) => RejectReason::ProviderLocalLimitExceeded,
+            _ => RejectReason::Other { result, source, reason },
+        }
+    }
+
+    /// Convert to (result, source, reason) bytes.
+    pub fn to_bytes(self) -> (u8, u8, u8) {
+        match self {
+            RejectReason::UserNoReason => (1, 1, 1),
+            RejectReason::UserApplicationContextNotSupported => (1, 1, 2),
+            RejectReason::UserCallingAeNotRecognized => (1, 1, 3),
+            RejectReason::UserCalledAeNotRecognized => (1, 1, 7),
+            RejectReason::ProviderNoReason => (1, 2, 1),
+            RejectReason::ProviderProtocolVersionNotSupported => (2, 2, 2),
+            RejectReason::ProviderTemporaryCongestion => (2, 3, 1),
+            RejectReason::ProviderLocalLimitExceeded => (2, 3, 2),
+            RejectReason::Other { result, source, reason } => (result, source, reason),
+        }
+    }
+}
+
+impl fmt::Display for RejectReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RejectReason::UserNoReason => write!(f, "UserNoReason(1/1/1)"),
+            RejectReason::UserApplicationContextNotSupported => write!(f, "UserApplicationContextNotSupported(1/1/2)"),
+            RejectReason::UserCallingAeNotRecognized => write!(f, "UserCallingAeNotRecognized(1/1/3)"),
+            RejectReason::UserCalledAeNotRecognized => write!(f, "UserCalledAeNotRecognized(1/1/7)"),
+            RejectReason::ProviderNoReason => write!(f, "ProviderNoReason(1/2/1)"),
+            RejectReason::ProviderProtocolVersionNotSupported => write!(f, "ProviderProtocolVersionNotSupported(2/2/2)"),
+            RejectReason::ProviderTemporaryCongestion => write!(f, "ProviderTemporaryCongestion(2/3/1)"),
+            RejectReason::ProviderLocalLimitExceeded => write!(f, "ProviderLocalLimitExceeded(2/3/2)"),
+            RejectReason::Other { result, source, reason } => write!(f, "Other({result}/{source}/{reason})"),
+        }
+    }
+}
+
+/// Presentation context acceptance result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AcceptResult {
+    /// Abstract syntax and transfer syntax accepted (0x00).
+    Accepted,
+    /// Abstract syntax not supported (0x03).
+    AbstractSyntaxNotSupported,
+    /// Transfer syntax not supported (0x04).
+    TransferSyntaxNotSupported,
+    /// Unknown/raw result value.
+    Other(u8),
+}
+
+impl AcceptResult {
+    /// Create an AcceptResult from a raw result byte.
+    pub fn from_u8(raw: u8) -> Self {
+        match raw {
+            0x00 => AcceptResult::Accepted,
+            0x03 => AcceptResult::AbstractSyntaxNotSupported,
+            0x04 => AcceptResult::TransferSyntaxNotSupported,
+            _ => AcceptResult::Other(raw),
+        }
+    }
+
+    /// Convert to the raw result byte.
+    pub fn as_u8(self) -> u8 {
+        match self {
+            AcceptResult::Accepted => 0x00,
+            AcceptResult::AbstractSyntaxNotSupported => 0x03,
+            AcceptResult::TransferSyntaxNotSupported => 0x04,
+            AcceptResult::Other(raw) => raw,
+        }
+    }
+
+    /// Return true if the context was accepted.
+    pub fn is_accepted(self) -> bool {
+        matches!(self, AcceptResult::Accepted)
+    }
+}
+
+impl fmt::Display for AcceptResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AcceptResult::Accepted => write!(f, "Accepted(0x00)"),
+            AcceptResult::AbstractSyntaxNotSupported => write!(f, "AbstractSyntaxNotSupported(0x03)"),
+            AcceptResult::TransferSyntaxNotSupported => write!(f, "TransferSyntaxNotSupported(0x04)"),
+            AcceptResult::Other(raw) => write!(f, "Other(0x{raw:02X})"),
+        }
+    }
+}
 
 /// Configurable networking limits.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,12 +456,50 @@ pub struct Abort {
 /// Presentation context in an association request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PresentationContext {
-    /// Presentation context identifier (odd).
-    pub id: u8,
+    /// Presentation context identifier (must be odd per DICOM spec).
+    id: u8,
     /// Abstract syntax UID.
-    pub abstract_syntax: String,
+    abstract_syntax: String,
     /// Transfer syntax UID list.
-    pub transfer_syntaxes: Vec<String>,
+    transfer_syntaxes: Vec<String>,
+}
+
+impl PresentationContext {
+    /// Create a new presentation context, validating that the ID is odd per DICOM spec.
+    ///
+    /// Per DICOM PS3.8, presentation context IDs must be odd integers (1, 3, 5, ..., 255).
+    pub fn new(id: u8, abstract_syntax: String, transfer_syntaxes: Vec<String>) -> Result<Self> {
+        if id == 0 || id % 2 == 0 {
+            return Err(decode_error(
+                "presentation context ID must be odd per DICOM spec",
+            ));
+        }
+        if transfer_syntaxes.is_empty() {
+            return Err(decode_error(
+                "presentation context requires at least one transfer syntax",
+            ));
+        }
+        Ok(Self {
+            id,
+            abstract_syntax,
+            transfer_syntaxes,
+        })
+    }
+
+    /// Return the presentation context identifier.
+    pub fn id(&self) -> u8 {
+        self.id
+    }
+
+    /// Return the abstract syntax UID.
+    pub fn abstract_syntax(&self) -> &str {
+        &self.abstract_syntax
+    }
+
+    /// Return the transfer syntax UID list.
+    pub fn transfer_syntaxes(&self) -> &[String] {
+        &self.transfer_syntaxes
+    }
 }
 
 /// Presentation context result in an association accept.
@@ -438,10 +822,10 @@ pub fn accept_association(
         if policy
             .supported_abstract_syntaxes
             .iter()
-            .any(|uid| uid == &context.abstract_syntax)
+            .any(|uid| uid == context.abstract_syntax())
         {
             for ts in &policy.supported_transfer_syntaxes {
-                if context.transfer_syntaxes.iter().any(|cand| cand == ts) {
+                if context.transfer_syntaxes().iter().any(|cand| cand == ts) {
                     result = 0x00;
                     chosen = Some(ts.clone());
                     break;
@@ -452,7 +836,7 @@ pub fn accept_association(
             }
         }
         accepted.push(PresentationContextAccept {
-            id: context.id,
+            id: context.id(),
             result,
             transfer_syntax: chosen,
         });
@@ -623,20 +1007,20 @@ fn encode_item(item_type: u8, body: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn encode_presentation_context_rq(context: &PresentationContext) -> Result<Vec<u8>> {
-    if context.id == 0 || context.id.is_multiple_of(2) {
+    if context.id() == 0 || context.id().is_multiple_of(2) {
         return Err(decode_error("presentation context ID must be odd"));
     }
-    if context.transfer_syntaxes.is_empty() {
+    if context.transfer_syntaxes().is_empty() {
         return Err(decode_error(
             "presentation context requires transfer syntax",
         ));
     }
     let mut body = Vec::new();
-    body.push(context.id);
+    body.push(context.id());
     body.push(0x00);
     body.extend_from_slice(&0u16.to_be_bytes());
-    body.extend_from_slice(&encode_uid_item(0x30, &context.abstract_syntax)?);
-    for ts in &context.transfer_syntaxes {
+    body.extend_from_slice(&encode_uid_item(0x30, context.abstract_syntax())?);
+    for ts in context.transfer_syntaxes() {
         body.extend_from_slice(&encode_uid_item(0x40, ts)?);
     }
     encode_item(0x20, &body)
@@ -924,11 +1308,7 @@ fn parse_presentation_context_rq(item_body: &[u8]) -> Result<PresentationContext
     if transfer_syntaxes.is_empty() {
         return Err(decode_error("missing transfer syntax"));
     }
-    Ok(PresentationContext {
-        id,
-        abstract_syntax,
-        transfer_syntaxes,
-    })
+    Ok(PresentationContext::new(id, abstract_syntax, transfer_syntaxes)?)
 }
 
 fn parse_presentation_context_ac(item_body: &[u8]) -> Result<PresentationContextAccept> {
@@ -1023,14 +1403,7 @@ fn parse_text(raw: &[u8]) -> Result<String> {
 }
 
 fn decode_error(detail: impl Into<String>) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::DecodeError {
-            stage: "dicom-net".to_string(),
-            detail: detail.into(),
-        },
-        "decode error",
-    )
-    .into()
+    dicom_util::decode_error("dicom-net", &detail.into())
 }
 
 fn state_error(state: AssociationState, event: AssociationEvent) -> Box<Error> {
@@ -1040,22 +1413,11 @@ fn state_error(state: AssociationState, event: AssociationEvent) -> Box<Error> {
 }
 
 fn limit_exceeded(limit_name: &'static str, observed: u64, allowed: u64) -> Box<Error> {
-    Error::from_kind(
-        ErrorKind::LimitExceeded {
-            limit_name,
-            observed,
-            allowed,
-        },
-        "limit exceeded",
-    )
-    .into()
+    dicom_util::limit_exceeded(limit_name, observed, allowed)
 }
 
 fn enforce_limit(limit_name: &'static str, observed: u64, allowed: u64) -> Result<()> {
-    if observed > allowed {
-        return Err(limit_exceeded(limit_name, observed, allowed));
-    }
-    Ok(())
+    dicom_util::enforce_limit(limit_name, observed, allowed)
 }
 
 struct Cursor<'a> {
@@ -1174,11 +1536,11 @@ mod tests {
             called_ae: "CALLED_AE".to_string(),
             calling_ae: "CALLING_AE".to_string(),
             application_context: APPLICATION_CONTEXT_UID.to_string(),
-            presentation_contexts: vec![PresentationContext {
-                id: 0x01,
-                abstract_syntax: "1.2.840.10008.1.1".to_string(),
-                transfer_syntaxes: vec!["1.2.840.10008.1.2".to_string()],
-            }],
+            presentation_contexts: vec![PresentationContext::new(
+                0x01,
+                "1.2.840.10008.1.1".to_string(),
+                vec!["1.2.840.10008.1.2".to_string()],
+            ).unwrap()],
             max_pdu_length: 16_384,
             implementation_class_uid: None,
             implementation_version_name: None,
@@ -1224,21 +1586,21 @@ mod tests {
             calling_ae: "CALLING_AE".to_string(),
             application_context: APPLICATION_CONTEXT_UID.to_string(),
             presentation_contexts: vec![
-                PresentationContext {
-                    id: 0x01,
-                    abstract_syntax: "1.2.3".to_string(),
-                    transfer_syntaxes: vec!["1.2.840.10008.1.2".to_string()],
-                },
-                PresentationContext {
-                    id: 0x03,
-                    abstract_syntax: "1.2.3".to_string(),
-                    transfer_syntaxes: vec!["1.2.840.10008.1.2.1".to_string()],
-                },
-                PresentationContext {
-                    id: 0x05,
-                    abstract_syntax: "9.9.9".to_string(),
-                    transfer_syntaxes: vec!["1.2.840.10008.1.2".to_string()],
-                },
+                PresentationContext::new(
+                    0x01,
+                    "1.2.3".to_string(),
+                    vec!["1.2.840.10008.1.2".to_string()],
+                ).unwrap(),
+                PresentationContext::new(
+                    0x03,
+                    "1.2.3".to_string(),
+                    vec!["1.2.840.10008.1.2.1".to_string()],
+                ).unwrap(),
+                PresentationContext::new(
+                    0x05,
+                    "9.9.9".to_string(),
+                    vec!["1.2.840.10008.1.2".to_string()],
+                ).unwrap(),
             ],
             max_pdu_length: 32_768,
             implementation_class_uid: None,
@@ -1451,3 +1813,4 @@ mod tests {
         }
     }
 }
+
