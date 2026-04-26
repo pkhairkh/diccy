@@ -1,11 +1,11 @@
 [package]
-name = "modality-xr"
+name = "modality-cr"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [features]
-modality-xr = []
+modality-cr = []
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }

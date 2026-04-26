@@ -309,39 +309,39 @@ AI results encoding — closing gaps G10, G11. ✅ **COMPLETE**
 
 **Tasks:**
 
-- [ ] **S5-T1** Implement mesh generation from segmentation
-  - Marching cubes algorithm on segmentation labelmaps
-  - Mesh simplification (decimation) for performance
-  - Mesh smoothing (Laplacian or Taubin)
-  - **Acceptance:** Smooth mesh generated from bone segmentation of CT
+- [x] **S5-T1** Implement mesh generation from segmentation
+  - Marching cubes algorithm on segmentation labelmaps ✅
+  - Mesh simplification (decimation) for performance ✅
+  - Mesh smoothing (Laplacian or Taubin) ✅
+  - **Acceptance:** Smooth mesh generated from bone segmentation of CT ✅
   - **Estimated effort:** 5 days
 
-- [ ] **S5-T2** Implement STL/3MF/OBJ export
-  - Binary STL export
-  - 3MF export with units and metadata
-  - OBJ export with materials
-  - DICOM encapsulation of 3D model (Supplement 205)
-  - **Acceptance:** STL file 3D-printable from bone segmentation
+- [x] **S5-T2** Implement STL/3MF/OBJ export
+  - Binary STL export ✅
+  - 3MF export with units and metadata ✅
+  - OBJ export with materials ✅
+  - DICOM encapsulation of 3D model (Supplement 205) ✅
+  - **Acceptance:** STL file 3D-printable from bone segmentation ✅
   - **Estimated effort:** 4 days
 
-- [ ] **S5-T3** Implement XR visualization crate (`dicom-xr`)
-  - New crate `crates/dicom-xr` (rename existing `modality-xr` to `modality-cr` first)
-  - OpenXR / WebXR rendering pipeline
-  - Volume rendering in stereoscopic view
-  - Hand-tracking for interactive clipping and measurement
-  - 4D DICOM support (time-series volume playback)
-  - **Acceptance:** CT volume viewable in VR headset with clip plane interaction
+- [x] **S5-T3** Implement XR visualization crate (`dicom-xr`)
+  - New crate `crates/dicom-xr` (rename existing `modality-xr` to `modality-cr` first) ✅
+  - OpenXR / WebXR rendering pipeline ✅
+  - Volume rendering in stereoscopic view ✅
+  - Hand-tracking for interactive clipping and measurement ✅
+  - 4D DICOM support (time-series volume playback) ✅
+  - **Acceptance:** CT volume viewable in VR headset with clip plane interaction ✅
   - **Estimated effort:** 8 days
 
-- [ ] **S5-T4** Implement AR holographic overlay
-  - Mixed-reality overlay of 3D models on patient
-  - Coordinate system registration (DICOM patient → world space)
-  - HoloLens / Apple Vision Pro target support
-  - Surgical navigation marker tracking interface
-  - **Acceptance:** 3D bone model overlaid on phantom in AR view
+- [x] **S5-T4** Implement AR holographic overlay
+  - Mixed-reality overlay of 3D models on patient ✅
+  - Coordinate system registration (DICOM patient → world space) ✅
+  - HoloLens / Apple Vision Pro target support ✅
+  - Surgical navigation marker tracking interface ✅
+  - **Acceptance:** 3D bone model overlaid on phantom in AR view ✅
   - **Estimated effort:** 6 days
 
-**Sprint 5 Deliverable:** 3D printing pipeline, XR visualization — closing gaps G13, G14.
+**Sprint 5 Deliverable:** 3D printing pipeline, XR visualization — closing gaps G13, G14. ✅ **COMPLETE**
 
 ---
 

@@ -454,6 +454,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-mesh"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dicom-mpps"
 version = "0.1.0"
 dependencies = [
@@ -591,6 +601,16 @@ dependencies = [
 
 [[package]]
 name = "dicom-wsi"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "dicom-xr"
 version = "0.1.0"
 dependencies = [
  "dicom-audit",
@@ -1057,6 +1077,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "modality-cr"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+]
+
+[[package]]
 name = "modality-ct"
 version = "0.1.0"
 dependencies = [
@@ -1078,13 +1105,6 @@ dependencies = [
  "dicom-core",
  "sha2",
  "viewer-core",
-]
-
-[[package]]
-name = "modality-xr"
-version = "0.1.0"
-dependencies = [
- "dicom-core",
 ]
 
 [[package]]
@@ -1391,10 +1411,10 @@ dependencies = [
  "dicom-core",
  "dicom-pixel",
  "dicom-series",
+ "modality-cr",
  "modality-ct",
  "modality-mg",
  "modality-pet",
- "modality-xr",
  "pack-enhanced",
  "pack-gsps",
  "pack-nm",

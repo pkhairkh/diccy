@@ -12,7 +12,7 @@ viewer-core = { path = "../viewer-core" }
 modality-ct = { path = "../modality-ct", optional = true }
 modality-pet = { path = "../modality-pet", optional = true }
 modality-mg = { path = "../modality-mg", optional = true }
-modality-xr = { path = "../modality-xr", optional = true }
+modality-cr = { path = "../modality-cr", optional = true }
 pack-enhanced = { path = "../pack-enhanced", optional = true }
 pack-gsps = { path = "../pack-gsps", optional = true }
 pack-us = { path = "../pack-us", optional = true }
@@ -32,7 +32,7 @@ gsps = ["dicom-core/gsps", "dep:pack-gsps"]
 modality-ct = ["dep:modality-ct", "dicom-core/modality-ct"]
 modality-pet = ["dep:modality-pet", "dicom-core/modality-pet"]
 modality-mg = ["dep:modality-mg", "dicom-core/modality-mg"]
-modality-xr = ["dep:modality-xr", "dicom-core/modality-xr"]
+modality-xr = ["dep:modality-cr", "dicom-core/modality-xr"]
 pack-enhanced = ["dep:pack-enhanced", "dicom-core/pack-enhanced", "dicom-pixel/pack-enhanced"]
 pack-us = ["dep:pack-us", "dicom-core/pack-us"]
 pack-nm = ["dep:pack-nm", "dicom-core/pack-nm"]

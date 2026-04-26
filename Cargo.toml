@@ -28,7 +28,7 @@ members = [
   "crates/modality-ct",
   "crates/modality-pet",
   "crates/modality-mg",
-  "crates/modality-xr",
+  "crates/modality-cr",
   "crates/pack-shared",
   "crates/pack-enhanced",
   "crates/pack-gsps",
@@ -48,4 +48,6 @@ members = [
   "crates/dicom-wsi",
   "crates/dicom-encapsulate",
   "crates/dicom-ihe",
+  "crates/dicom-mesh",
+  "crates/dicom-xr",
 ]
