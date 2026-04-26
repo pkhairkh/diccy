@@ -479,21 +479,12 @@ mod tests {
 
     fn context_dataset(study: &str, series: &str, instance: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(study.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SERIES_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(series.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(instance.to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance.to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -516,6 +507,6 @@ mod tests {
         };
 
         let err = validate_export_plan(&plan).expect_err("duplicate id must fail");
-        assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
     }
 }

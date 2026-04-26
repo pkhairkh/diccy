@@ -22,42 +22,21 @@ fn temp_snapshot_path(name: &str) -> PathBuf {
 
 fn dataset_with_status(status: &str, sop_uid: &str, with_end: bool) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(sop_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_STATUS,
-        vr: Vr::Cs,
-        value: Value::Str(status.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PERFORMED_STEP_ID,
-        vr: Vr::Sh,
-        value: Value::Str("STEP-1".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str("20260214".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str("101500".to_string()),
-    });
+    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP-1".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string()),
+    ).unwrap());
     if with_end {
-        dataset.insert(Element {
-            tag: TAG_END_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20260214".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_END_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("103000".to_string()),
-        });
+        dataset.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20260214".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("103000".to_string()),
+        ).unwrap());
     }
     dataset
 }
@@ -79,7 +58,7 @@ fn mpps_transition_contract_enforces_terminal_state_rules() {
     let err = store
         .ingest_update(&invalid_reopen)
         .expect_err("terminal immutability");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
 
     let current = store.get("1.2.3").expect("stored update");
     assert_eq!(current.status, MppsStatus::Completed);
@@ -130,7 +109,7 @@ fn mpps_corrupt_snapshot_fails_closed() {
     fs::write(&path, b"BAD").expect("write corrupt snapshot");
     let err = MppsStore::open(Limits::default(), &path).expect_err("corrupt snapshot");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::DecodeError { .. } | ErrorKind::IoError { .. }
     ));
     let _ = fs::remove_file(path);

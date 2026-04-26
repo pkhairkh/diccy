@@ -1,16 +1,11 @@
 use modality_pet::{
     execute_pet_ct_fusion, FusionBlendPolicy, FusionExecutionLimits, PetCtFusionInput,
+    VolumeGridProvider,
 };
+#[cfg(feature = "viewer-core")]
 use viewer_core::VolumeGrid;
 
-fn parse_arg<T: std::str::FromStr>(args: &[String], name: &str, default: T) -> T {
-    let prefix = format!("--{name}=");
-    args.iter()
-        .find_map(|arg| arg.strip_prefix(&prefix))
-        .and_then(|value| value.parse::<T>().ok())
-        .unwrap_or(default)
-}
-
+#[cfg(feature = "viewer-core")]
 fn build_volume(dims: [usize; 3], seed: i32, frame_uid: &str) -> VolumeGrid {
     let mut volume = VolumeGrid::new(dims, [1_000, 1_000, 1_000]).expect("volume");
     for z in 0..dims[2] {
@@ -25,6 +20,15 @@ fn build_volume(dims: [usize; 3], seed: i32, frame_uid: &str) -> VolumeGrid {
     volume
 }
 
+fn parse_arg<T: std::str::FromStr>(args: &[String], name: &str, default: T) -> T {
+    let prefix = format!("--{name}=");
+    args.iter()
+        .find_map(|arg| arg.strip_prefix(&prefix))
+        .and_then(|value| value.parse::<T>().ok())
+        .unwrap_or(default)
+}
+
+#[cfg(feature = "viewer-core")]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let width = parse_arg(&args, "width", 64usize);
@@ -66,4 +70,10 @@ fn main() {
         );
         std::process::exit(2);
     }
+}
+
+#[cfg(not(feature = "viewer-core"))]
+fn main() {
+    eprintln!("fusion_benchmark requires the viewer-core feature");
+    std::process::exit(1);
 }

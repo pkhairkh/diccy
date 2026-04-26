@@ -497,7 +497,7 @@ mod tests {
         let mut instance = ct_instance("a", 0.0, 1, 1);
         instance.image_orientation = Some([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         let err = assemble(&[instance]).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidGeometry { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidGeometry { .. }));
     }
 
     #[test]

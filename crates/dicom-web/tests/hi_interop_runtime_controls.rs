@@ -330,7 +330,7 @@ fn stow_preflight_fails_closed_on_unsupported_transfer_syntax() {
     );
     let err = stow_preflight_compatibility(&payload, &Limits::default()).expect_err("error");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::UnsupportedTransferSyntax { .. } | ErrorKind::DecodeError { .. }
     ));
 }
@@ -346,7 +346,7 @@ fn stow_preflight_fails_closed_on_unsupported_sop_class() {
         "1.2.840.2200.1.1.1",
     );
     let err = stow_preflight_compatibility(&payload, &Limits::default()).expect_err("error");
-    assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+    assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
 }
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
@@ -355,7 +355,7 @@ fn stow_preflight_rejects_malformed_dataset() {
     // REQ-HI-259, REQ-HI-316
     let payload = vec![0x00, 0x01, 0x02, 0x03];
     let err = stow_preflight_compatibility(&payload, &Limits::default()).expect_err("error");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 }
 
 #[cfg(all(feature = "qido", feature = "wado", feature = "stow"))]
@@ -388,7 +388,7 @@ fn service_stow_rejects_unsupported_sop_and_keeps_storage_empty() {
         .handle_http(&stow_http, TransportSecurity::Insecure, &mut storage)
         .expect_err("unsupported sop class");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::UnsupportedSopClass { .. } | ErrorKind::DecodeError { .. }
     ));
     assert_eq!(storage.index().total_instances(), 0);

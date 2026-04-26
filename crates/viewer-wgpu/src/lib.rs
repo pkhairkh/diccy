@@ -449,7 +449,7 @@ pub struct WgpuRenderer {
 impl WgpuRenderer {
     /// Create a renderer from an already-probed capability snapshot.
     pub fn from_capabilities(capabilities: GpuCapabilities, limits: &Limits) -> Self {
-        let budget = GpuBudget::new(limits.max_gpu_texture_bytes);
+        let budget = GpuBudget::new(limits.max_gpu_texture_bytes());
         Self {
             capabilities,
             budget,
@@ -459,7 +459,7 @@ impl WgpuRenderer {
             acquired_frames: 0,
             presented_frames: 0,
             encoded_passes: 0,
-            texture_cache: DeterministicCache::new(limits.max_gpu_texture_bytes),
+            texture_cache: DeterministicCache::new(limits.max_gpu_texture_bytes()),
             live: None,
         }
     }
@@ -768,7 +768,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("Luma16 must be rejected");
-        assert_eq!(err.code, "DVF.RENDER.INVALID_FRAME_FORMAT");
+        assert_eq!(err.code(), "DVF.RENDER.INVALID_FRAME_FORMAT");
     }
 
     #[test]
@@ -788,7 +788,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("invalid frame size");
-        assert_eq!(err.code, "DVF.RENDER.INVALID_FRAME_LENGTH");
+        assert_eq!(err.code(), "DVF.RENDER.INVALID_FRAME_LENGTH");
     }
 
     #[test]
@@ -824,7 +824,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("surface required");
-        assert_eq!(err.code, "DVF.RENDER.SURFACE_NOT_CONFIGURED");
+        assert_eq!(err.code(), "DVF.RENDER.SURFACE_NOT_CONFIGURED");
     }
 
     #[test]
@@ -834,7 +834,7 @@ mod tests {
         let err = renderer
             .configure_surface(0, 128, wgpu::TextureFormat::Rgba8UnormSrgb)
             .expect_err("zero width rejected");
-        assert_eq!(err.code, "DVF.RENDER.INVALID_SURFACE_CONFIG");
+        assert_eq!(err.code(), "DVF.RENDER.INVALID_SURFACE_CONFIG");
     }
 
     #[test]

@@ -59,7 +59,7 @@ fn auth_denial_blocks_routed_requests() {
         .route_request(request)
         .expect_err("request must be denied");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::DecodeError { ref stage, .. } if stage == "dicom-auth"
     ));
 }
@@ -83,7 +83,7 @@ fn insecure_transport_is_blocked_before_authz_execution() {
         .route_request(request)
         .expect_err("insecure transport must fail");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::DecodeError { ref stage, .. } if stage == "dicom-web"
     ));
 }

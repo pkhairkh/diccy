@@ -153,7 +153,7 @@ impl MppsStore {
                 enforce_limit(
                     "max_dataset_elements",
                     (self.updates.len() as u64) + 1,
-                    self.limits.max_dataset_elements,
+                    self.limits.max_dataset_elements(),
                 )?;
                 self.updates.insert(key.clone(), update);
                 IngestOutcome::Inserted
@@ -340,7 +340,7 @@ fn load_mpps_snapshot(path: &Path, limits: &Limits) -> Result<BTreeMap<String, M
     enforce_limit(
         "max_dataset_elements",
         count as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
     let mut updates = BTreeMap::new();
     for _ in 0..count {
@@ -471,7 +471,7 @@ fn read_required_str(bytes: &[u8], offset: &mut usize, limits: &Limits) -> Resul
     enforce_limit(
         "max_string_bytes",
         raw.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     let out =
         std::str::from_utf8(raw).map_err(|_| decode_error("MPPS field is not valid UTF-8"))?;
@@ -538,7 +538,7 @@ fn require_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     enforce_limit(
         "max_string_bytes",
         value.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     validate_uid_strict(tag, value)?;
     Ok(value.to_string())
@@ -546,14 +546,14 @@ fn require_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
 
 fn require_str(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     let value = dataset.get(tag).ok_or_else(|| missing_required_tag(tag))?;
-    let string = match &value.value {
+    let string = match value.value() {
         Value::Str(text) | Value::Uid(text) => text,
         _ => return Err(invalid_tag_value(tag, "expected string value")),
     };
     enforce_limit(
         "max_string_bytes",
         string.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     if string.is_empty() {
         return Err(invalid_tag_value(tag, "value must not be empty"));
@@ -566,14 +566,14 @@ fn optional_str(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<S
         Some(value) => value,
         None => return Ok(None),
     };
-    let string = match &value.value {
+    let string = match value.value() {
         Value::Str(text) | Value::Uid(text) => text,
         _ => return Err(invalid_tag_value(tag, "expected string value")),
     };
     enforce_limit(
         "max_string_bytes",
         string.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     if string.is_empty() {
         return Ok(None);
@@ -641,31 +641,16 @@ mod tests {
 
     fn dataset_with_status(status: &str, sop_uid: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_SOP_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(sop_uid.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_STATUS,
-            vr: Vr::Cs,
-            value: Value::Str(status.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PERFORMED_STEP_ID,
-            vr: Vr::Sh,
-            value: Value::Str("STEP1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_START_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20240101".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_START_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("120000".to_string()),
-        });
+        dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_uid.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20240101".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("120000".to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -682,7 +667,7 @@ mod tests {
         // REQ-MPPS-350: required tags must be present.
         let dataset = Dataset::new();
         let err = validate_mpps_update(&dataset, &Limits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
@@ -690,7 +675,7 @@ mod tests {
         // REQ-MPPS-351: unsupported status must fail closed.
         let dataset = dataset_with_status("BAD", "1.2.3");
         let err = validate_mpps_update(&dataset, &Limits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
@@ -698,7 +683,7 @@ mod tests {
         // REQ-MPPS-351: completed status requires end date/time.
         let dataset = dataset_with_status("COMPLETED", "1.2.3");
         let err = validate_mpps_update(&dataset, &Limits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -708,37 +693,28 @@ mod tests {
         let dataset = dataset_with_status("IN PROGRESS", "1.2.3");
         store.ingest_update(&dataset).expect("insert");
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element {
-            tag: TAG_END_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20240101".to_string()),
-        });
-        completed.insert(Element {
-            tag: TAG_END_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("130000".to_string()),
-        });
+        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
+        ).unwrap());
+        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string()),
+        ).unwrap());
         let outcome = store.ingest_update(&completed).expect("update");
         assert_eq!(outcome, IngestOutcome::Updated);
 
         let reverted = dataset_with_status("IN PROGRESS", "1.2.3");
         let err = store.ingest_update(&reverted).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
     }
 
     #[test]
     fn mpps_enforces_limit() {
         // REQ-MPPS-353: store size is bounded by max_dataset_elements.
-        let limits = Limits {
-            max_dataset_elements: 1,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_dataset_elements(1).build().unwrap();
         let mut store = MppsStore::new(limits);
         let d1 = dataset_with_status("IN PROGRESS", "1.2.3");
         let d2 = dataset_with_status("IN PROGRESS", "1.2.4");
         store.ingest_update(&d1).expect("insert");
         let err = store.ingest_update(&d2).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
@@ -762,16 +738,10 @@ mod tests {
         assert_eq!(inserted, IngestOutcome::Inserted);
 
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element {
-            tag: TAG_END_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20240101".to_string()),
-        });
-        completed.insert(Element {
-            tag: TAG_END_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("130000".to_string()),
-        });
+        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
+        ).unwrap());
+        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string()),
+        ).unwrap());
         let updated = service.ingest(&completed).expect("update");
         assert_eq!(updated, IngestOutcome::Updated);
 
@@ -796,16 +766,10 @@ mod tests {
         let path = temp_snapshot_path("mpps");
         let mut store = MppsStore::open(Limits::default(), &path).expect("open");
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element {
-            tag: TAG_END_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20240101".to_string()),
-        });
-        completed.insert(Element {
-            tag: TAG_END_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("121500".to_string()),
-        });
+        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
+        ).unwrap());
+        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("121500".to_string()),
+        ).unwrap());
         store.ingest_update(&completed).expect("ingest");
         drop(store);
 
@@ -822,7 +786,7 @@ mod tests {
         fs::write(&path, b"BAD").expect("write");
         let err = MppsStore::open(Limits::default(), &path).expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::DecodeError { .. } | ErrorKind::IoError { .. }
         ));
         let _ = fs::remove_file(path);

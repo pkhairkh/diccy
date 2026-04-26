@@ -6,7 +6,56 @@
 //! an explicit scale factor and raw modality values.
 
 use dicom_core::{Error, ErrorKind, Result, Tag};
-use viewer_core::VolumeGrid;
+
+/// Trait providing volume data access for fusion operations.
+///
+/// This trait abstracts the concrete `viewer_core::VolumeGrid` type so that
+/// modality-pet does not depend on the viewer-core crate for domain logic.
+/// Implementors provide dimensional, voxel, and patient-space mapping access.
+pub trait VolumeGridProvider {
+    /// Return dimensions as `[x, y, z]`.
+    fn dimensions(&self) -> [usize; 3];
+    /// Return one voxel value if coordinates are in range.
+    fn voxel(&self, x: usize, y: usize, z: usize) -> Option<i32>;
+    /// Return voxel buffer in deterministic row-major layout.
+    fn voxels(&self) -> &[i32];
+    /// Return true when patient-space geometry is available.
+    fn has_patient_geometry(&self) -> bool;
+    /// Convert voxel coordinates to patient-space micrometers when geometry exists.
+    fn voxel_to_patient_um(&self, x: usize, y: usize, z: usize) -> Option<[i64; 3]>;
+    /// Convert patient-space micrometers to voxel-space floating coordinates.
+    fn patient_to_voxel_f64(&self, patient_um: [f64; 3]) -> Option<[f64; 3]>;
+}
+
+impl std::fmt::Debug for dyn VolumeGridProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VolumeGridProvider")
+            .field("dimensions", &self.dimensions())
+            .finish()
+    }
+}
+
+#[cfg(feature = "viewer-core")]
+impl VolumeGridProvider for viewer_core::VolumeGrid {
+    fn dimensions(&self) -> [usize; 3] {
+        viewer_core::VolumeGrid::dimensions(self)
+    }
+    fn voxel(&self, x: usize, y: usize, z: usize) -> Option<i32> {
+        viewer_core::VolumeGrid::voxel(self, x, y, z)
+    }
+    fn voxels(&self) -> &[i32] {
+        viewer_core::VolumeGrid::voxels(self)
+    }
+    fn has_patient_geometry(&self) -> bool {
+        viewer_core::VolumeGrid::patient_geometry(self).is_some()
+    }
+    fn voxel_to_patient_um(&self, x: usize, y: usize, z: usize) -> Option<[i64; 3]> {
+        viewer_core::VolumeGrid::voxel_to_patient_um(self, x, y, z)
+    }
+    fn patient_to_voxel_f64(&self, patient_um: [f64; 3]) -> Option<[f64; 3]> {
+        viewer_core::VolumeGrid::patient_to_voxel_f64(self, patient_um)
+    }
+}
 
 /// PET Image Storage SOP Class UID (Tier 1, requires PET pack).
 pub const SOP_CLASS_PET: &str = "1.2.840.10008.5.1.4.1.1.128";
@@ -144,12 +193,12 @@ impl Default for FusionBlendPolicy {
 }
 
 /// Input bundle for PET-over-CT fusion execution.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PetCtFusionInput<'a> {
     /// CT reference volume.
-    pub ct_volume: &'a VolumeGrid,
+    pub ct_volume: &'a dyn VolumeGridProvider,
     /// PET source volume.
-    pub pet_volume: &'a VolumeGrid,
+    pub pet_volume: &'a dyn VolumeGridProvider,
     /// Frame-of-reference UID for CT.
     pub ct_frame_of_reference_uid: Option<&'a str>,
     /// Frame-of-reference UID for PET.
@@ -180,8 +229,7 @@ pub fn validate_fusion_preconditions(
         ct_frame_of_reference_uid: input.ct_frame_of_reference_uid,
         pet_frame_of_reference_uid: input.pet_frame_of_reference_uid,
     })?;
-    if input.ct_volume.patient_geometry().is_none() || input.pet_volume.patient_geometry().is_none()
-    {
+    if !input.ct_volume.has_patient_geometry() || !input.pet_volume.has_patient_geometry() {
         return Err(Box::new(Error::from_kind(
             ErrorKind::InvalidTagValue {
                 tag: TAG_FRAME_OF_REFERENCE_UID,
@@ -272,7 +320,7 @@ pub fn resample_pet_to_ct_grid(
 
 /// Blend PET overlay over CT grayscale volume using deterministic policy.
 pub fn blend_pet_overlay(
-    ct_volume: &VolumeGrid,
+    ct_volume: &dyn VolumeGridProvider,
     pet_on_ct_suv: &[f64],
     policy: FusionBlendPolicy,
     limits: FusionExecutionLimits,
@@ -357,10 +405,11 @@ fn missing_required_tag(tag: Tag) -> Box<Error> {
     .into()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "viewer-core"))]
 mod tests {
     use super::*;
     use sha2::{Digest, Sha256};
+    use viewer_core::VolumeGrid;
 
     fn volume(values: [i32; 4], uid: &str) -> VolumeGrid {
         let mut grid = VolumeGrid::new([2, 2, 1], [1_000, 1_000, 1_000]).expect("volume");
@@ -387,7 +436,7 @@ mod tests {
     fn pet_pack_disabled_rejects_pet() {
         assert!(!PetPack::enabled());
         let err = PetPack::ensure_pet_supported().unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+        assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
     }
 
     #[test]
@@ -404,7 +453,7 @@ mod tests {
             pet_frame_of_reference_uid: Some("1.2.3"),
         })
         .unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+        assert_eq!(err.code(), "DVF.DICOM.MISSING_TAG");
     }
 
     #[test]
@@ -414,7 +463,7 @@ mod tests {
             pet_frame_of_reference_uid: Some("1.2.4"),
         })
         .unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+        assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
     }
 
     #[test]
@@ -433,7 +482,7 @@ mod tests {
             scale_factor: 1.0,
         })
         .unwrap_err();
-        assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -443,7 +492,7 @@ mod tests {
             scale_factor: 0.0,
         })
         .unwrap_err();
-        assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -501,7 +550,7 @@ mod tests {
             FusionExecutionLimits::default(),
         )
         .expect_err("missing geometry");
-        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+        assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
 
         ct.migrate_patient_geometry_from_legacy(None);
         pet.migrate_patient_geometry_from_legacy(None);
@@ -518,7 +567,7 @@ mod tests {
         };
         let err = validate_fusion_preconditions(&limited_input, tight_limits)
             .expect_err("limit exceeded");
-        assert_eq!(err.code, "DVF.SECURITY.LIMIT_EXCEEDED");
+        assert_eq!(err.code(), "DVF.SECURITY.LIMIT_EXCEEDED");
     }
 
     #[test]

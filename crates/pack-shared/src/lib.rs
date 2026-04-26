@@ -84,12 +84,12 @@ pub fn parse_uniform_time_vector(
 
 fn read_str<'a>(dataset: &'a Dataset, tag: Tag, limits: &Limits) -> Result<Option<&'a str>> {
     match dataset.get(tag) {
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(Some(value.as_str()))
             }
@@ -97,7 +97,7 @@ fn read_str<'a>(dataset: &'a Dataset, tag: Tag, limits: &Limits) -> Result<Optio
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(Some(value.as_str()))
             }
@@ -105,7 +105,7 @@ fn read_str<'a>(dataset: &'a Dataset, tag: Tag, limits: &Limits) -> Result<Optio
                 enforce_limit(
                     "max_string_bytes",
                     bytes.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 std::str::from_utf8(bytes)
                     .map(Some)
@@ -139,24 +139,18 @@ mod tests {
     #[test]
     fn parse_spacing_pair_rejects_non_utf8_bytes() {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_TEST,
-            vr: Vr::Ds,
-            value: Value::Bytes(vec![0xff, 0xfe]),
-        });
+        dataset.insert(Element::new(TAG_TEST, Vr::Ds, Value::Bytes(vec![0xff, 0xfe]),
+        ).unwrap());
         let err = parse_spacing_pair(&dataset, TAG_TEST, &Limits::default())
             .expect_err("expected invalid utf8");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
     fn parse_uniform_time_vector_accepts_uniform_values() {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_VEC,
-            vr: Vr::Ds,
-            value: Value::Str("40\\40\\40".to_string()),
-        });
+        dataset.insert(Element::new(TAG_VEC, Vr::Ds, Value::Str("40\\40\\40".to_string()),
+        ).unwrap());
         let value = parse_uniform_time_vector(&dataset, TAG_VEC, 1e-6, &Limits::default())
             .expect("parse")
             .expect("value");

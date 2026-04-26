@@ -693,7 +693,7 @@ mod tests {
             CtPack::ensure_enhanced_ct_supported().expect("pack-enhanced enabled");
         } else {
             let err = CtPack::ensure_enhanced_ct_supported().unwrap_err();
-            assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+            assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
         }
     }
 
@@ -708,7 +708,7 @@ mod tests {
             ipp: None,
         };
         let err = validate_ct_geometry(input, 1e-4).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+        assert_eq!(err.code(), "DVF.DICOM.MISSING_TAG");
     }
 
     #[test]
@@ -722,7 +722,7 @@ mod tests {
             ipp: Some([0.0, 0.0, 0.0]),
         };
         let err = validate_ct_geometry(input, 1e-4).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+        assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
     }
 
     #[test]
@@ -756,7 +756,7 @@ mod tests {
             slice_spacing_epsilon: 1e-4,
         };
         let err = validate_volume_geometry(&slices, tol).unwrap_err();
-        assert_eq!(err.code, "DVF.GEOM.INVALID");
+        assert_eq!(err.code(), "DVF.GEOM.INVALID");
     }
 
     #[test]
@@ -783,7 +783,7 @@ mod tests {
             slice_spacing_epsilon: 0.1,
         };
         let err = compute_slice_spacing(&slices, tol, false).unwrap_err();
-        assert_eq!(err.code, "DVF.GEOM.INVALID");
+        assert_eq!(err.code(), "DVF.GEOM.INVALID");
     }
 
     #[test]
@@ -791,7 +791,7 @@ mod tests {
     fn ct_measure_distance_mm_requires_spacing() {
         // REQ-MEAS-020: missing pixel spacing must fail closed in mm mode.
         let err = measure_distance_mm((0.0, 0.0), (1.0, 1.0), None).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+        assert_eq!(err.code(), "DVF.DICOM.MISSING_TAG");
     }
 
     #[test]
@@ -799,7 +799,7 @@ mod tests {
     fn ct_measure_distance_mm_rejects_when_pack_disabled() {
         // REQ-FEAT-302: physical measurements require CT pack feature.
         let err = measure_distance_mm((0.0, 0.0), (1.0, 1.0), None).unwrap_err();
-        assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -817,7 +817,7 @@ mod tests {
     fn ct_angle_zero_length_rejected() {
         // REQ-MEAS-060: zero-length segments fail closed.
         let err = measure_angle_degrees((0.0, 0.0), (0.0, 0.0), (1.0, 0.0)).unwrap_err();
-        assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]

@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![deny(clippy::cast_possible_truncation)]
 
 //! DICOM UL (Upper Layer) parsing and association negotiation primitives.
 
@@ -385,8 +386,8 @@ pub fn parse_pdu_stream(input: &[u8], limits: &NetworkLimits) -> Result<Vec<Pdu>
         }
         let pdu_type = cursor.read_u8()?;
         let _reserved = cursor.read_u8()?;
-        let length = cursor.read_u32_be()? as usize;
-        enforce_limit("max_pdu_bytes", length as u64, limits.max_pdu_bytes)?;
+        let length = usize::try_from(cursor.read_u32_be()?).map_err(|_| decode_error("PDU length exceeds usize"))?;
+        enforce_limit("max_pdu_bytes", u64::try_from(length).map_err(|_| decode_error("PDU length exceeds u64"))?, limits.max_pdu_bytes)?;
         if cursor.remaining() < length {
             return Err(decode_error("PDU length exceeds buffer"));
         }
@@ -425,10 +426,10 @@ pub fn accept_association(
 
     let mut accepted = Vec::with_capacity(request.presentation_contexts.len());
     for context in &request.presentation_contexts {
-        if accepted.len() as u64 >= limits.max_presentation_contexts {
+        if u64::try_from(accepted.len()).unwrap_or(u64::MAX) >= limits.max_presentation_contexts {
             return Err(limit_exceeded(
                 "max_presentation_contexts",
-                accepted.len() as u64,
+                u64::try_from(accepted.len()).unwrap_or(u64::MAX),
                 limits.max_presentation_contexts,
             ));
         }
@@ -496,11 +497,11 @@ fn pdu_type(pdu: &Pdu) -> u8 {
 }
 
 fn wrap_pdu(pdu_type: u8, body: &[u8], limits: &NetworkLimits) -> Result<Vec<u8>> {
-    enforce_limit("max_pdu_bytes", body.len() as u64, limits.max_pdu_bytes)?;
+    enforce_limit("max_pdu_bytes", u64::try_from(body.len()).map_err(|_| decode_error("PDU body length exceeds u64"))?, limits.max_pdu_bytes)?;
     let mut out = Vec::with_capacity(body.len() + 6);
     out.push(pdu_type);
     out.push(0x00);
-    out.extend_from_slice(&(body.len() as u32).to_be_bytes());
+    out.extend_from_slice(&u32::try_from(body.len()).map_err(|_| decode_error("PDU body length exceeds u32"))?.to_be_bytes());
     out.extend_from_slice(body);
     Ok(out)
 }
@@ -513,7 +514,7 @@ fn encode_associate_rq(request: &AssociationRequest, limits: &NetworkLimits) -> 
     }
     enforce_limit(
         "max_presentation_contexts",
-        request.presentation_contexts.len() as u64,
+        u64::try_from(request.presentation_contexts.len()).unwrap_or(u64::MAX),
         limits.max_presentation_contexts,
     )?;
     for context in &request.presentation_contexts {
@@ -535,7 +536,7 @@ fn encode_associate_ac(accept: &AssociationAccept, limits: &NetworkLimits) -> Re
     }
     enforce_limit(
         "max_presentation_contexts",
-        accept.presentation_contexts.len() as u64,
+        u64::try_from(accept.presentation_contexts.len()).unwrap_or(u64::MAX),
         limits.max_presentation_contexts,
     )?;
     for context in &accept.presentation_contexts {
@@ -560,9 +561,9 @@ fn encode_abort(abort: &Abort) -> Vec<u8> {
 fn encode_pdata(pdvs: &[Pdv], limits: &NetworkLimits) -> Result<Vec<u8>> {
     let mut body = Vec::new();
     for pdv in pdvs {
-        let pdv_len = pdv.data.len() + 2;
-        enforce_limit("max_pdv_bytes", pdv_len as u64, limits.max_pdv_bytes)?;
-        body.extend_from_slice(&(pdv_len as u32).to_be_bytes());
+        let pdv_len = pdv.data.len().checked_add(2).ok_or_else(|| decode_error("PDV length overflow"))?;
+        enforce_limit("max_pdv_bytes", u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?, limits.max_pdv_bytes)?;
+        body.extend_from_slice(&u32::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u32"))?.to_be_bytes());
         body.push(pdv.presentation_context_id);
         body.push(pdv.message_control_header);
         body.extend_from_slice(&pdv.data);
@@ -610,13 +611,13 @@ fn encode_text_item(item_type: u8, text: &str) -> Result<Vec<u8>> {
 }
 
 fn encode_item(item_type: u8, body: &[u8]) -> Result<Vec<u8>> {
-    if body.len() > u16::MAX as usize {
+    if body.len() > usize::from(u16::MAX) {
         return Err(decode_error("item length exceeds u16"));
     }
     let mut out = Vec::with_capacity(body.len() + 4);
     out.push(item_type);
     out.push(0x00);
-    out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+    out.extend_from_slice(&u16::try_from(body.len()).map_err(|_| decode_error("item length exceeds u16"))?.to_be_bytes());
     out.extend_from_slice(body);
     Ok(out)
 }
@@ -702,10 +703,10 @@ fn parse_associate_rq(body: &[u8], limits: &NetworkLimits) -> Result<Association
                 application_context = Some(uid);
             }
             0x20 => {
-                if contexts.len() as u64 >= limits.max_presentation_contexts {
+                if u64::try_from(contexts.len()).unwrap_or(u64::MAX) >= limits.max_presentation_contexts {
                     return Err(limit_exceeded(
                         "max_presentation_contexts",
-                        contexts.len() as u64,
+                        u64::try_from(contexts.len()).unwrap_or(u64::MAX),
                         limits.max_presentation_contexts,
                     ));
                 }
@@ -767,10 +768,10 @@ fn parse_associate_ac(body: &[u8], limits: &NetworkLimits) -> Result<Association
                 application_context = Some(uid);
             }
             0x21 => {
-                if contexts.len() as u64 >= limits.max_presentation_contexts {
+                if u64::try_from(contexts.len()).unwrap_or(u64::MAX) >= limits.max_presentation_contexts {
                     return Err(limit_exceeded(
                         "max_presentation_contexts",
-                        contexts.len() as u64,
+                        u64::try_from(contexts.len()).unwrap_or(u64::MAX),
                         limits.max_presentation_contexts,
                     ));
                 }
@@ -843,8 +844,8 @@ fn parse_pdata(body: &[u8], limits: &NetworkLimits) -> Result<Vec<Pdv>> {
         if cursor.remaining() < 4 {
             return Err(decode_error("truncated PDV header"));
         }
-        let pdv_len = cursor.read_u32_be()? as usize;
-        enforce_limit("max_pdv_bytes", pdv_len as u64, limits.max_pdv_bytes)?;
+        let pdv_len = usize::try_from(cursor.read_u32_be()?).map_err(|_| decode_error("PDV length exceeds usize"))?;
+        enforce_limit("max_pdv_bytes", u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?, limits.max_pdv_bytes)?;
         if pdv_len < 2 {
             return Err(decode_error("invalid PDV length"));
         }
@@ -885,7 +886,7 @@ fn parse_item(cursor: &mut Cursor<'_>) -> Result<(u8, Vec<u8>)> {
     }
     let item_type = cursor.read_u8()?;
     let _reserved = cursor.read_u8()?;
-    let item_length = cursor.read_u16_be()? as usize;
+    let item_length = usize::from(cursor.read_u16_be()?);
     if cursor.remaining() < item_length {
         return Err(decode_error("UL item length exceeds buffer"));
     }
@@ -1102,14 +1103,14 @@ mod tests {
 
     fn build_uid_item(item_type: u8, uid: &str) -> Vec<u8> {
         let mut out = vec![item_type, 0x00];
-        out.extend_from_slice(&(uid.len() as u16).to_be_bytes());
+        out.extend_from_slice(&u16::try_from(uid.len()).unwrap_or_else(|_| panic!("UID item too long")).to_be_bytes());
         out.extend_from_slice(uid.as_bytes());
         out
     }
 
     fn build_item(item_type: u8, body: &[u8]) -> Vec<u8> {
         let mut out = vec![item_type, 0x00];
-        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(&u16::try_from(body.len()).unwrap_or_else(|_| panic!("item body too long")).to_be_bytes());
         out.extend_from_slice(body);
         out
     }
@@ -1145,7 +1146,7 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
         pdu.extend_from_slice(&body);
         pdu
     }
@@ -1288,7 +1289,7 @@ mod tests {
         let err = fsm
             .on_event(AssociationEvent::Send(AssociationPduType::PDataTf))
             .expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::DecodeError { stage, .. } => {
                 assert_eq!(stage, "dicom-net");
             }
@@ -1306,7 +1307,7 @@ mod tests {
             .expect("uid position");
         pdu[idx] = b'x';
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
@@ -1318,7 +1319,7 @@ mod tests {
             *byte = b' ';
         }
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1336,11 +1337,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
         pdu.extend_from_slice(&body);
 
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1357,11 +1358,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
         pdu.extend_from_slice(&body);
 
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1374,7 +1375,7 @@ mod tests {
             .expect("uid position");
         pdu[idx + APPLICATION_CONTEXT_UID.len() - 1] = b'2';
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1386,9 +1387,9 @@ mod tests {
             ..NetworkLimits::default()
         };
         let err = parse_pdu(&pdu, &limits).expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::LimitExceeded { limit_name, .. } => {
-                assert_eq!(limit_name, "max_pdu_bytes");
+                assert_eq!(*limit_name, "max_pdu_bytes");
             }
             _ => panic!("expected limit exceeded"),
         }
@@ -1409,7 +1410,7 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
         pdu.extend_from_slice(&body);
 
         let limits = NetworkLimits {
@@ -1417,9 +1418,9 @@ mod tests {
             ..NetworkLimits::default()
         };
         let err = parse_pdu(&pdu, &limits).expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::LimitExceeded { limit_name, .. } => {
-                assert_eq!(limit_name, "max_presentation_contexts");
+                assert_eq!(*limit_name, "max_presentation_contexts");
             }
             _ => panic!("expected limit exceeded"),
         }
@@ -1433,18 +1434,18 @@ mod tests {
         body.extend_from_slice(&pdv_len.to_be_bytes());
         body.push(0x01);
         body.push(0x03);
-        body.extend_from_slice(&vec![0u8; (pdv_len - 2) as usize]);
+        body.extend_from_slice(&vec![0u8; usize::try_from(pdv_len - 2).unwrap_or(0)]);
         let mut pdu = vec![0x04, 0x00];
-        pdu.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
         pdu.extend_from_slice(&body);
         let limits = NetworkLimits {
             max_pdv_bytes: 128,
             ..NetworkLimits::default()
         };
         let err = parse_pdu(&pdu, &limits).expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::LimitExceeded { limit_name, .. } => {
-                assert_eq!(limit_name, "max_pdv_bytes");
+                assert_eq!(*limit_name, "max_pdv_bytes");
             }
             _ => panic!("expected limit exceeded"),
         }

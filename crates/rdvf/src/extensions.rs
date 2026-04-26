@@ -190,7 +190,7 @@ mod tests {
         let err = registry
             .register(Box::new(SampleEchoExtension))
             .expect_err("duplicate");
-        assert_eq!(err.code, "DVF.INTEGRITY.ERROR");
+        assert_eq!(err.code(), "DVF.INTEGRITY.ERROR");
     }
 
     #[test]

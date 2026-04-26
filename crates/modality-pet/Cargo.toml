@@ -5,11 +5,14 @@ edition = "2021"
 publish = false
 
 [features]
+default = []
 modality-pet = []
+viewer-core = ["dep:viewer-core"]
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
-viewer-core = { path = "../viewer-core" }
+viewer-core = { path = "../viewer-core", optional = true }
 
 [dev-dependencies]
 sha2 = "0.10"
+viewer-core = { path = "../viewer-core" }

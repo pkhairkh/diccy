@@ -280,7 +280,7 @@ mod tests {
         let err = log
             .record(event_with_value(AuditValue::Plain("too_large".to_string())))
             .expect_err("expected error");
-        assert_eq!(err.code, "DVF.SECURITY.LIMIT_EXCEEDED");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert_eq!(err.code(), "DVF.SECURITY.LIMIT_EXCEEDED");
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 }

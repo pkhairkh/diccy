@@ -109,7 +109,7 @@ fn dimse_server_rejects_double_bind_on_same_address() {
         Ok(_server) => panic!("expected double-bind failure"),
         Err(err) => err,
     };
-    assert!(matches!(err.kind, ErrorKind::IoError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IoError { .. }));
 
     drop(listener);
 }
@@ -141,7 +141,7 @@ fn dimse_server_auth_failure_rejects_association() {
         Ok(_client) => panic!("expected auth failure"),
         Err(err) => err,
     };
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 
     handle.join().expect("run_once thread");
 }
@@ -215,7 +215,7 @@ fn dimse_server_read_timeout_path_is_exercised_for_slow_handlers() {
     let err = client
         .c_echo(1)
         .expect_err("expected read timeout path behavior");
-    assert!(matches!(err.kind, ErrorKind::IoError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IoError { .. }));
     handle.join().expect("run_once thread");
 }
 
@@ -259,13 +259,13 @@ fn c_get_disabled_in_roles_fails_closed_at_association_time() {
     );
     match result {
         Err(err) => {
-            assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+            assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
         }
         Ok(mut client) => {
             let err = client
                 .c_get(11, "1.2.840.10008.5.1.4.1.2.2.3", 0, &[])
                 .expect_err("C-GET must fail closed when no C-GET context is negotiated");
-            assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+            assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
             let _ = client.release();
         }
     }
@@ -307,7 +307,7 @@ fn c_get_disabled_in_roles_rejects_operation_after_verification_association() {
     let err = client
         .c_get(9, "1.2.840.10008.5.1.4.1.2.2.3", 0, &[])
         .expect_err("C-GET must fail closed when role is disabled");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     let _ = client.release();
     handle.join().expect("run_once thread");
 }
@@ -377,11 +377,11 @@ fn c_store_disabled_in_roles_returns_fail_closed_status() {
                 &sample_c_store_dataset("1.2.3", "1.2.3.4", "1.2.3.4.5"),
             ) {
                 Ok(status) => assert_eq!(status.code, 0x0122),
-                Err(err) => assert!(matches!(err.kind, ErrorKind::DecodeError { .. })),
+                Err(err) => assert!(matches!(err.kind(), ErrorKind::DecodeError { .. })),
             }
             let _ = client.release();
         }
-        Err(err) => assert!(matches!(err.kind, ErrorKind::DecodeError { .. })),
+        Err(err) => assert!(matches!(err.kind(), ErrorKind::DecodeError { .. })),
     }
     handle.join().expect("run_once thread");
 }

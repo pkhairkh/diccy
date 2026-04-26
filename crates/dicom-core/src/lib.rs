@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![deny(clippy::cast_possible_truncation)]
 
 //! Core DICOM types and shared error model.
 //!
@@ -22,14 +23,15 @@ impl Tag {
     }
 
     /// Return the tag as a packed `u32` (group << 16 | element).
-    pub const fn as_u32(self) -> u32 {
-        ((self.0 as u32) << 16) | (self.1 as u32)
+    pub fn as_u32(self) -> u32 {
+        (u32::from(self.0) << 16) | u32::from(self.1)
     }
 
     /// Create a tag from a packed `u32` (group << 16 | element).
     pub const fn from_u32(value: u32) -> Self {
-        let group = (value >> 16) as u16;
-        let element = (value & 0xFFFF) as u16;
+        let bytes = value.to_be_bytes();
+        let group = u16::from_be_bytes([bytes[0], bytes[1]]);
+        let element = u16::from_be_bytes([bytes[2], bytes[3]]);
         Self(group, element)
     }
 
@@ -237,11 +239,73 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Element {
     /// Element tag.
-    pub tag: Tag,
+    tag: Tag,
     /// Value representation.
-    pub vr: Vr,
+    vr: Vr,
     /// Element value.
-    pub value: Value,
+    value: Value,
+}
+
+impl Element {
+    /// Create a new element, validating VR/value consistency.
+    ///
+    /// Returns an error if the VR and value are obviously inconsistent
+    /// (e.g. `Vr::Sq` paired with a non-sequence value).
+    pub fn new(tag: Tag, vr: Vr, value: Value) -> Result<Self> {
+        Self::validate_vr_value(vr, &value)?;
+        Ok(Self { tag, vr, value })
+    }
+
+    /// Return a reference to the element tag.
+    pub fn tag(&self) -> &Tag {
+        &self.tag
+    }
+
+    /// Return a reference to the value representation.
+    pub fn vr(&self) -> &Vr {
+        &self.vr
+    }
+
+    /// Return a reference to the element value.
+    pub fn value(&self) -> &Value {
+        &self.value
+    }
+
+    /// Consume the element and return its value.
+    pub fn into_value(self) -> Value {
+        self.value
+    }
+
+    /// Validate that the VR and value are consistent.
+    fn validate_vr_value(vr: Vr, value: &Value) -> Result<()> {
+        match (vr, value) {
+            // SQ must be Sequence or Empty
+            (Vr::Sq, Value::Sequence(_) | Value::Empty) => Ok(()),
+            (Vr::Sq, _) => Err(invalid_tag_value(
+                Tag(0x0000, 0x0000),
+                "SQ VR requires Sequence or Empty value",
+            )),
+            // UI should be Uid, Str, or Empty
+            (Vr::Ui, Value::Uid(_) | Value::Str(_) | Value::Empty) => Ok(()),
+            (Vr::Ui, _) => Err(invalid_tag_value(
+                Tag(0x0000, 0x0000),
+                "UI VR requires Uid, Str, or Empty value",
+            )),
+            // Binary VRs should pair with Bytes or Empty
+            (Vr::Ob | Vr::Ow | Vr::Od | Vr::Of | Vr::Un, Value::Bytes(_) | Value::Empty) => Ok(()),
+            (Vr::Ob | Vr::Ow | Vr::Od | Vr::Of | Vr::Un, _) => Err(invalid_tag_value(
+                Tag(0x0000, 0x0000),
+                "Binary VR requires Bytes or Empty value",
+            )),
+            // Numeric VRs should pair with appropriate numeric types or Empty
+            (Vr::Ss | Vr::Us | Vr::Sl | Vr::Ul, Value::I32(_) | Value::Empty) => Ok(()),
+            (Vr::Fl | Vr::Fd, Value::F64(_) | Value::Empty) => Ok(()),
+            // String VRs pair with Str, Uid (for UI handled above), or Empty
+            (_, Value::Str(_) | Value::Empty) => Ok(()),
+            // Allow remaining combinations (e.g. I32/F64 with non-numeric VR)
+            _ => Ok(()),
+        }
+    }
 }
 
 /// A DICOM dataset.
@@ -331,7 +395,10 @@ impl Dataset {
     pub fn insert_checked(&mut self, element: Element, limits: &Limits) -> Result<()> {
         enforce_limit(
             "max_dataset_elements",
-            (self.elements.len() as u64) + 1,
+            u64::try_from(self.elements.len())
+                .ok()
+                .and_then(|n| n.checked_add(1))
+                .ok_or_else(|| invalid_tag_value(Tag(0x0000, 0x0000), "element count overflow"))?,
             limits.max_dataset_elements,
         )?;
 
@@ -339,14 +406,14 @@ impl Dataset {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
             }
             Value::Uid(value) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 validate_uid_strict(element.tag, value)?;
@@ -354,7 +421,7 @@ impl Dataset {
             Value::Bytes(bytes) => {
                 enforce_limit(
                     "max_element_vl_bytes",
-                    bytes.len() as u64,
+                    u64::try_from(bytes.len()).unwrap_or(u64::MAX),
                     limits.max_element_vl_bytes,
                 )?;
             }
@@ -375,7 +442,7 @@ impl Dataset {
             }) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 Ok(Some(value.as_str()))
@@ -398,7 +465,7 @@ impl Dataset {
             }) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 parse_i32_strict(tag, value).map(Some)
@@ -421,7 +488,7 @@ impl Dataset {
             }) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 parse_f64_strict(tag, value).map(Some)
@@ -440,7 +507,7 @@ impl Dataset {
             }) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 validate_uid_strict(tag, value)?;
@@ -452,7 +519,7 @@ impl Dataset {
             }) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 validate_uid_strict(tag, value)?;
@@ -467,25 +534,278 @@ impl Dataset {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Limits {
     /// Max total input bytes.
-    pub max_input_bytes: u64,
+    max_input_bytes: u64,
     /// Max number of decoded elements.
-    pub max_dataset_elements: u64,
+    max_dataset_elements: u64,
     /// Max sequence/item nesting depth.
-    pub max_sequence_depth: u64,
+    max_sequence_depth: u64,
     /// Max bytes in a single string value.
-    pub max_string_bytes: u64,
+    max_string_bytes: u64,
     /// Max bytes in a single element value length.
-    pub max_element_vl_bytes: u64,
+    max_element_vl_bytes: u64,
     /// Max frames per instance.
-    pub max_frames_per_instance: u64,
+    max_frames_per_instance: u64,
     /// Max pixels per frame.
-    pub max_pixels_per_frame: u64,
+    max_pixels_per_frame: u64,
     /// Max decompressed bytes per instance.
-    pub max_decompressed_bytes: u64,
+    max_decompressed_bytes: u64,
     /// Max total cached GPU texture bytes.
-    pub max_gpu_texture_bytes: u64,
+    max_gpu_texture_bytes: u64,
     /// Max total cached CPU bytes.
-    pub max_cache_bytes: u64,
+    max_cache_bytes: u64,
+}
+
+impl Limits {
+    /// Create a new Limits with sensible defaults.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return a builder for constructing Limits with validation.
+    pub fn builder() -> LimitsBuilder {
+        LimitsBuilder::default()
+    }
+
+    /// Return the max total input bytes limit.
+    pub fn max_input_bytes(&self) -> u64 {
+        self.max_input_bytes
+    }
+
+    /// Set the max total input bytes limit.
+    pub fn set_max_input_bytes(&mut self, value: u64) {
+        self.max_input_bytes = value;
+    }
+
+    /// Return the max number of decoded elements limit.
+    pub fn max_dataset_elements(&self) -> u64 {
+        self.max_dataset_elements
+    }
+
+    /// Set the max number of decoded elements limit.
+    pub fn set_max_dataset_elements(&mut self, value: u64) {
+        self.max_dataset_elements = value;
+    }
+
+    /// Return the max sequence/item nesting depth limit.
+    pub fn max_sequence_depth(&self) -> u64 {
+        self.max_sequence_depth
+    }
+
+    /// Set the max sequence/item nesting depth limit.
+    pub fn set_max_sequence_depth(&mut self, value: u64) {
+        self.max_sequence_depth = value;
+    }
+
+    /// Return the max bytes in a single string value limit.
+    pub fn max_string_bytes(&self) -> u64 {
+        self.max_string_bytes
+    }
+
+    /// Set the max bytes in a single string value limit.
+    pub fn set_max_string_bytes(&mut self, value: u64) {
+        self.max_string_bytes = value;
+    }
+
+    /// Return the max bytes in a single element value length limit.
+    pub fn max_element_vl_bytes(&self) -> u64 {
+        self.max_element_vl_bytes
+    }
+
+    /// Set the max bytes in a single element value length limit.
+    pub fn set_max_element_vl_bytes(&mut self, value: u64) {
+        self.max_element_vl_bytes = value;
+    }
+
+    /// Return the max frames per instance limit.
+    pub fn max_frames_per_instance(&self) -> u64 {
+        self.max_frames_per_instance
+    }
+
+    /// Set the max frames per instance limit.
+    pub fn set_max_frames_per_instance(&mut self, value: u64) {
+        self.max_frames_per_instance = value;
+    }
+
+    /// Return the max pixels per frame limit.
+    pub fn max_pixels_per_frame(&self) -> u64 {
+        self.max_pixels_per_frame
+    }
+
+    /// Set the max pixels per frame limit.
+    pub fn set_max_pixels_per_frame(&mut self, value: u64) {
+        self.max_pixels_per_frame = value;
+    }
+
+    /// Return the max decompressed bytes per instance limit.
+    pub fn max_decompressed_bytes(&self) -> u64 {
+        self.max_decompressed_bytes
+    }
+
+    /// Set the max decompressed bytes per instance limit.
+    pub fn set_max_decompressed_bytes(&mut self, value: u64) {
+        self.max_decompressed_bytes = value;
+    }
+
+    /// Return the max total cached GPU texture bytes limit.
+    pub fn max_gpu_texture_bytes(&self) -> u64 {
+        self.max_gpu_texture_bytes
+    }
+
+    /// Set the max total cached GPU texture bytes limit.
+    pub fn set_max_gpu_texture_bytes(&mut self, value: u64) {
+        self.max_gpu_texture_bytes = value;
+    }
+
+    /// Return the max total cached CPU bytes limit.
+    pub fn max_cache_bytes(&self) -> u64 {
+        self.max_cache_bytes
+    }
+
+    /// Set the max total cached CPU bytes limit.
+    pub fn set_max_cache_bytes(&mut self, value: u64) {
+        self.max_cache_bytes = value;
+    }
+}
+
+/// Builder for constructing [`Limits`] with validation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LimitsBuilder {
+    max_input_bytes: u64,
+    max_dataset_elements: u64,
+    max_sequence_depth: u64,
+    max_string_bytes: u64,
+    max_element_vl_bytes: u64,
+    max_frames_per_instance: u64,
+    max_pixels_per_frame: u64,
+    max_decompressed_bytes: u64,
+    max_gpu_texture_bytes: u64,
+    max_cache_bytes: u64,
+}
+
+impl Default for LimitsBuilder {
+    fn default() -> Self {
+        let limits = Limits::default();
+        Self {
+            max_input_bytes: limits.max_input_bytes,
+            max_dataset_elements: limits.max_dataset_elements,
+            max_sequence_depth: limits.max_sequence_depth,
+            max_string_bytes: limits.max_string_bytes,
+            max_element_vl_bytes: limits.max_element_vl_bytes,
+            max_frames_per_instance: limits.max_frames_per_instance,
+            max_pixels_per_frame: limits.max_pixels_per_frame,
+            max_decompressed_bytes: limits.max_decompressed_bytes,
+            max_gpu_texture_bytes: limits.max_gpu_texture_bytes,
+            max_cache_bytes: limits.max_cache_bytes,
+        }
+    }
+}
+
+impl LimitsBuilder {
+    /// Set the max total input bytes limit.
+    pub fn max_input_bytes(mut self, value: u64) -> Self {
+        self.max_input_bytes = value;
+        self
+    }
+
+    /// Set the max number of decoded elements limit.
+    pub fn max_dataset_elements(mut self, value: u64) -> Self {
+        self.max_dataset_elements = value;
+        self
+    }
+
+    /// Set the max sequence/item nesting depth limit.
+    pub fn max_sequence_depth(mut self, value: u64) -> Self {
+        self.max_sequence_depth = value;
+        self
+    }
+
+    /// Set the max bytes in a single string value limit.
+    pub fn max_string_bytes(mut self, value: u64) -> Self {
+        self.max_string_bytes = value;
+        self
+    }
+
+    /// Set the max bytes in a single element value length limit.
+    pub fn max_element_vl_bytes(mut self, value: u64) -> Self {
+        self.max_element_vl_bytes = value;
+        self
+    }
+
+    /// Set the max frames per instance limit.
+    pub fn max_frames_per_instance(mut self, value: u64) -> Self {
+        self.max_frames_per_instance = value;
+        self
+    }
+
+    /// Set the max pixels per frame limit.
+    pub fn max_pixels_per_frame(mut self, value: u64) -> Self {
+        self.max_pixels_per_frame = value;
+        self
+    }
+
+    /// Set the max decompressed bytes per instance limit.
+    pub fn max_decompressed_bytes(mut self, value: u64) -> Self {
+        self.max_decompressed_bytes = value;
+        self
+    }
+
+    /// Set the max total cached GPU texture bytes limit.
+    pub fn max_gpu_texture_bytes(mut self, value: u64) -> Self {
+        self.max_gpu_texture_bytes = value;
+        self
+    }
+
+    /// Set the max total cached CPU bytes limit.
+    pub fn max_cache_bytes(mut self, value: u64) -> Self {
+        self.max_cache_bytes = value;
+        self
+    }
+
+    /// Build the Limits, validating that all values are non-zero.
+    pub fn build(self) -> Result<Limits> {
+        if self.max_input_bytes == 0 {
+            return Err(limit_exceeded("max_input_bytes", 0, 1));
+        }
+        if self.max_dataset_elements == 0 {
+            return Err(limit_exceeded("max_dataset_elements", 0, 1));
+        }
+        if self.max_sequence_depth == 0 {
+            return Err(limit_exceeded("max_sequence_depth", 0, 1));
+        }
+        if self.max_string_bytes == 0 {
+            return Err(limit_exceeded("max_string_bytes", 0, 1));
+        }
+        if self.max_element_vl_bytes == 0 {
+            return Err(limit_exceeded("max_element_vl_bytes", 0, 1));
+        }
+        if self.max_frames_per_instance == 0 {
+            return Err(limit_exceeded("max_frames_per_instance", 0, 1));
+        }
+        if self.max_pixels_per_frame == 0 {
+            return Err(limit_exceeded("max_pixels_per_frame", 0, 1));
+        }
+        if self.max_decompressed_bytes == 0 {
+            return Err(limit_exceeded("max_decompressed_bytes", 0, 1));
+        }
+        if self.max_gpu_texture_bytes == 0 {
+            return Err(limit_exceeded("max_gpu_texture_bytes", 0, 1));
+        }
+        if self.max_cache_bytes == 0 {
+            return Err(limit_exceeded("max_cache_bytes", 0, 1));
+        }
+        Ok(Limits {
+            max_input_bytes: self.max_input_bytes,
+            max_dataset_elements: self.max_dataset_elements,
+            max_sequence_depth: self.max_sequence_depth,
+            max_string_bytes: self.max_string_bytes,
+            max_element_vl_bytes: self.max_element_vl_bytes,
+            max_frames_per_instance: self.max_frames_per_instance,
+            max_pixels_per_frame: self.max_pixels_per_frame,
+            max_decompressed_bytes: self.max_decompressed_bytes,
+            max_gpu_texture_bytes: self.max_gpu_texture_bytes,
+            max_cache_bytes: self.max_cache_bytes,
+        })
+    }
 }
 
 impl Default for Limits {
@@ -523,46 +843,267 @@ pub fn validate_dataset(dataset: &Dataset, limits: &Limits) -> Result<()> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContextItem {
     /// Context key.
-    pub key: &'static str,
+    key: &'static str,
     /// Context value.
-    pub value: String,
+    value: String,
+}
+
+impl ContextItem {
+    /// Create a new context item.
+    pub fn new(key: &'static str, value: impl Into<String>) -> Self {
+        Self {
+            key,
+            value: value.into(),
+        }
+    }
+
+    /// Return the context key.
+    pub fn key(&self) -> &'static str {
+        self.key
+    }
+
+    /// Return the context value.
+    pub fn value(&self) -> &str {
+        &self.value
+    }
 }
 
 /// Feature availability flags for the active build.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Capabilities {
     /// Tier 1 Deflated Explicit VR Little Endian support.
-    pub tier1_deflate: bool,
+    tier1_deflate: bool,
     /// JPEG-LS codec support.
-    pub codec_jpegls: bool,
+    codec_jpegls: bool,
     /// JPEG 2000 codec support.
-    pub codec_j2k: bool,
+    codec_j2k: bool,
     /// Non-DICOM raster input support.
-    pub raster_io: bool,
+    raster_io: bool,
     /// Grayscale Softcopy Presentation State support.
-    pub gsps: bool,
+    gsps: bool,
     /// CT modality pack support.
-    pub modality_ct: bool,
+    modality_ct: bool,
     /// PET modality pack support.
-    pub modality_pet: bool,
+    modality_pet: bool,
     /// MG modality pack support.
-    pub modality_mg: bool,
+    modality_mg: bool,
     /// XR modality pack support.
-    pub modality_xr: bool,
+    modality_xr: bool,
     /// Enhanced multi-frame pack support.
-    pub pack_enhanced: bool,
+    pack_enhanced: bool,
     /// Ultrasound pack support.
-    pub pack_us: bool,
+    pack_us: bool,
     /// Nuclear medicine pack support.
-    pub pack_nm: bool,
+    pack_nm: bool,
     /// XA/XRF pack support.
-    pub pack_xa: bool,
+    pack_xa: bool,
     /// Segmentation pack support.
-    pub pack_seg: bool,
+    pack_seg: bool,
     /// RT Dose pack support.
-    pub pack_rt: bool,
+    pack_rt: bool,
     /// Structured Report pack support.
-    pub pack_sr: bool,
+    pack_sr: bool,
+}
+
+impl Capabilities {
+    /// Create a new Capabilities with the given feature flags.
+    pub fn new(
+        tier1_deflate: bool,
+        codec_jpegls: bool,
+        codec_j2k: bool,
+        raster_io: bool,
+        gsps: bool,
+        modality_ct: bool,
+        modality_pet: bool,
+        modality_mg: bool,
+        modality_xr: bool,
+        pack_enhanced: bool,
+        pack_us: bool,
+        pack_nm: bool,
+        pack_xa: bool,
+        pack_seg: bool,
+        pack_rt: bool,
+        pack_sr: bool,
+    ) -> Self {
+        Self {
+            tier1_deflate,
+            codec_jpegls,
+            codec_j2k,
+            raster_io,
+            gsps,
+            modality_ct,
+            modality_pet,
+            modality_mg,
+            modality_xr,
+            pack_enhanced,
+            pack_us,
+            pack_nm,
+            pack_xa,
+            pack_seg,
+            pack_rt,
+            pack_sr,
+        }
+    }
+
+    /// Return whether Tier 1 Deflate support is enabled.
+    pub fn tier1_deflate(&self) -> bool {
+        self.tier1_deflate
+    }
+
+    /// Set whether Tier 1 Deflate support is enabled.
+    pub fn set_tier1_deflate(&mut self, value: bool) {
+        self.tier1_deflate = value;
+    }
+
+    /// Return whether JPEG-LS codec support is enabled.
+    pub fn codec_jpegls(&self) -> bool {
+        self.codec_jpegls
+    }
+
+    /// Set whether JPEG-LS codec support is enabled.
+    pub fn set_codec_jpegls(&mut self, value: bool) {
+        self.codec_jpegls = value;
+    }
+
+    /// Return whether JPEG 2000 codec support is enabled.
+    pub fn codec_j2k(&self) -> bool {
+        self.codec_j2k
+    }
+
+    /// Set whether JPEG 2000 codec support is enabled.
+    pub fn set_codec_j2k(&mut self, value: bool) {
+        self.codec_j2k = value;
+    }
+
+    /// Return whether non-DICOM raster input support is enabled.
+    pub fn raster_io(&self) -> bool {
+        self.raster_io
+    }
+
+    /// Set whether non-DICOM raster input support is enabled.
+    pub fn set_raster_io(&mut self, value: bool) {
+        self.raster_io = value;
+    }
+
+    /// Return whether GSPS support is enabled.
+    pub fn gsps(&self) -> bool {
+        self.gsps
+    }
+
+    /// Set whether GSPS support is enabled.
+    pub fn set_gsps(&mut self, value: bool) {
+        self.gsps = value;
+    }
+
+    /// Return whether CT modality pack support is enabled.
+    pub fn modality_ct(&self) -> bool {
+        self.modality_ct
+    }
+
+    /// Set whether CT modality pack support is enabled.
+    pub fn set_modality_ct(&mut self, value: bool) {
+        self.modality_ct = value;
+    }
+
+    /// Return whether PET modality pack support is enabled.
+    pub fn modality_pet(&self) -> bool {
+        self.modality_pet
+    }
+
+    /// Set whether PET modality pack support is enabled.
+    pub fn set_modality_pet(&mut self, value: bool) {
+        self.modality_pet = value;
+    }
+
+    /// Return whether MG modality pack support is enabled.
+    pub fn modality_mg(&self) -> bool {
+        self.modality_mg
+    }
+
+    /// Set whether MG modality pack support is enabled.
+    pub fn set_modality_mg(&mut self, value: bool) {
+        self.modality_mg = value;
+    }
+
+    /// Return whether XR modality pack support is enabled.
+    pub fn modality_xr(&self) -> bool {
+        self.modality_xr
+    }
+
+    /// Set whether XR modality pack support is enabled.
+    pub fn set_modality_xr(&mut self, value: bool) {
+        self.modality_xr = value;
+    }
+
+    /// Return whether enhanced multi-frame pack support is enabled.
+    pub fn pack_enhanced(&self) -> bool {
+        self.pack_enhanced
+    }
+
+    /// Set whether enhanced multi-frame pack support is enabled.
+    pub fn set_pack_enhanced(&mut self, value: bool) {
+        self.pack_enhanced = value;
+    }
+
+    /// Return whether ultrasound pack support is enabled.
+    pub fn pack_us(&self) -> bool {
+        self.pack_us
+    }
+
+    /// Set whether ultrasound pack support is enabled.
+    pub fn set_pack_us(&mut self, value: bool) {
+        self.pack_us = value;
+    }
+
+    /// Return whether nuclear medicine pack support is enabled.
+    pub fn pack_nm(&self) -> bool {
+        self.pack_nm
+    }
+
+    /// Set whether nuclear medicine pack support is enabled.
+    pub fn set_pack_nm(&mut self, value: bool) {
+        self.pack_nm = value;
+    }
+
+    /// Return whether XA/XRF pack support is enabled.
+    pub fn pack_xa(&self) -> bool {
+        self.pack_xa
+    }
+
+    /// Set whether XA/XRF pack support is enabled.
+    pub fn set_pack_xa(&mut self, value: bool) {
+        self.pack_xa = value;
+    }
+
+    /// Return whether segmentation pack support is enabled.
+    pub fn pack_seg(&self) -> bool {
+        self.pack_seg
+    }
+
+    /// Set whether segmentation pack support is enabled.
+    pub fn set_pack_seg(&mut self, value: bool) {
+        self.pack_seg = value;
+    }
+
+    /// Return whether RT Dose pack support is enabled.
+    pub fn pack_rt(&self) -> bool {
+        self.pack_rt
+    }
+
+    /// Set whether RT Dose pack support is enabled.
+    pub fn set_pack_rt(&mut self, value: bool) {
+        self.pack_rt = value;
+    }
+
+    /// Return whether structured report pack support is enabled.
+    pub fn pack_sr(&self) -> bool {
+        self.pack_sr
+    }
+
+    /// Set whether structured report pack support is enabled.
+    pub fn set_pack_sr(&mut self, value: bool) {
+        self.pack_sr = value;
+    }
 }
 
 impl Capabilities {
@@ -684,6 +1225,11 @@ pub enum ErrorKind {
         /// Human-readable detail.
         detail: String,
     },
+    /// Resource not found.
+    NotFound {
+        /// Human-readable detail.
+        detail: String,
+    },
 }
 
 impl ErrorKind {
@@ -701,6 +1247,7 @@ impl ErrorKind {
             ErrorKind::IoError { .. } => "DVF.IO.ERROR",
             ErrorKind::IntegrityError { .. } => "DVF.INTEGRITY.ERROR",
             ErrorKind::InternalError { .. } => "DVF.INTERNAL.ERROR",
+            ErrorKind::NotFound { .. } => "DVF.WEB.NOT_FOUND",
         }
     }
 }
@@ -709,20 +1256,27 @@ impl ErrorKind {
 #[derive(Debug)]
 pub struct Error {
     /// Stable error code.
-    pub code: &'static str,
+    code: &'static str,
     /// Error kind.
-    pub kind: ErrorKind,
+    kind: ErrorKind,
     /// Short, non-PII message.
-    pub message: String,
+    message: String,
     /// Structured context items.
-    pub context: Vec<ContextItem>,
+    context: Vec<ContextItem>,
     /// Optional source error.
-    pub source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    source: Option<Box<dyn std::error::Error + Send + Sync>>,
 }
 
 impl Error {
-    /// Create a new error.
+    /// Create a new error, validating code/kind consistency.
+    ///
+    /// In debug builds, panics if `code` does not match `kind.code()`.
     pub fn new(code: &'static str, kind: ErrorKind, message: impl Into<String>) -> Self {
+        debug_assert_eq!(
+            code, kind.code(),
+            "Error::new code/kind mismatch: code={code}, expected={}",
+            kind.code()
+        );
         Self {
             code,
             kind,
@@ -745,6 +1299,31 @@ impl Error {
             value: value.into(),
         });
         self
+    }
+
+    /// Return the stable error code.
+    pub fn code(&self) -> &'static str {
+        self.code
+    }
+
+    /// Return the error kind.
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
+
+    /// Return the error message.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    /// Return the structured context items.
+    pub fn context(&self) -> &[ContextItem] {
+        &self.context
+    }
+
+    /// Return the optional source error.
+    pub fn source(&self) -> Option<&(dyn std::error::Error + Send + Sync)> {
+        self.source.as_deref()
     }
 }
 
@@ -781,14 +1360,14 @@ fn validate_dataset_inner(
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
             }
             Value::Uid(value) => {
                 enforce_limit(
                     "max_string_bytes",
-                    value.len() as u64,
+                    u64::try_from(value.len()).unwrap_or(u64::MAX),
                     limits.max_string_bytes,
                 )?;
                 validate_uid_strict(element.tag, value)?;
@@ -796,7 +1375,7 @@ fn validate_dataset_inner(
             Value::Bytes(bytes) => {
                 enforce_limit(
                     "max_element_vl_bytes",
-                    bytes.len() as u64,
+                    u64::try_from(bytes.len()).unwrap_or(u64::MAX),
                     limits.max_element_vl_bytes,
                 )?;
             }

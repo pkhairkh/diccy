@@ -15,21 +15,12 @@ const TAG_INSTANCE_UID: Tag = Tag(0x0008, 0x0018);
 
 fn dataset_with_context(study_uid: &str, series_uid: &str, instance_uid: &str) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_STUDY_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(study_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_SERIES_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(series_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(instance_uid.to_string()),
-    });
+    dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance_uid.to_string()),
+    ).unwrap());
     dataset
 }
 
@@ -71,7 +62,7 @@ fn export_plan_rejects_mismatched_measurement_source_tuple() {
     };
 
     let err = validate_export_plan(&plan).expect_err("tuple mismatch must fail closed");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
 }
 
 #[test]
@@ -93,7 +84,7 @@ fn export_plan_rejects_empty_measurement_identifier() {
     };
 
     let err = validate_export_plan(&plan).expect_err("empty measurement id must fail");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 }
 
 #[test]

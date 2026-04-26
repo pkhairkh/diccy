@@ -32,74 +32,35 @@ struct SegFixture<'a> {
 
 fn build_seg_dataset(fixture: SegFixture<'_>) -> Dataset {
     let mut ref_instance = Dataset::new();
-    ref_instance.insert(Element {
-        tag: TAG_REFERENCED_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(fixture.referenced_uid.to_string()),
-    });
+    ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(fixture.referenced_uid.to_string()),
+    ).unwrap());
     let mut ref_series = Dataset::new();
-    ref_series.insert(Element {
-        tag: TAG_REFERENCED_INSTANCE_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![ref_instance]),
-    });
+    ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
+    ).unwrap());
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_ROWS,
-        vr: Vr::Us,
-        value: Value::Str(fixture.rows.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_COLUMNS,
-        vr: Vr::Us,
-        value: Value::Str(fixture.cols.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_NUMBER_OF_FRAMES,
-        vr: Vr::Is,
-        value: Value::Str(fixture.frames.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_FRAME_OF_REFERENCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(fixture.frame_of_reference_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_SEGMENTATION_TYPE,
-        vr: Vr::Cs,
-        value: Value::Str(fixture.seg_type.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_SEGMENT_NUMBER,
-        vr: Vr::Us,
-        value: Value::Str(fixture.segment_number.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_BITS_ALLOCATED,
-        vr: Vr::Us,
-        value: Value::Str(fixture.bits_allocated.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_BITS_STORED,
-        vr: Vr::Us,
-        value: Value::Str(fixture.bits_stored.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_HIGH_BIT,
-        vr: Vr::Us,
-        value: Value::Str(fixture.high_bit.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PIXEL_DATA,
-        vr: Vr::Ob,
-        value: Value::Bytes(fixture.pixel_data),
-    });
-    dataset.insert(Element {
-        tag: TAG_REFERENCED_SERIES_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![ref_series]),
-    });
+    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str(fixture.rows.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str(fixture.cols.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(fixture.frames.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid(fixture.frame_of_reference_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str(fixture.seg_type.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str(fixture.segment_number.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str(fixture.bits_allocated.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str(fixture.bits_stored.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str(fixture.high_bit.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(fixture.pixel_data),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
+    ).unwrap());
     dataset
 }
 
@@ -129,7 +90,7 @@ fn seg_parser_enforces_binary_and_bit_constraints() {
         segment_number: 1,
     });
     let type_err = Segmentation::from_dataset(&non_binary).expect_err("type");
-    assert!(matches!(type_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(type_err.kind(), ErrorKind::InvalidTagValue { .. }));
 
     let bad_bits = build_seg_dataset(SegFixture {
         rows: 1,
@@ -145,7 +106,7 @@ fn seg_parser_enforces_binary_and_bit_constraints() {
         segment_number: 1,
     });
     let bits_err = Segmentation::from_dataset(&bad_bits).expect_err("bits");
-    assert!(matches!(bits_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(bits_err.kind(), ErrorKind::InvalidTagValue { .. }));
 }
 
 #[test]
@@ -174,7 +135,7 @@ fn seg_overlay_alignment_and_frame_bounds_fail_closed() {
         sop_instance_uid: "1.2.3.4",
     };
     let uid_err = seg.overlay_on(&frame, wrong_uid).expect_err("uid mismatch");
-    assert!(matches!(uid_err.kind, ErrorKind::InvalidGeometry { .. }));
+    assert!(matches!(uid_err.kind(), ErrorKind::InvalidGeometry { .. }));
 
     let wrong_grid = SegReference {
         rows: 3,
@@ -185,7 +146,7 @@ fn seg_overlay_alignment_and_frame_bounds_fail_closed() {
     let grid_err = seg
         .overlay_on(&frame, wrong_grid)
         .expect_err("grid mismatch");
-    assert!(matches!(grid_err.kind, ErrorKind::InvalidGeometry { .. }));
+    assert!(matches!(grid_err.kind(), ErrorKind::InvalidGeometry { .. }));
 
     let valid_ref = SegReference {
         rows: 2,
@@ -196,7 +157,7 @@ fn seg_overlay_alignment_and_frame_bounds_fail_closed() {
     let frame_err = seg
         .overlay_on_frame(&frame, valid_ref, 2)
         .expect_err("frame out of range");
-    assert!(matches!(frame_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(frame_err.kind(), ErrorKind::InvalidTagValue { .. }));
 }
 
 #[test]
@@ -242,5 +203,5 @@ fn seg_overlay_color_and_mask_processing_are_deterministic() {
         segment_number: 7,
     });
     let short_err = Segmentation::from_dataset(&too_short).expect_err("pixel data too short");
-    assert!(matches!(short_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(short_err.kind(), ErrorKind::InvalidTagValue { .. }));
 }

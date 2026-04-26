@@ -18,75 +18,39 @@ const TAG_MODALITY: Tag = Tag(0x0008, 0x0060);
 
 fn mpps_dataset(status: &str, sop_instance_uid: &str, with_end: bool) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(sop_instance_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_STATUS,
-        vr: Vr::Cs,
-        value: Value::Str(status.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PERFORMED_STEP_ID,
-        vr: Vr::Sh,
-        value: Value::Str("PS-100".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str("20260214".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str("101500".to_string()),
-    });
+    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_instance_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("PS-100".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string()),
+    ).unwrap());
     if with_end {
-        dataset.insert(Element {
-            tag: TAG_END_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20260214".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_END_TIME,
-            vr: Vr::Tm,
-            value: Value::Str("102000".to_string()),
-        });
+        dataset.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20260214".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("102000".to_string()),
+        ).unwrap());
     }
     dataset
 }
 
 fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time: &str) -> Dataset {
     let mut item = Dataset::new();
-    item.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str(step_id.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_MODALITY,
-        vr: Vr::Cs,
-        value: Value::Str(modality.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str(start_date.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str(start_time.to_string()),
-    });
+    item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(start_date.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(start_time.to_string()),
+    ).unwrap());
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SPS_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![item]),
-    });
+    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
+    ).unwrap());
     dataset
 }
 
@@ -140,7 +104,7 @@ fn mpps_terminal_state_rejects_invalid_reopen_transition() {
     let err = service
         .ingest(&invalid_reopen)
         .expect_err("reopen must fail");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
 
     let update = service.get("1.2.840.1002").expect("stored update");
     assert_eq!(update.status, MppsStatus::Completed);
@@ -170,7 +134,7 @@ fn worklist_query_results_remain_deterministic_across_repeated_reads() {
 
     let first_step = first[0]
         .get(TAG_SPS_SEQUENCE)
-        .and_then(|el| match &el.value {
+        .and_then(|el| match el.value() {
             Value::Sequence(items) => items.first(),
             _ => None,
         })

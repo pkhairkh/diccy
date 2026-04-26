@@ -678,7 +678,7 @@ cargo build -p pack-seg --features pack-seg
 
 **Tasks:**
 
-- [ ] **S9-T1** Split `dicom-storage` into bounded-context crates
+- [x] **S9-T1** Split `dicom-storage` into bounded-context crates
   - Extract Storage Commitment types into new `dicom-storage-commitment` crate: `StorageCommitmentRequest`, `StorageCommitmentEventJob`, `StorageCommitmentPolicy`
   - Extract S3 backend into new `dicom-storage-s3` crate: `S3Config`, `S3Backend`, `MultipartUploadResult`
   - Extract VNA lifecycle into new `dicom-vna` crate: `VnaEngine`, `VnaStudyRecord`, `RetentionPolicy`, `LifecyclePolicy`
@@ -688,7 +688,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo test --workspace` passes; `dicom-storage` reduced to core WAL concern only
   - **Estimated effort:** 5 days
 
-- [ ] **S9-T2** Split `dicom-auth/human_interface.rs` into bounded-context modules
+- [x] **S9-T2** Split `dicom-auth/human_interface.rs` into bounded-context modules
   - Create `src/session.rs` — `SessionPolicy`, `SessionStatus`, `force_reauthentication_for_suspicious_session()`
   - Create `src/config_control.rs` — `ConfigChangeJournalEntry`, `ConfigChangeJournal`
   - Create `src/break_glass.rs` — `BreakGlassPolicy`, `BreakGlassRequest`, `BreakGlassOutcome`
@@ -700,7 +700,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo test -p dicom-auth` passes; `human_interface.rs` eliminated; each module < 200 lines
   - **Estimated effort:** 3 days
 
-- [ ] **S9-T3** Split `dicom-dimse-service` into protocol, commitment, and transport layers
+- [x] **S9-T3** Split `dicom-dimse-service` into protocol, commitment, and transport layers
   - Create `src/protocol.rs` — `DimseService` trait, `StorageBackedDimseService`, C-FIND/C-MOVE/C-GET handlers
   - Create `src/commitment.rs` — `StorageCommitmentNActionRequest`, `StorageCommitmentLifecycleEvent`
   - Create `src/transport.rs` — `DimseServer` (TCP listener), `DimseTlsMaterialConfig`, transport abstraction
@@ -711,7 +711,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo test -p dicom-dimse-service` passes; `lib.rs` reduced to < 500 lines
   - **Estimated effort:** 4 days
 
-- [ ] **S9-T4** Decompose `dicom-workflow-server/main.rs` into modules
+- [x] **S9-T4** Decompose `dicom-workflow-server/main.rs` into modules
   - Create `src/config.rs` — runtime configuration and env parsing (~800 lines)
   - Create `src/hl7.rs` — HL7 transport and subscription management (~1,500 lines)
   - Create `src/tenant.rs` — tenant management, policies, quotas, rate limits (~1,200 lines)
@@ -727,7 +727,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo test -p dicom-workflow-server` passes; `main.rs` < 200 lines; all modules compile independently
   - **Estimated effort:** 6 days
 
-- [ ] **S9-T5** Split `dicom-web/lib.rs` into modules
+- [x] **S9-T5** Split `dicom-web/lib.rs` into modules
   - Create `src/qido.rs` — QIDO-RS query engine
   - Create `src/wado.rs` — WADO-RS retrieval engine + WADO-URI legacy
   - Create `src/stow.rs` — STOW-RS storage engine
@@ -738,7 +738,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo test -p dicom-web` passes; `lib.rs` reduced to < 500 lines
   - **Estimated effort:** 4 days
 
-- [ ] **S9-T6** Make struct fields private with validated constructors (Phase 1: critical types)
+- [x] **S9-T6** Make struct fields private with validated constructors (Phase 1: critical types)
   - `dicom-core::Element` — make `tag`, `vr`, `value` private; add `Element::new(tag, vr, value)` that validates VR/value consistency; add getters
   - `dicom-core::Limits` — make all fields private; add `Limits::new()` with validation (e.g., `max_input_bytes > 0`); add `Limits::builder()`
   - `dicom-core::Error` — make `code`, `kind`, `message`, `context`, `source` private; add `Error::new()` that ensures code/kind consistency
@@ -751,7 +751,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** All 8 types have private fields + validated constructors + getters; `cargo test --workspace` passes
   - **Estimated effort:** 6 days
 
-- [ ] **S9-T7** Fix integer overflow and bounds-checking gaps
+- [x] **S9-T7** Fix integer overflow and bounds-checking gaps
   - Add checked arithmetic in all `enforce_limit()` implementations (replace `as` casts with `try_into()`)
   - Add bounds validation in `dicom-pixel` for `rows * columns * samples_per_pixel` multiplication
   - Add bounds validation in `pack-seg` for segment descriptor `total_pixels` vs actual data length
@@ -762,7 +762,7 @@ cargo build -p pack-seg --features pack-seg
   - **Acceptance:** `cargo clippy --workspace -- -D clippy::cast_possible_truncation` passes with zero warnings
   - **Estimated effort:** 5 days
 
-- [ ] **S9-T8** Decouple rendering from domain crates
+- [x] **S9-T8** Decouple rendering from domain crates
   - Move `DisplayFrame`-dependent code from `pack-gsps` into new module `viewer-render/gsps_overlay.rs`; pack-gsps returns `GspsOverlayDescriptor` (domain type with contour points, spatial transforms, no pixel dependency)
   - Move `DisplayFrame`-dependent code from `pack-seg` into `viewer-render/seg_overlay.rs`; pack-seg returns `SegOverlayDescriptor`
   - Move `DisplayFrame`-dependent code from `pack-rt` into `viewer-render/rt_overlay.rs`; pack-rt returns `RtOverlayDescriptor`

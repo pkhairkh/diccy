@@ -1051,12 +1051,12 @@ fn enforce_idempotency_key(key: &str, limits: &Limits) -> Result<()> {
     if key.trim().is_empty() {
         return Err(idempotency_missing_error());
     }
-    if key.len() as u64 > limits.max_string_bytes {
+    if key.len() as u64 > limits.max_string_bytes() {
         return Err(Error::from_kind(
             ErrorKind::LimitExceeded {
                 limit_name: "max_string_bytes",
                 observed: key.len() as u64,
-                allowed: limits.max_string_bytes,
+                allowed: limits.max_string_bytes(),
             },
             "idempotency key too long",
         )
@@ -1092,8 +1092,7 @@ fn update_payload_key(request: &SrUpdateEnvelope) -> String {
 
 fn sr_authoring_error(error: SrAuthoringError) -> Box<Error> {
     match error {
-        SrAuthoringError::VersionConflict { expected, actual } => Error::new(
-            "DVF.WORKFLOW.SR.VERSION_CONFLICT",
+        SrAuthoringError::VersionConflict { expected, actual } => Error::from_kind(
             ErrorKind::IntegrityError {
                 detail: format!("sr version conflict expected={expected} actual={actual}"),
             },
@@ -1151,8 +1150,7 @@ fn write_history_line(
 }
 
 fn reference_error(uid: &str) -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.UNKNOWN_REFERENCE",
+    Error::from_kind(
         ErrorKind::InvalidTagValue {
             tag: dicom_core::Tag(0x0008, 0x1155),
             detail: format!("unknown referenced SOP Instance UID {uid}"),
@@ -1163,8 +1161,7 @@ fn reference_error(uid: &str) -> Box<Error> {
 }
 
 fn document_exists_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.ALREADY_EXISTS",
+    Error::from_kind(
         ErrorKind::IntegrityError {
             detail: "sr document already exists".to_string(),
         },
@@ -1174,10 +1171,8 @@ fn document_exists_error() -> Box<Error> {
 }
 
 fn document_not_found_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.NOT_FOUND",
-        ErrorKind::DecodeError {
-            stage: "sr-workflow".to_string(),
+    Error::from_kind(
+        ErrorKind::NotFound {
             detail: "sr document not found".to_string(),
         },
         "sr document not found",
@@ -1186,8 +1181,7 @@ fn document_not_found_error() -> Box<Error> {
 }
 
 fn idempotency_missing_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.IDEMPOTENCY_REQUIRED",
+    Error::from_kind(
         ErrorKind::DecodeError {
             stage: "sr-workflow".to_string(),
             detail: "idempotency key is required".to_string(),
@@ -1198,8 +1192,7 @@ fn idempotency_missing_error() -> Box<Error> {
 }
 
 fn idempotency_conflict_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.IDEMPOTENCY_CONFLICT",
+    Error::from_kind(
         ErrorKind::IntegrityError {
             detail: "idempotency key replay payload mismatch".to_string(),
         },
@@ -1209,8 +1202,7 @@ fn idempotency_conflict_error() -> Box<Error> {
 }
 
 fn sr_invalid_transition_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.INVALID_TRANSITION",
+    Error::from_kind(
         ErrorKind::IntegrityError {
             detail: "invalid sr lifecycle transition".to_string(),
         },
@@ -1220,8 +1212,7 @@ fn sr_invalid_transition_error() -> Box<Error> {
 }
 
 fn auth_denied_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.AUTH_DENIED",
+    Error::from_kind(
         ErrorKind::DecodeError {
             stage: "sr-workflow-auth".to_string(),
             detail: "write principal is not authorized for SR operations".to_string(),
@@ -1232,8 +1223,7 @@ fn auth_denied_error() -> Box<Error> {
 }
 
 fn io_error(detail: String) -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.IO_ERROR",
+    Error::from_kind(
         ErrorKind::IoError { detail },
         "sr workflow persistence error",
     )
@@ -1241,8 +1231,7 @@ fn io_error(detail: String) -> Box<Error> {
 }
 
 fn snapshot_error() -> Box<Error> {
-    Error::new(
-        "DVF.WORKFLOW.SR.SNAPSHOT_INVALID",
+    Error::from_kind(
         ErrorKind::DecodeError {
             stage: "sr-workflow-snapshot".to_string(),
             detail: "invalid sr workflow snapshot".to_string(),
@@ -1478,7 +1467,7 @@ mod tests {
                 &auth(),
             )
             .expect_err("must fail");
-        assert_eq!(err.code, "DVF.WORKFLOW.SR.VERSION_CONFLICT");
+        assert_eq!(err.code(), "DVF.INTEGRITY.ERROR");
 
         let err = store
             .create(
@@ -1499,7 +1488,7 @@ mod tests {
                 },
             )
             .expect_err("auth fail");
-        assert_eq!(err.code, "DVF.WORKFLOW.SR.AUTH_DENIED");
+        assert_eq!(err.code(), "DVF.DICOM.DECODE_ERROR");
     }
 
     #[test]
@@ -1669,6 +1658,6 @@ mod tests {
                 &auth(),
             )
             .expect_err("invalid transition must fail");
-        assert_eq!(err.code, "DVF.WORKFLOW.SR.INVALID_TRANSITION");
+        assert_eq!(err.code(), "DVF.INTEGRITY.ERROR");
     }
 }

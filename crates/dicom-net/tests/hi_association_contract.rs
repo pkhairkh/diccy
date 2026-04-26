@@ -35,7 +35,7 @@ fn association_parsing_fails_closed_for_invalid_context_and_presentation_rules()
     invalid_app_context.application_context = "1.2.3".to_string();
     let encoded = encode_pdu(&Pdu::AssociateRq(invalid_app_context), &limits).expect("encode");
     let err = parse_pdu(&encoded, &limits).expect_err("invalid app-context must fail");
-    match &err.kind {
+    match &err.kind() {
         ErrorKind::DecodeError { detail, .. } => {
             assert!(detail.contains("application context"));
         }
@@ -49,7 +49,7 @@ fn association_parsing_fails_closed_for_invalid_context_and_presentation_rules()
     }]);
     let err = encode_pdu(&Pdu::AssociateRq(even_context_id), &limits)
         .expect_err("even context IDs must fail");
-    match &err.kind {
+    match &err.kind() {
         ErrorKind::DecodeError { detail, .. } => {
             assert!(detail.contains("presentation context ID must be odd"));
         }
@@ -109,7 +109,7 @@ fn state_machine_and_pdv_limits_expose_fail_closed_contracts() {
     let err = machine
         .on_event(AssociationEvent::Receive(AssociationPduType::AssociateAc))
         .expect_err("out-of-order transitions must fail");
-    match &err.kind {
+    match &err.kind() {
         ErrorKind::DecodeError { detail, .. } => {
             assert!(detail.contains("invalid association transition"));
         }
@@ -133,7 +133,7 @@ fn state_machine_and_pdv_limits_expose_fail_closed_contracts() {
     };
     let err = encode_pdu(&pdu, &limits).expect_err("pdv limit must be enforced");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::LimitExceeded {
             limit_name: "max_pdv_bytes",
             ..

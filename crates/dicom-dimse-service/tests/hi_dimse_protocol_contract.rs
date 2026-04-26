@@ -74,5 +74,5 @@ fn query_retrieve_status_progression_is_pending_then_final() {
     let err =
         validate_query_retrieve_status_sequence(&[DimseStatus::success(), DimseStatus::pending()])
             .expect_err("invalid sequence must fail");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 }

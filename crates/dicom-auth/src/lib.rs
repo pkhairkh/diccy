@@ -1,12 +1,67 @@
 #![deny(missing_docs)]
 
 //! Authentication and authorization policy hooks.
+//!
+//! The auth crate is organized into bounded-context modules:
+//! - **session** — Session policy, status, directory, and identity management
+//! - **config_control** — Configuration change journal and audit
+//! - **break_glass** — Break-glass and secure-default override policies
+//! - **claim_surface** — UI claim surface management and controlled wording
+//! - **interface_control** — Interface change control, revision tracking, system metadata, and startup controls
+//! - **export_policy** — Clipboard, removable media, and workspace privacy policies
+
+pub mod break_glass;
+pub mod claim_surface;
+pub mod config_control;
+pub mod export_policy;
+pub mod interface_control;
+pub mod session;
+
+// Re-export all session types.
+pub use session::{
+    SessionPolicy, SessionStatus, force_reauthentication_for_suspicious_session,
+    session_requires_reauthentication, UserRole, SessionOpenRequest, SessionRecord,
+    SessionSummary, IdentityBanner, RoleChangeEvent, SessionDirectory, PermissionDeniedView,
+    permission_denied_view, SecretCommitReceipt, commit_secret_entry,
+};
+
+// Re-export config_control types.
+pub use config_control::{ConfigChangeJournal, ConfigChangeJournalEntry, ConfigChangeRequest};
+
+// Re-export break_glass types.
+pub use break_glass::{
+    BreakGlassGrant, BreakGlassOutcome, BreakGlassPolicy, BreakGlassRequest,
+    activate_break_glass_access, SecureDefaultOverrideRequest, ActiveSecureDefaultOverride,
+    activate_secure_default_override,
+};
+
+// Re-export claim_surface types.
+pub use claim_surface::{
+    ClaimConflictResolution, ClaimedRect, UiClaimSurface, APPROVED_INTENDED_PURPOSE_TEXT,
+    ControlledWordingPolicy, validate_release_text_input, UiStringChangeReview,
+    validate_ui_string_change_review,
+};
+
+// Re-export interface_control types.
+pub use interface_control::{
+    InterfaceChangeControlDisposition, InterfaceChangeControlRecord, InterfaceChangeRecord,
+    InterfaceImpactClass, RequirementRevision, RequirementRevisionRecord,
+    ScreenshotExportPolicy, validate_interface_change_control_record,
+    validate_requirement_revision, validate_requirement_revision_record,
+    validate_screenshot_export_policy, FeatureProfile, PackActivationState,
+    SecurityPostureIndicators, RuntimeLimitIndicators, IntegrityStatus,
+    UnsupportedWorkflowState, HighRiskToggleSummary, SystemMetadataView,
+    validate_system_metadata_view, StartupFailClosedControls, validate_startup_fail_closed_controls,
+};
+
+// Re-export export_policy types.
+pub use export_policy::{
+    ClipboardPolicy, ClipboardPolicyDecision, RemovableMediaExportRequest, RemovableMediaPolicy,
+    WorkspacePrivacyMode, evaluate_clipboard_policy, validate_removable_media_export,
+    workspace_privacy_mode,
+};
 
 use dicom_core::{Error, ErrorKind, Result};
-
-pub mod human_interface;
-
-pub use human_interface::*;
 
 /// Authorization scope for an incoming request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -266,94 +321,6 @@ pub enum SessionState {
     Locked,
 }
 
-/// Deterministic session policy for timeout and lock controls.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SessionPolicy {
-    /// Inactivity timeout in seconds.
-    pub inactivity_timeout_secs: u64,
-    /// Warning window before timeout in seconds.
-    pub warning_window_secs: u64,
-    /// Authentication failures that trigger lock.
-    pub max_failures: u32,
-}
-
-impl Default for SessionPolicy {
-    fn default() -> Self {
-        Self {
-            inactivity_timeout_secs: 900,
-            warning_window_secs: 60,
-            max_failures: 5,
-        }
-    }
-}
-
-/// Session status tracked for deterministic lock transitions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SessionStatus {
-    /// Last activity timestamp (seconds since epoch from caller clock).
-    pub last_activity_epoch_secs: u64,
-    /// Number of consecutive authentication failures.
-    pub failed_attempts: u32,
-    /// Explicit lock flag set by failure policy.
-    pub locked: bool,
-}
-
-impl SessionStatus {
-    /// Create a new active session status.
-    pub fn new(now_epoch_secs: u64) -> Self {
-        Self {
-            last_activity_epoch_secs: now_epoch_secs,
-            failed_attempts: 0,
-            locked: false,
-        }
-    }
-
-    /// Record user activity.
-    pub fn touch(&mut self, now_epoch_secs: u64) {
-        self.last_activity_epoch_secs = now_epoch_secs;
-    }
-
-    /// Register an authentication failure and return resulting session state.
-    pub fn register_failure(&mut self, now_epoch_secs: u64, policy: SessionPolicy) -> SessionState {
-        self.last_activity_epoch_secs = now_epoch_secs;
-        self.failed_attempts = self.failed_attempts.saturating_add(1);
-        if self.failed_attempts >= policy.max_failures.max(1) {
-            self.locked = true;
-        }
-        self.state_at(now_epoch_secs, policy)
-    }
-
-    /// Clear failure counter after successful re-authentication.
-    pub fn clear_failures(&mut self) {
-        self.failed_attempts = 0;
-    }
-
-    /// Unlock the session after successful re-authentication.
-    pub fn unlock(&mut self, now_epoch_secs: u64) {
-        self.locked = false;
-        self.failed_attempts = 0;
-        self.last_activity_epoch_secs = now_epoch_secs;
-    }
-
-    /// Evaluate session state at a deterministic timestamp.
-    pub fn state_at(&self, now_epoch_secs: u64, policy: SessionPolicy) -> SessionState {
-        if self.locked || self.failed_attempts >= policy.max_failures.max(1) {
-            return SessionState::Locked;
-        }
-        let inactivity = now_epoch_secs.saturating_sub(self.last_activity_epoch_secs);
-        let timeout = policy.inactivity_timeout_secs.max(1);
-        if inactivity >= timeout {
-            return SessionState::Locked;
-        }
-        let warning_threshold = timeout.saturating_sub(policy.warning_window_secs);
-        if inactivity >= warning_threshold && policy.warning_window_secs > 0 {
-            SessionState::Warning
-        } else {
-            SessionState::Active
-        }
-    }
-}
-
 /// Authorization policy interface.
 pub trait Authorizer {
     /// Return the authorization decision for a request.
@@ -435,9 +402,9 @@ mod tests {
         let decision = auth.authorize(&sample_request()).expect("decision");
         assert!(!decision.is_allowed());
         let err = decision.enforce().expect_err("denied");
-        assert_eq!(err.code, "DVF.DICOM.DECODE_ERROR");
+        assert_eq!(err.code(), "DVF.DICOM.DECODE_ERROR");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::DecodeError { stage, .. } if stage == "dicom-auth"
         ));
     }
@@ -480,7 +447,7 @@ mod tests {
     fn tenant_scope_enforcement_denies_cross_tenant_write() {
         let err = enforce_tenant_scope(Some("tenant-a"), Some("tenant-b"))
             .expect_err("cross-tenant write must fail");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -493,5 +460,41 @@ mod tests {
             row.action == AuthAction::StorageCommitment
                 && row.resource == AuthResourceKey::StorageCommitment
         }));
+    }
+
+    #[test]
+    fn new_modules_reexport_types() {
+        // Session module
+        let _policy = SessionPolicy::default();
+        let _status = SessionStatus::new(100);
+
+        // Config control module
+        let _journal = ConfigChangeJournal::default();
+
+        // Break glass module
+        let _bg_policy = BreakGlassPolicy::default();
+        let _bg_request = BreakGlassRequest {
+            principal: "test".to_string(),
+            reason_code: "emergency".to_string(),
+            scope: "elevated".to_string(),
+            approved_by: "admin".to_string(),
+            now_epoch_secs: 100,
+            expires_epoch_secs: 200,
+        };
+
+        // Claim surface module
+        let _surface = UiClaimSurface::new();
+
+        // Interface control module
+        let _rev = RequirementRevision {
+            requirement_id: "REQ-001".to_string(),
+            version: "1.0".to_string(),
+            approver_signature: "sig".to_string(),
+            effective_date: "2026-01-01".to_string(),
+        };
+
+        // Export policy module
+        let _clip = evaluate_clipboard_policy(true);
+        let _privacy = workspace_privacy_mode(false);
     }
 }

@@ -329,18 +329,18 @@ fn frame_to_rgba8(frame: &DisplayFrame) -> Result<Vec<u8>, String> {
 }
 
 fn describe_core_error(err: &CoreError) -> String {
-    match &err.kind {
+    match &err.kind() {
         ErrorKind::InvalidTagValue { tag, detail } => {
             format!(
                 "{} tag=({:04X},{:04X}) detail={detail}",
-                err.code, tag.0, tag.1
+                err.code(), tag.0, tag.1
             )
         }
         ErrorKind::MissingRequiredTag { tag } => {
-            format!("{} tag=({:04X},{:04X})", err.code, tag.0, tag.1)
+            format!("{} tag=({:04X},{:04X})", err.code(), tag.0, tag.1)
         }
         ErrorKind::DecodeError { stage, detail } => {
-            format!("{} stage={stage} detail={detail}", err.code)
+            format!("{} stage={stage} detail={detail}", err.code())
         }
         ErrorKind::LimitExceeded {
             limit_name,
@@ -348,21 +348,21 @@ fn describe_core_error(err: &CoreError) -> String {
             allowed,
         } => format!(
             "{} limit={limit_name} observed={observed} allowed={allowed}",
-            err.code
+            err.code()
         ),
         ErrorKind::UnsupportedSopClass { sop_class_uid } => {
-            format!("{} sop_class_uid={sop_class_uid}", err.code)
+            format!("{} sop_class_uid={sop_class_uid}", err.code())
         }
         ErrorKind::UnsupportedTransferSyntax {
             transfer_syntax_uid,
         } => {
-            format!("{} transfer_syntax_uid={transfer_syntax_uid}", err.code)
+            format!("{} transfer_syntax_uid={transfer_syntax_uid}", err.code())
         }
         ErrorKind::InvalidGeometry { detail }
         | ErrorKind::InvalidPixelTransform { detail, .. }
         | ErrorKind::IoError { detail }
         | ErrorKind::IntegrityError { detail }
-        | ErrorKind::InternalError { detail } => format!("{} detail={detail}", err.code),
+        | ErrorKind::InternalError { detail } => format!("{} detail={detail}", err.code()),
     }
 }
 

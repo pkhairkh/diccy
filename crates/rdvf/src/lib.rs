@@ -96,52 +96,52 @@ impl Config {
         push_line(
             &mut out,
             "limits.max_input_bytes",
-            self.limits.max_input_bytes,
+            self.limits.max_input_bytes(),
         );
         push_line(
             &mut out,
             "limits.max_dataset_elements",
-            self.limits.max_dataset_elements,
+            self.limits.max_dataset_elements(),
         );
         push_line(
             &mut out,
             "limits.max_sequence_depth",
-            self.limits.max_sequence_depth,
+            self.limits.max_sequence_depth(),
         );
         push_line(
             &mut out,
             "limits.max_string_bytes",
-            self.limits.max_string_bytes,
+            self.limits.max_string_bytes(),
         );
         push_line(
             &mut out,
             "limits.max_element_vl_bytes",
-            self.limits.max_element_vl_bytes,
+            self.limits.max_element_vl_bytes(),
         );
         push_line(
             &mut out,
             "limits.max_frames_per_instance",
-            self.limits.max_frames_per_instance,
+            self.limits.max_frames_per_instance(),
         );
         push_line(
             &mut out,
             "limits.max_pixels_per_frame",
-            self.limits.max_pixels_per_frame,
+            self.limits.max_pixels_per_frame(),
         );
         push_line(
             &mut out,
             "limits.max_decompressed_bytes",
-            self.limits.max_decompressed_bytes,
+            self.limits.max_decompressed_bytes(),
         );
         push_line(
             &mut out,
             "limits.max_gpu_texture_bytes",
-            self.limits.max_gpu_texture_bytes,
+            self.limits.max_gpu_texture_bytes(),
         );
         push_line(
             &mut out,
             "limits.max_cache_bytes",
-            self.limits.max_cache_bytes,
+            self.limits.max_cache_bytes(),
         );
 
         for (key, enabled) in self.capabilities.report_rows() {
@@ -213,24 +213,11 @@ impl Config {
         }
 
         let mut limits = Limits::default();
-        let mut caps = Capabilities {
-            tier1_deflate: false,
-            codec_jpegls: false,
-            codec_j2k: false,
-            raster_io: false,
-            gsps: false,
-            modality_ct: false,
-            modality_pet: false,
-            modality_mg: false,
-            modality_xr: false,
-            pack_enhanced: false,
-            pack_us: false,
-            pack_nm: false,
-            pack_xa: false,
-            pack_seg: false,
-            pack_rt: false,
-            pack_sr: false,
-        };
+        let mut caps = Capabilities::new(
+            false, false, false, false, false,
+            false, false, false, false, false,
+            false, false, false, false, false, false,
+        );
 
         let mut seen = SeenFields::default();
 
@@ -248,107 +235,107 @@ impl Config {
             match key {
                 "limits.max_input_bytes" => {
                     seen.mark("limits.max_input_bytes")?;
-                    limits.max_input_bytes = parse_u64(key, value)?;
+                    limits.set_max_input_bytes(parse_u64(key, value)?);
                 }
                 "limits.max_dataset_elements" => {
                     seen.mark("limits.max_dataset_elements")?;
-                    limits.max_dataset_elements = parse_u64(key, value)?;
+                    limits.set_max_dataset_elements(parse_u64(key, value)?);
                 }
                 "limits.max_sequence_depth" => {
                     seen.mark("limits.max_sequence_depth")?;
-                    limits.max_sequence_depth = parse_u64(key, value)?;
+                    limits.set_max_sequence_depth(parse_u64(key, value)?);
                 }
                 "limits.max_string_bytes" => {
                     seen.mark("limits.max_string_bytes")?;
-                    limits.max_string_bytes = parse_u64(key, value)?;
+                    limits.set_max_string_bytes(parse_u64(key, value)?);
                 }
                 "limits.max_element_vl_bytes" => {
                     seen.mark("limits.max_element_vl_bytes")?;
-                    limits.max_element_vl_bytes = parse_u64(key, value)?;
+                    limits.set_max_element_vl_bytes(parse_u64(key, value)?);
                 }
                 "limits.max_frames_per_instance" => {
                     seen.mark("limits.max_frames_per_instance")?;
-                    limits.max_frames_per_instance = parse_u64(key, value)?;
+                    limits.set_max_frames_per_instance(parse_u64(key, value)?);
                 }
                 "limits.max_pixels_per_frame" => {
                     seen.mark("limits.max_pixels_per_frame")?;
-                    limits.max_pixels_per_frame = parse_u64(key, value)?;
+                    limits.set_max_pixels_per_frame(parse_u64(key, value)?);
                 }
                 "limits.max_decompressed_bytes" => {
                     seen.mark("limits.max_decompressed_bytes")?;
-                    limits.max_decompressed_bytes = parse_u64(key, value)?;
+                    limits.set_max_decompressed_bytes(parse_u64(key, value)?);
                 }
                 "limits.max_gpu_texture_bytes" => {
                     seen.mark("limits.max_gpu_texture_bytes")?;
-                    limits.max_gpu_texture_bytes = parse_u64(key, value)?;
+                    limits.set_max_gpu_texture_bytes(parse_u64(key, value)?);
                 }
                 "limits.max_cache_bytes" => {
                     seen.mark("limits.max_cache_bytes")?;
-                    limits.max_cache_bytes = parse_u64(key, value)?;
+                    limits.set_max_cache_bytes(parse_u64(key, value)?);
                 }
                 "capabilities.tier1_deflate" => {
                     seen.mark("capabilities.tier1_deflate")?;
-                    caps.tier1_deflate = parse_bool(key, value)?;
+                    caps.set_tier1_deflate(parse_bool(key, value)?);
                 }
                 "capabilities.codec_jpegls" => {
                     seen.mark("capabilities.codec_jpegls")?;
-                    caps.codec_jpegls = parse_bool(key, value)?;
+                    caps.set_codec_jpegls(parse_bool(key, value)?);
                 }
                 "capabilities.codec_j2k" => {
                     seen.mark("capabilities.codec_j2k")?;
-                    caps.codec_j2k = parse_bool(key, value)?;
+                    caps.set_codec_j2k(parse_bool(key, value)?);
                 }
                 "capabilities.raster_io" => {
                     seen.mark("capabilities.raster_io")?;
-                    caps.raster_io = parse_bool(key, value)?;
+                    caps.set_raster_io(parse_bool(key, value)?);
                 }
                 "capabilities.gsps" => {
                     seen.mark("capabilities.gsps")?;
-                    caps.gsps = parse_bool(key, value)?;
+                    caps.set_gsps(parse_bool(key, value)?);
                 }
                 "capabilities.modality_ct" => {
                     seen.mark("capabilities.modality_ct")?;
-                    caps.modality_ct = parse_bool(key, value)?;
+                    caps.set_modality_ct(parse_bool(key, value)?);
                 }
                 "capabilities.modality_pet" => {
                     seen.mark("capabilities.modality_pet")?;
-                    caps.modality_pet = parse_bool(key, value)?;
+                    caps.set_modality_pet(parse_bool(key, value)?);
                 }
                 "capabilities.modality_mg" => {
                     seen.mark("capabilities.modality_mg")?;
-                    caps.modality_mg = parse_bool(key, value)?;
+                    caps.set_modality_mg(parse_bool(key, value)?);
                 }
                 "capabilities.modality_xr" => {
                     seen.mark("capabilities.modality_xr")?;
-                    caps.modality_xr = parse_bool(key, value)?;
+                    caps.set_modality_xr(parse_bool(key, value)?);
                 }
                 "capabilities.pack_enhanced" => {
                     seen.mark("capabilities.pack_enhanced")?;
-                    caps.pack_enhanced = parse_bool(key, value)?;
+                    caps.set_pack_enhanced(parse_bool(key, value)?);
                 }
                 "capabilities.pack_us" => {
                     seen.mark("capabilities.pack_us")?;
-                    caps.pack_us = parse_bool(key, value)?;
+                    caps.set_pack_us(parse_bool(key, value)?);
                 }
                 "capabilities.pack_nm" => {
                     seen.mark("capabilities.pack_nm")?;
-                    caps.pack_nm = parse_bool(key, value)?;
+                    caps.set_pack_nm(parse_bool(key, value)?);
                 }
                 "capabilities.pack_xa" => {
                     seen.mark("capabilities.pack_xa")?;
-                    caps.pack_xa = parse_bool(key, value)?;
+                    caps.set_pack_xa(parse_bool(key, value)?);
                 }
                 "capabilities.pack_seg" => {
                     seen.mark("capabilities.pack_seg")?;
-                    caps.pack_seg = parse_bool(key, value)?;
+                    caps.set_pack_seg(parse_bool(key, value)?);
                 }
                 "capabilities.pack_rt" => {
                     seen.mark("capabilities.pack_rt")?;
-                    caps.pack_rt = parse_bool(key, value)?;
+                    caps.set_pack_rt(parse_bool(key, value)?);
                 }
                 "capabilities.pack_sr" => {
                     seen.mark("capabilities.pack_sr")?;
-                    caps.pack_sr = parse_bool(key, value)?;
+                    caps.set_pack_sr(parse_bool(key, value)?);
                 }
                 _ => {
                     return Err(ConfigParseError::UnknownKey {
@@ -436,16 +423,16 @@ struct SeenFields {
 impl SeenFields {
     fn required() -> Vec<&'static str> {
         let mut out = vec![
-            "limits.max_input_bytes",
-            "limits.max_dataset_elements",
-            "limits.max_sequence_depth",
-            "limits.max_string_bytes",
-            "limits.max_element_vl_bytes",
-            "limits.max_frames_per_instance",
-            "limits.max_pixels_per_frame",
-            "limits.max_decompressed_bytes",
-            "limits.max_gpu_texture_bytes",
-            "limits.max_cache_bytes",
+            "limits.max_input_bytes()",
+            "limits.max_dataset_elements()",
+            "limits.max_sequence_depth()",
+            "limits.max_string_bytes()",
+            "limits.max_element_vl_bytes()",
+            "limits.max_frames_per_instance()",
+            "limits.max_pixels_per_frame()",
+            "limits.max_decompressed_bytes()",
+            "limits.max_gpu_texture_bytes()",
+            "limits.max_cache_bytes()",
         ];
         let keys = capabilities().report_rows();
         for (key, _) in keys {
@@ -774,12 +761,10 @@ mod tests {
     #[test]
     fn config_builder_overrides() {
         // REQ-ARCH-122, REQ-API-207: builder must wire limits and capabilities.
-        let limits = super::Limits {
-            max_input_bytes: 42,
-            ..super::Limits::default()
-        };
+        let mut limits = super::Limits::default();
+        limits.set_max_input_bytes(42);
         let mut caps = super::capabilities();
-        caps.tier1_deflate = !caps.tier1_deflate;
+        caps.set_tier1_deflate(!caps.tier1_deflate());
 
         let config = super::Config::builder()
             .limits(limits.clone())

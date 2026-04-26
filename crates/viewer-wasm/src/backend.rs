@@ -291,7 +291,7 @@ impl WasmRenderBackend for WebGpuBackend {
             PixelFormat::Luma8 | PixelFormat::Rgba8 => {}
             PixelFormat::Luma16 => return Err(BackendErrorCode::SubmitFailed),
         }
-        if frame_bytes as u64 > limits.max_gpu_texture_bytes {
+        if frame_bytes as u64 > limits.max_gpu_texture_bytes() {
             return Err(BackendErrorCode::SubmitFailed);
         }
         let chunk_bytes = select_upload_chunk_bytes(frame_bytes, target_frame_interval_ms);
@@ -507,7 +507,7 @@ impl BackendRuntimeState {
             }
         }
 
-        if limits.max_gpu_texture_bytes == 0 {
+        if limits.max_gpu_texture_bytes() == 0 {
             self.record_fallback(
                 "configure_limits_max_gpu_texture_zero",
                 BackendErrorCode::SubmitFailed,
@@ -646,7 +646,7 @@ impl BackendRuntimeState {
 
         self.metrics.webgpu_init_attempts = self.metrics.webgpu_init_attempts.saturating_add(1);
         match self.webgpu.initialize(&self.probe) {
-            Ok(()) if limits.max_gpu_texture_bytes > 0 => {
+            Ok(()) if limits.max_gpu_texture_bytes() > 0 => {
                 self.webgpu_lifecycle = WebGpuLifecycle::Ready;
                 self.metrics.last_error_code = None;
                 self.transition_backend(RendererBackend::WebGpu, "recover_device_lost_success");

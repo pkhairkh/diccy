@@ -20,33 +20,18 @@ fn temp_snapshot_path(name: &str) -> PathBuf {
 
 fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time: &str) -> Dataset {
     let mut item = Dataset::new();
-    item.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str(step_id.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_MODALITY,
-        vr: Vr::Cs,
-        value: Value::Str(modality.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str(start_date.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str(start_time.to_string()),
-    });
+    item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(start_date.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(start_time.to_string()),
+    ).unwrap());
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SPS_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![item]),
-    });
+    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
+    ).unwrap());
     dataset
 }
 
@@ -54,43 +39,25 @@ fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time:
 fn worklist_validation_rejects_multi_item_sps_and_empty_filters() {
     // REQ-HI-433, REQ-HI-435
     let mut first = Dataset::new();
-    first.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str("A".to_string()),
-    });
-    first.insert(Element {
-        tag: TAG_MODALITY,
-        vr: Vr::Cs,
-        value: Value::Str("CT".to_string()),
-    });
-    first.insert(Element {
-        tag: TAG_SPS_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str("20260214".to_string()),
-    });
-    first.insert(Element {
-        tag: TAG_SPS_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str("090000".to_string()),
-    });
+    first.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("A".to_string()),
+    ).unwrap());
+    first.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
+    ).unwrap());
+    first.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
+    ).unwrap());
+    first.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str("090000".to_string()),
+    ).unwrap());
 
     let mut second = first.clone();
-    second.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str("B".to_string()),
-    });
+    second.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("B".to_string()),
+    ).unwrap());
 
     let mut invalid = Dataset::new();
-    invalid.insert(Element {
-        tag: TAG_SPS_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![first, second]),
-    });
+    invalid.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![first, second]),
+    ).unwrap());
 
     let err = validate_worklist_item(&invalid, &Limits::default()).expect_err("single-item SPS");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 
     let store = WorklistStore::new(Limits::default());
     let query_err = store
@@ -101,7 +68,7 @@ fn worklist_validation_rejects_multi_item_sps_and_empty_filters() {
             requested_procedure_id: None,
         })
         .expect_err("empty filter");
-    assert!(matches!(query_err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(query_err.kind(), ErrorKind::DecodeError { .. }));
 }
 
 #[test]
@@ -137,7 +104,7 @@ fn worklist_corrupt_snapshot_fails_closed() {
     fs::write(&path, b"BAD").expect("write corrupt snapshot");
     let err = WorklistStore::open(Limits::default(), &path).expect_err("corrupt snapshot");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::DecodeError { .. } | ErrorKind::IoError { .. }
     ));
     let _ = fs::remove_file(path);

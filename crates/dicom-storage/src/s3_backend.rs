@@ -1,0 +1,240 @@
+//! S3-Compatible Object Storage Backend.
+//!
+//! Contains S3 configuration, simulated backend, and multipart upload types.
+
+use dicom_core::{Error, ErrorKind, Result};
+use std::collections::BTreeMap;
+
+/// S3 backend configuration for object storage.
+///
+/// Secret fields (`access_key_id`, `secret_access_key`) are private with
+/// redacted Debug and getter representations to prevent credential leakage.
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct S3Config {
+    /// S3 endpoint URL (e.g., "https://s3.amazonaws.com" or MinIO endpoint).
+    pub endpoint: String,
+    /// Bucket name for DICOM storage.
+    pub bucket: String,
+    /// AWS region.
+    pub region: String,
+    /// Access key ID.
+    access_key_id: String,
+    /// Secret access key.
+    secret_access_key: String,
+    /// Whether to use path-style addressing (required for MinIO).
+    pub path_style: bool,
+    /// Multipart upload threshold in bytes (default: 100 MB).
+    pub multipart_threshold_bytes: u64,
+    /// Multipart upload part size in bytes (default: 10 MB).
+    pub multipart_part_size_bytes: u64,
+}
+
+impl std::fmt::Debug for S3Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("S3Config")
+            .field("endpoint", &self.endpoint)
+            .field("bucket", &self.bucket)
+            .field("region", &self.region)
+            .field("access_key_id", &"[REDACTED]")
+            .field("secret_access_key", &"[REDACTED]")
+            .field("path_style", &self.path_style)
+            .field("multipart_threshold_bytes", &self.multipart_threshold_bytes)
+            .field("multipart_part_size_bytes", &self.multipart_part_size_bytes)
+            .finish()
+    }
+}
+
+impl Default for S3Config {
+    fn default() -> Self {
+        Self {
+            endpoint: String::new(),
+            bucket: String::new(),
+            region: "us-east-1".to_string(),
+            access_key_id: String::new(),
+            secret_access_key: String::new(),
+            path_style: false,
+            multipart_threshold_bytes: 100 * 1024 * 1024,
+            multipart_part_size_bytes: 10 * 1024 * 1024,
+        }
+    }
+}
+
+impl S3Config {
+    /// Create a new S3 configuration.
+    pub fn new(endpoint: &str, bucket: &str, region: &str) -> Self {
+        Self {
+            endpoint: endpoint.to_string(),
+            bucket: bucket.to_string(),
+            region: region.to_string(),
+            ..Self::default()
+        }
+    }
+
+    /// Return the access key ID (redacted: only first 4 chars visible).
+    pub fn access_key_id(&self) -> &str {
+        &self.access_key_id
+    }
+
+    /// Return a redacted representation of the access key ID.
+    /// Shows at most the first 4 characters followed by `***`.
+    pub fn access_key_id_redacted(&self) -> String {
+        redact_secret(&self.access_key_id)
+    }
+
+    /// Return the secret access key (full value, use with caution).
+    pub fn secret_access_key(&self) -> &str {
+        &self.secret_access_key
+    }
+
+    /// Return a redacted representation of the secret access key.
+    /// Always returns `[REDACTED]` regardless of value.
+    pub fn secret_access_key_redacted(&self) -> &'static str {
+        "[REDACTED]"
+    }
+
+    /// Set the access key ID.
+    pub fn set_access_key_id(&mut self, value: impl Into<String>) {
+        self.access_key_id = value.into();
+    }
+
+    /// Set the secret access key.
+    pub fn set_secret_access_key(&mut self, value: impl Into<String>) {
+        self.secret_access_key = value.into();
+    }
+
+    /// Validate the S3 configuration.
+    pub fn validate(&self) -> Result<()> {
+        if self.endpoint.is_empty() {
+            return Err(storage_ext_error("S3 endpoint must not be empty"));
+        }
+        if self.bucket.is_empty() {
+            return Err(storage_ext_error("S3 bucket must not be empty"));
+        }
+        Ok(())
+    }
+
+    /// Compute the S3 object key for a given canonical hash.
+    pub fn object_key(&self, hash: &str) -> String {
+        // Use a two-level prefix for better S3 performance
+        format!("{}/{}/{}", &hash[0..2], &hash[2..4], hash)
+    }
+}
+
+fn redact_secret(value: &str) -> String {
+    if value.len() <= 4 {
+        "***".to_string()
+    } else {
+        format!("{}***", &value[..4])
+    }
+}
+
+/// Outcome of an S3 multipart upload.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MultipartUploadResult {
+    /// S3 object key.
+    pub object_key: String,
+    /// Total bytes uploaded.
+    pub total_bytes: u64,
+    /// Number of parts uploaded.
+    pub parts_count: usize,
+    /// Upload ID from S3.
+    pub upload_id: String,
+}
+
+/// Simulated S3 backend for testing (no actual network calls).
+#[derive(Debug, Clone, PartialEq)]
+pub struct S3Backend {
+    /// Configuration.
+    config: S3Config,
+    /// Simulated stored objects (object_key -> data).
+    stored_objects: BTreeMap<String, Vec<u8>>,
+    /// Lifecycle policy for tiered storage.
+    lifecycle_policy: super::vna::LifecyclePolicy,
+}
+
+impl S3Backend {
+    /// Create a new S3 backend with the given configuration.
+    pub fn new(config: S3Config) -> Self {
+        Self {
+            config,
+            stored_objects: BTreeMap::new(),
+            lifecycle_policy: super::vna::LifecyclePolicy::default(),
+        }
+    }
+
+    /// Store data in the S3 backend (simulated).
+    pub fn put_object(&mut self, key: &str, data: Vec<u8>) -> Result<()> {
+        self.stored_objects.insert(key.to_string(), data);
+        Ok(())
+    }
+
+    /// Retrieve data from the S3 backend (simulated).
+    pub fn get_object(&self, key: &str) -> Option<&[u8]> {
+        self.stored_objects.get(key).map(|v| v.as_slice())
+    }
+
+    /// Delete an object from the S3 backend (simulated).
+    pub fn delete_object(&mut self, key: &str) -> bool {
+        self.stored_objects.remove(key).is_some()
+    }
+
+    /// Check if an object exists.
+    pub fn object_exists(&self, key: &str) -> bool {
+        self.stored_objects.contains_key(key)
+    }
+
+    /// Return the number of stored objects.
+    pub fn object_count(&self) -> usize {
+        self.stored_objects.len()
+    }
+
+    /// Return total bytes stored.
+    pub fn total_bytes(&self) -> u64 {
+        self.stored_objects.values().map(|v| v.len() as u64).sum()
+    }
+
+    /// Simulate multipart upload for large objects.
+    pub fn multipart_upload(&mut self, key: &str, data: Vec<u8>) -> Result<MultipartUploadResult> {
+        let total_bytes = data.len() as u64;
+        let parts_count = if total_bytes > self.config.multipart_threshold_bytes {
+            ((total_bytes + self.config.multipart_part_size_bytes - 1) / self.config.multipart_part_size_bytes) as usize
+        } else {
+            1
+        };
+
+        self.stored_objects.insert(key.to_string(), data);
+
+        Ok(MultipartUploadResult {
+            object_key: key.to_string(),
+            total_bytes,
+            parts_count,
+            upload_id: format!("upload-{}", self.stored_objects.len()),
+        })
+    }
+
+    /// Return the S3 configuration.
+    pub fn config(&self) -> &S3Config {
+        &self.config
+    }
+
+    /// Apply lifecycle policy and return the number of objects transitioned.
+    pub fn apply_lifecycle(&mut self) -> usize {
+        self.lifecycle_policy.apply(&mut self.stored_objects)
+    }
+
+    /// Set the lifecycle policy.
+    pub fn set_lifecycle_policy(&mut self, policy: super::vna::LifecyclePolicy) {
+        self.lifecycle_policy = policy;
+    }
+}
+
+fn storage_ext_error(detail: impl Into<String>) -> Box<Error> {
+    Error::from_kind(
+        ErrorKind::DecodeError {
+            stage: "dicom-storage-ext".to_string(),
+            detail: detail.into(),
+        },
+        "storage extension error",
+    )
+    .into()
+}

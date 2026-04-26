@@ -1,7 +1,7 @@
 use dicom_core::{Error, ErrorKind, Limits};
 use dicom_web::{
     dicomweb_http_status_contract, dicomweb_status_for_error, http_preread_hard_cap_bytes,
-    parse_http_request, TransportSecurity, DICOM_WEB_NOT_FOUND_CODE,
+    parse_http_request, TransportSecurity,
 };
 
 #[test]
@@ -20,18 +20,15 @@ fn http_status_contract_rows_are_stable() {
 #[test]
 fn status_mapping_is_deterministic_for_core_error_classes() {
     // REQ-HI-288, REQ-HI-325, REQ-HI-379
-    let not_found = Error::new(
-        DICOM_WEB_NOT_FOUND_CODE,
-        ErrorKind::DecodeError {
-            stage: "dicom-web".to_string(),
+    let not_found = Error::from_kind(
+        ErrorKind::NotFound {
             detail: "not found".to_string(),
         },
         "missing",
     );
     assert_eq!(dicomweb_status_for_error(&not_found), (404, "Not Found"));
 
-    let denied = Error::new(
-        "DVF.DICOM.DECODE_ERROR",
+    let denied = Error::from_kind(
         ErrorKind::DecodeError {
             stage: "dicom-auth".to_string(),
             detail: "denied".to_string(),
@@ -53,14 +50,14 @@ fn status_mapping_is_deterministic_for_core_error_classes() {
 #[test]
 fn framing_contract_exposes_preread_cap_and_fails_closed_on_malformed_requests() {
     // REQ-HI-323, REQ-HI-324, REQ-HI-375, REQ-HI-376
-    let limits = Limits {
-        max_input_bytes: 64,
-        max_string_bytes: 16,
-        ..Limits::default()
-    };
+    let limits = Limits::builder()
+        .max_input_bytes(64)
+        .max_string_bytes(16)
+        .build()
+        .expect("valid limits");
     assert_eq!(http_preread_hard_cap_bytes(&limits), 80);
 
     let err = parse_http_request(b"GET /studies HTTP/1.1", &limits, TransportSecurity::Tls)
         .expect_err("missing header terminator must fail");
-    assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 }

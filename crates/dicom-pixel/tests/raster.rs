@@ -84,5 +84,5 @@ fn raster_enforces_input_limit() {
     };
     let err = decode_raster_bytes(RasterFormat::Png, &[0u8, 1u8], &limits)
         .expect_err("expected limit error");
-    assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+    assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
 }

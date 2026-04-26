@@ -203,46 +203,22 @@ impl CalciumScoreResult {
         let mut ds = Dataset::new();
 
         // SOP Class UID (Enhanced SR)
-        ds.insert(Element {
-            tag: Tag(0x0008, 0x0016),
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()),
-        });
+        ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string())).unwrap());
 
         // Study Instance UID
-        ds.insert(Element {
-            tag: Tag(0x0020, 0x000D),
-            vr: Vr::Ui,
-            value: Value::Uid(study_uid.to_string()),
-        });
+        ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string())).unwrap());
 
         // Series Instance UID
-        ds.insert(Element {
-            tag: Tag(0x0020, 0x000E),
-            vr: Vr::Ui,
-            value: Value::Uid(series_uid.to_string()),
-        });
+        ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string())).unwrap());
 
         // Total Agatston Score
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA300),
-            vr: Vr::Ds,
-            value: Value::Str(format!("{:.2}", self.total_agatston)),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA300), Vr::Ds, Value::Str(format!("{:.2}", self.total_agatston))).unwrap());
 
         // Total Volume
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA301),
-            vr: Vr::Ds,
-            value: Value::Str(format!("{:.2}", self.total_volume_mm3)),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA301), Vr::Ds, Value::Str(format!("{:.2}", self.total_volume_mm3))).unwrap());
 
         // Total Mass
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA302),
-            vr: Vr::Ds,
-            value: Value::Str(format!("{:.2}", self.total_mass_mg)),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA302), Vr::Ds, Value::Str(format!("{:.2}", self.total_mass_mg))).unwrap());
 
         ds
     }

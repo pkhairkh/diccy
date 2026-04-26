@@ -68,11 +68,11 @@ fn metadata_view_is_controlled_and_claim_safe() {
 
     view.intended_purpose = "Diagnostic workstation - FDA cleared".to_string();
     let err = validate_system_metadata_view(&view, &policy).expect_err("claim text must fail");
-    assert_eq!(err.code, "DVF.DICOM.DECODE_ERROR");
+    assert_eq!(err.code(), "DVF.DICOM.DECODE_ERROR");
 
     let claim_err =
         validate_release_text_input("ce marked diagnostic mode").expect_err("claim must fail");
-    assert_eq!(claim_err.code, "DVF.DICOM.DECODE_ERROR");
+    assert_eq!(claim_err.code(), "DVF.DICOM.DECODE_ERROR");
 }
 
 #[test]

@@ -60,7 +60,7 @@ fn renderer_requires_surface_before_render() {
     let err = renderer
         .render(&frame, &viewport)
         .expect_err("surface configuration is required");
-    assert_eq!(err.code, "DVF.RENDER.SURFACE_NOT_CONFIGURED");
+    assert_eq!(err.code(), "DVF.RENDER.SURFACE_NOT_CONFIGURED");
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn renderer_budget_enforced_during_draw_submission() {
     let err = renderer
         .render(&frame, &viewport)
         .expect_err("budget should be exceeded");
-    assert_eq!(err.code, "DVF.RENDER.LIMIT_EXCEEDED");
+    assert_eq!(err.code(), "DVF.RENDER.LIMIT_EXCEEDED");
 }
 
 #[test]

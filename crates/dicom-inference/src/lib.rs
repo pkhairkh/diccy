@@ -559,53 +559,25 @@ impl AirIodEncoder {
         let mut ds = Dataset::new();
 
         // Finding UID
-        ds.insert(Element {
-            tag: Tag(0x0008, 0x0018),
-            vr: Vr::Ui,
-            value: Value::Uid(finding.finding_uid.clone()),
-        });
+        ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(finding.finding_uid.clone())).unwrap());
 
         // Finding type code sequence
         let mut type_item = Dataset::new();
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0100),
-            vr: Vr::Sh,
-            value: Value::Str(finding.finding_type_code.clone()),
-        });
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0102),
-            vr: Vr::Sh,
-            value: Value::Str(finding.coding_scheme.clone()),
-        });
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0104),
-            vr: Vr::Lo,
-            value: Value::Str(finding.finding_type_display.clone()),
-        });
+        type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(finding.finding_type_code.clone())).unwrap());
+        type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str(finding.coding_scheme.clone())).unwrap());
+        type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str(finding.finding_type_display.clone())).unwrap());
 
-        ds.insert(Element {
-            tag: Tag(0x0008, 0x0104),
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![type_item]),
-        });
+        ds.insert(Element::new(Tag(0x0008, 0x0104), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
 
         // Bounding box (as measured value)
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA300),
-            vr: Vr::Ds,
-            value: Value::Str(format!(
-                "{:.6}\\\\{:.6}\\\\{:.6}\\\\{:.6}",
-                finding.bounding_box.0, finding.bounding_box.1,
-                finding.bounding_box.2, finding.bounding_box.3
-            )),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA300), Vr::Ds, Value::Str(format!(
+            "{:.6}\\\\{:.6}\\\\{:.6}\\\\{:.6}",
+            finding.bounding_box.0, finding.bounding_box.1,
+            finding.bounding_box.2, finding.bounding_box.3
+        ))).unwrap());
 
         // Probability
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA353),
-            vr: Vr::Ds,
-            value: Value::Str(format!("{:.6}", finding.probability)),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA353), Vr::Ds, Value::Str(format!("{:.6}", finding.probability))).unwrap());
 
         ds
     }
@@ -615,73 +587,29 @@ impl AirIodEncoder {
         let mut ds = Dataset::new();
 
         // Finding UID
-        ds.insert(Element {
-            tag: Tag(0x0008, 0x0018),
-            vr: Vr::Ui,
-            value: Value::Uid(finding.finding_uid.clone()),
-        });
+        ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(finding.finding_uid.clone())).unwrap());
 
         // Finding type code sequence
         let mut type_item = Dataset::new();
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0100),
-            vr: Vr::Sh,
-            value: Value::Str(finding.finding_type_code.clone()),
-        });
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0102),
-            vr: Vr::Sh,
-            value: Value::Str(finding.coding_scheme.clone()),
-        });
-        type_item.insert(Element {
-            tag: Tag(0x0008, 0x0104),
-            vr: Vr::Lo,
-            value: Value::Str(finding.finding_type_display.clone()),
-        });
+        type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(finding.finding_type_code.clone())).unwrap());
+        type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str(finding.coding_scheme.clone())).unwrap());
+        type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str(finding.finding_type_display.clone())).unwrap());
 
-        ds.insert(Element {
-            tag: Tag(0x0008, 0x0104),
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![type_item]),
-        });
+        ds.insert(Element::new(Tag(0x0008, 0x0104), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
 
         // Classification
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA043),
-            vr: Vr::Cs,
-            value: Value::Str(finding.classification.clone()),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA043), Vr::Cs, Value::Str(finding.classification.clone())).unwrap());
 
         // Probability
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA353),
-            vr: Vr::Ds,
-            value: Value::Str(format!("{:.6}", finding.probability)),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA353), Vr::Ds, Value::Str(format!("{:.6}", finding.probability))).unwrap());
 
         // Algorithm Identification
         let mut algo_item = Dataset::new();
-        algo_item.insert(Element {
-            tag: Tag(0x0008, 0x0100),
-            vr: Vr::Sh,
-            value: Value::Str(self.algorithm.name.clone()),
-        });
-        algo_item.insert(Element {
-            tag: Tag(0x0008, 0x0110),
-            vr: Vr::Lo,
-            value: Value::Str(self.algorithm.version.clone()),
-        });
-        algo_item.insert(Element {
-            tag: Tag(0x0008, 0x0018),
-            vr: Vr::Ui,
-            value: Value::Uid(self.algorithm.uid.clone()),
-        });
+        algo_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(self.algorithm.name.clone())).unwrap());
+        algo_item.insert(Element::new(Tag(0x0008, 0x0110), Vr::Lo, Value::Str(self.algorithm.version.clone())).unwrap());
+        algo_item.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(self.algorithm.uid.clone())).unwrap());
 
-        ds.insert(Element {
-            tag: Tag(0x0040, 0xA354),
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![algo_item]),
-        });
+        ds.insert(Element::new(Tag(0x0040, 0xA354), Vr::Sq, Value::Sequence(vec![algo_item])).unwrap());
 
         ds
     }
@@ -699,11 +627,7 @@ pub fn encode_air_iod(
     let mut ds = Dataset::new();
 
     // SOP Class UID for Enhanced SR (AI Results use TID 1500 in an Enhanced SR)
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0016),
-        vr: Vr::Ui,
-        value: Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()))?);
 
     // SOP Instance UID
     let sop_uid = format!(
@@ -712,39 +636,19 @@ pub fn encode_air_iod(
         series_uid.len(),
         encoder.algorithm.uid.len(),
     );
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0018),
-        vr: Vr::Ui,
-        value: Value::Uid(sop_uid),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
 
     // Study Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000D),
-        vr: Vr::Ui,
-        value: Value::Uid(study_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
 
     // Series Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000E),
-        vr: Vr::Ui,
-        value: Value::Uid(series_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
 
     // Series Number
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x0011),
-        vr: Vr::Is,
-        value: Value::Str(encoder.series_number.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x0011), Vr::Is, Value::Str(encoder.series_number.to_string()))?);
 
     // Instance Number
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x0013),
-        vr: Vr::Is,
-        value: Value::Str(encoder.instance_number.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x0013), Vr::Is, Value::Str(encoder.instance_number.to_string()))?);
 
     // Content Sequence with findings
     let mut content_items = Vec::new();
@@ -781,30 +685,14 @@ pub fn encode_air_iod(
             // Segmentation results use Segmentation IOD, not AIR IOD directly
             // Encode a reference finding
             let mut seg_item = Dataset::new();
-            seg_item.insert(Element {
-                tag: Tag(0x0008, 0x0100),
-                vr: Vr::Sh,
-                value: Value::Str("126000".to_string()),
-            });
-            seg_item.insert(Element {
-                tag: Tag(0x0008, 0x0102),
-                vr: Vr::Sh,
-                value: Value::Str("DCM".to_string()),
-            });
-            seg_item.insert(Element {
-                tag: Tag(0x0008, 0x0104),
-                vr: Vr::Lo,
-                value: Value::Str("Segmentation".to_string()),
-            });
+            seg_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("126000".to_string())).unwrap());
+            seg_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("DCM".to_string())).unwrap());
+            seg_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Segmentation".to_string())).unwrap());
             content_items.push(seg_item);
         }
     }
 
-    ds.insert(Element {
-        tag: Tag(0x0040, 0xA730),
-        vr: Vr::Sq,
-        value: Value::Sequence(content_items),
-    });
+    ds.insert(Element::new(Tag(0x0040, 0xA730), Vr::Sq, Value::Sequence(content_items))?);
 
     Ok(ds)
 }

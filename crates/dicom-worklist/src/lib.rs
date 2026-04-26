@@ -144,7 +144,7 @@ impl WorklistStore {
                 enforce_limit(
                     "max_dataset_elements",
                     (self.items_by_step_id.len() as u64) + 1,
-                    self.limits.max_dataset_elements,
+                    self.limits.max_dataset_elements(),
                 )?;
                 self.items_by_step_id.insert(key.clone(), item.clone());
                 UpsertOutcome::Inserted
@@ -216,7 +216,7 @@ pub fn validate_worklist_item(dataset: &Dataset, limits: &Limits) -> Result<Work
     let sequence = dataset
         .get(TAG_SPS_SEQUENCE)
         .ok_or_else(|| missing_required_tag(TAG_SPS_SEQUENCE))?;
-    let items = match &sequence.value {
+    let items = match sequence.value() {
         Value::Sequence(items) => items,
         _ => {
             return Err(decode_error(
@@ -227,7 +227,7 @@ pub fn validate_worklist_item(dataset: &Dataset, limits: &Limits) -> Result<Work
     enforce_limit(
         "max_dataset_elements",
         items.len() as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
     if items.len() != 1 {
         return Err(decode_error(
@@ -262,7 +262,7 @@ pub fn build_worklist_response(items: &[WorklistItem], limits: &Limits) -> Resul
     enforce_limit(
         "max_dataset_elements",
         items.len() as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
     let mut ordered: Vec<WorklistItem> = items.to_vec();
     ordered.sort_by(|a, b| {
@@ -295,7 +295,7 @@ fn validate_query_filters(query: &WorklistQuery, limits: &Limits) -> Result<()> 
         enforce_limit(
             "max_string_bytes",
             value.len() as u64,
-            limits.max_string_bytes,
+            limits.max_string_bytes(),
         )?;
         if value.is_empty() {
             return Err(decode_error("query filter values must not be empty"));
@@ -378,60 +378,33 @@ fn record_worklist_audit(
 
 fn worklist_item_to_dataset(item: WorklistItem) -> Dataset {
     let mut sps_item = Dataset::new();
-    sps_item.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str(item.scheduled_step_id),
-    });
-    sps_item.insert(Element {
-        tag: TAG_MODALITY,
-        vr: Vr::Cs,
-        value: Value::Str(item.modality),
-    });
-    sps_item.insert(Element {
-        tag: TAG_SPS_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str(item.start_date),
-    });
-    sps_item.insert(Element {
-        tag: TAG_SPS_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str(item.start_time),
-    });
+    sps_item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(item.scheduled_step_id),
+    ).unwrap());
+    sps_item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(item.modality),
+    ).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(item.start_date),
+    ).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(item.start_time),
+    ).unwrap());
     if let Some(requested_procedure_id) = item.requested_procedure_id {
-        sps_item.insert(Element {
-            tag: TAG_REQUESTED_PROCEDURE_ID,
-            vr: Vr::Sh,
-            value: Value::Str(requested_procedure_id),
-        });
+        sps_item.insert(Element::new(TAG_REQUESTED_PROCEDURE_ID, Vr::Sh, Value::Str(requested_procedure_id),
+        ).unwrap());
     }
     if let Some(scheduled_station_ae_title) = item.scheduled_station_ae_title {
-        sps_item.insert(Element {
-            tag: TAG_SCHEDULED_STATION_AE_TITLE,
-            vr: Vr::Ae,
-            value: Value::Str(scheduled_station_ae_title),
-        });
+        sps_item.insert(Element::new(TAG_SCHEDULED_STATION_AE_TITLE, Vr::Ae, Value::Str(scheduled_station_ae_title),
+        ).unwrap());
     }
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SPS_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![sps_item]),
-    });
+    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![sps_item]),
+    ).unwrap());
     if let Some(patient_id) = item.patient_id {
-        dataset.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str(patient_id),
-        });
+        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id),
+        ).unwrap());
     }
     if let Some(accession_number) = item.accession_number {
-        dataset.insert(Element {
-            tag: TAG_ACCESSION_NUMBER,
-            vr: Vr::Sh,
-            value: Value::Str(accession_number),
-        });
+        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str(accession_number),
+        ).unwrap());
     }
     dataset
 }
@@ -461,7 +434,7 @@ fn load_worklist_snapshot(path: &Path, limits: &Limits) -> Result<BTreeMap<Strin
     enforce_limit(
         "max_dataset_elements",
         count as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
 
     let mut items = BTreeMap::new();
@@ -582,7 +555,7 @@ fn read_required_str(bytes: &[u8], offset: &mut usize, limits: &Limits) -> Resul
     enforce_limit(
         "max_string_bytes",
         raw.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     let out =
         std::str::from_utf8(raw).map_err(|_| decode_error("worklist field is not valid UTF-8"))?;
@@ -602,14 +575,14 @@ fn read_optional_str(bytes: &[u8], offset: &mut usize, limits: &Limits) -> Resul
 
 fn require_str(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     let value = dataset.get(tag).ok_or_else(|| missing_required_tag(tag))?;
-    let string = match &value.value {
+    let string = match value.value() {
         Value::Str(text) | Value::Uid(text) => text,
         _ => return Err(invalid_tag_value(tag, "expected string value")),
     };
     enforce_limit(
         "max_string_bytes",
         string.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     if string.is_empty() {
         return Err(invalid_tag_value(tag, "value must not be empty"));
@@ -622,14 +595,14 @@ fn optional_str(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<S
         Some(value) => value,
         None => return Ok(None),
     };
-    let string = match &value.value {
+    let string = match value.value() {
         Value::Str(text) | Value::Uid(text) => text,
         _ => return Err(invalid_tag_value(tag, "expected string value")),
     };
     enforce_limit(
         "max_string_bytes",
         string.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     if string.is_empty() {
         return Ok(None);
@@ -690,33 +663,18 @@ mod tests {
 
     fn worklist_dataset(step_id: &str, modality: &str, date: &str, time: &str) -> Dataset {
         let mut item = Dataset::new();
-        item.insert(Element {
-            tag: TAG_SPS_ID,
-            vr: Vr::Sh,
-            value: Value::Str(step_id.to_string()),
-        });
-        item.insert(Element {
-            tag: TAG_MODALITY,
-            vr: Vr::Cs,
-            value: Value::Str(modality.to_string()),
-        });
-        item.insert(Element {
-            tag: TAG_SPS_START_DATE,
-            vr: Vr::Da,
-            value: Value::Str(date.to_string()),
-        });
-        item.insert(Element {
-            tag: TAG_SPS_START_TIME,
-            vr: Vr::Tm,
-            value: Value::Str(time.to_string()),
-        });
+        item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
+        ).unwrap());
+        item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
+        ).unwrap());
+        item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(date.to_string()),
+        ).unwrap());
+        item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(time.to_string()),
+        ).unwrap());
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_SPS_SEQUENCE,
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![item]),
-        });
+        dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
+        ).unwrap());
         dataset
     }
 
@@ -733,20 +691,17 @@ mod tests {
         // REQ-WL-300: missing Scheduled Procedure Step Sequence must fail closed.
         let dataset = Dataset::new();
         let err = validate_worklist_item(&dataset, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
     fn worklist_rejects_empty_sequence() {
         // REQ-WL-300: empty sequence must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_SPS_SEQUENCE,
-            vr: Vr::Sq,
-            value: Value::Sequence(Vec::new()),
-        });
+        dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(Vec::new()),
+        ).unwrap());
         let err = validate_worklist_item(&dataset, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -780,29 +735,23 @@ mod tests {
     #[test]
     fn worklist_enforces_limits() {
         // REQ-WL-302: string limits must be enforced.
-        let limits = Limits {
-            max_string_bytes: 2,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_string_bytes(2).build().unwrap();
         let dataset = worklist_dataset("AAA", "CT", "20240101", "120000");
         let err = validate_worklist_item(&dataset, &limits).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
     fn response_enforces_item_limit() {
         // REQ-WL-302: response size is bounded by max_dataset_elements.
-        let limits = Limits {
-            max_dataset_elements: 1,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_dataset_elements(1).build().unwrap();
         let item = validate_worklist_item(
             &worklist_dataset("A", "CT", "20240101", "090000"),
             &Limits::default(),
         )
         .expect("item");
         let err = build_worklist_response(&[item.clone(), item], &limits).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
@@ -810,16 +759,10 @@ mod tests {
         // REQ-WL-303: persisted worklist queries are deterministic and filterable.
         let mut store = WorklistStore::new(Limits::default());
         let mut dataset = worklist_dataset("STEP1", "CT", "20240101", "090000");
-        dataset.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PATIENT_A".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_ACCESSION_NUMBER,
-            vr: Vr::Sh,
-            value: Value::Str("ACC123".to_string()),
-        });
+        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str("ACC123".to_string()),
+        ).unwrap());
         let outcome = store.upsert_dataset(&dataset).expect("upsert");
         assert_eq!(outcome, UpsertOutcome::Inserted);
 
@@ -887,7 +830,7 @@ mod tests {
         fs::write(&path, b"BAD").expect("write");
         let err = WorklistStore::open(Limits::default(), &path).expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::DecodeError { .. } | ErrorKind::IoError { .. }
         ));
         let _ = fs::remove_file(path);

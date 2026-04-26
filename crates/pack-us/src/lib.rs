@@ -163,7 +163,7 @@ mod tests {
         // REQ-FEAT-302, REQ-SOP-301
         assert!(!UsPack::enabled());
         let err = UsPack::ensure_supported(SOP_CLASS_US).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+        assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
     }
 
     #[test]
@@ -188,16 +188,10 @@ mod tests {
     fn calibration_prefers_pixel_spacing() {
         // REQ-CONF-085
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("0.5\\0.5".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGER_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("1\\1".to_string()),
-        });
+        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("0.5\\0.5".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGER_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
+        ).unwrap());
         let ctx = extract_measurement_context(&dataset, &Limits::default()).expect("context");
         assert_eq!(
             ctx.calibration,
@@ -209,11 +203,8 @@ mod tests {
     fn calibration_falls_back_to_imager_spacing() {
         // REQ-CONF-085
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_IMAGER_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("1\\2".to_string()),
-        });
+        dataset.insert(Element::new(TAG_IMAGER_PIXEL_SPACING, Vr::Ds, Value::Str("1\\2".to_string()),
+        ).unwrap());
         let ctx = extract_measurement_context(&dataset, &Limits::default()).expect("context");
         assert_eq!(
             ctx.calibration,
@@ -239,11 +230,8 @@ mod tests {
     fn invalid_utf8_bytes_emit_invalid_warning() {
         // REQ-CONF-085: malformed string bytes must fail closed as invalid metadata.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_FRAME_TIME,
-            vr: Vr::Ds,
-            value: Value::Bytes(vec![0xff, 0xfe]),
-        });
+        dataset.insert(Element::new(TAG_FRAME_TIME, Vr::Ds, Value::Bytes(vec![0xff, 0xfe]),
+        ).unwrap());
         let ctx = extract_measurement_context(&dataset, &Limits::default()).expect("context");
         assert!(ctx.warnings.contains(&MeasurementWarning::InvalidFrameTime));
     }

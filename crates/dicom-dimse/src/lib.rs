@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![deny(clippy::cast_possible_truncation)]
 
 //! DIMSE command parsing for Verification (C-ECHO), Storage (C-STORE), and
 //! feature-gated Query/Retrieve services.
@@ -187,7 +188,7 @@ pub fn parse_command_pdv(pdv: &Pdv, limits: &DimseLimits) -> Result<DimseMessage
 pub fn parse_command_set(bytes: &[u8], limits: &DimseLimits) -> Result<DimseMessage> {
     enforce_limit(
         "max_command_bytes",
-        bytes.len() as u64,
+        u64::try_from(bytes.len()).unwrap_or(u64::MAX),
         limits.max_command_bytes,
     )?;
     let mut cursor = Cursor::new(bytes);
@@ -210,7 +211,7 @@ pub fn parse_command_set(bytes: &[u8], limits: &DimseLimits) -> Result<DimseMess
         }
         let group = cursor.read_u16_le()?;
         let element = cursor.read_u16_le()?;
-        let length = cursor.read_u32_le()? as usize;
+        let length = usize::try_from(cursor.read_u32_le()?).map_err(|_| decode_error("command element length exceeds usize"))?;
         if cursor.remaining() < length {
             return Err(decode_error("command element length exceeds buffer"));
         }
@@ -474,7 +475,7 @@ pub fn build_c_echo_response(message_id_responded_to: u16, status: u16) -> Vec<u
     write_us(&mut body, 0x0900, status);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -488,7 +489,7 @@ pub fn build_c_echo_request(message_id: u16) -> Vec<u8> {
     write_us(&mut body, 0x0800, 0x0101);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -509,7 +510,7 @@ pub fn build_c_store_response(
     write_ui(&mut body, 0x1000, sop_instance_uid);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -530,7 +531,7 @@ pub fn build_c_store_request(
     write_ui(&mut body, 0x1000, sop_instance_uid);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -551,7 +552,7 @@ pub fn build_n_action_request(
     write_us(&mut body, 0x1008, action_type_id);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -575,7 +576,7 @@ pub fn build_n_action_response(
     write_us(&mut body, 0x1008, action_type_id);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -591,7 +592,7 @@ pub fn build_c_find_request(message_id: u16, sop_class_uid: &str, priority: u16)
     write_us(&mut body, 0x0800, 0x0000);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -612,7 +613,7 @@ pub fn build_c_find_response(
     write_us(&mut body, 0x0900, status);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -634,7 +635,7 @@ pub fn build_c_move_request(
     write_us(&mut body, 0x0800, 0x0000);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -655,7 +656,7 @@ pub fn build_c_move_response(
     write_us(&mut body, 0x0900, status);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -671,7 +672,7 @@ pub fn build_c_get_request(message_id: u16, sop_class_uid: &str, priority: u16) 
     write_us(&mut body, 0x0800, 0x0000);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -692,7 +693,7 @@ pub fn build_c_get_response(
     write_us(&mut body, 0x0900, status);
 
     let mut out = Vec::new();
-    write_ul(&mut out, 0x0000, body.len() as u32);
+    write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
     out.extend_from_slice(&body);
     out
 }
@@ -752,7 +753,7 @@ fn write_ui(out: &mut Vec<u8>, element: u16, uid: &str) {
     if bytes.len() % 2 == 1 {
         bytes.push(0);
     }
-    out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(&u32::try_from(bytes.len()).unwrap_or(u32::MAX).to_le_bytes());
     out.extend_from_slice(&bytes);
 }
 
@@ -763,7 +764,7 @@ fn write_ae(out: &mut Vec<u8>, element: u16, ae: &str) {
     if bytes.len() % 2 == 1 {
         bytes.push(b' ');
     }
-    out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(&u32::try_from(bytes.len()).unwrap_or(u32::MAX).to_le_bytes());
     out.extend_from_slice(&bytes);
 }
 
@@ -869,14 +870,14 @@ mod tests {
             .expect("uid position");
         bytes[idx] = b'9';
         let err = parse_command_set(&bytes, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn decode_error_stage_is_dicom_dimse() {
         // REQ-DIMSE-305: DIMSE command parse failures surface DecodeError with dicom-dimse stage.
         let err = parse_command_set(&[], &DimseLimits::default()).expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::DecodeError { stage, .. } => {
                 assert_eq!(stage, "dicom-dimse");
             }
@@ -892,9 +893,9 @@ mod tests {
             max_command_bytes: 8,
         };
         let err = parse_command_set(&bytes, &limits).expect_err("error");
-        match err.kind {
+        match err.kind() {
             ErrorKind::LimitExceeded { limit_name, .. } => {
-                assert_eq!(limit_name, "max_command_bytes");
+                assert_eq!(*limit_name, "max_command_bytes");
             }
             _ => panic!("expected limit exceeded"),
         }
@@ -929,11 +930,11 @@ mod tests {
         write_us(&mut body, 0x0800, 0x0000);
 
         let mut out = Vec::new();
-        write_ul(&mut out, 0x0000, body.len() as u32);
+        write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
         out.extend_from_slice(&body);
 
         let err = parse_command_set(&out, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[cfg(not(feature = "dimse-c-move"))]
@@ -947,11 +948,11 @@ mod tests {
         write_us(&mut body, 0x0800, 0x0000);
 
         let mut out = Vec::new();
-        write_ul(&mut out, 0x0000, body.len() as u32);
+        write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
         out.extend_from_slice(&body);
 
         let err = parse_command_set(&out, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[cfg(not(feature = "dimse-c-get"))]
@@ -965,11 +966,11 @@ mod tests {
         write_us(&mut body, 0x0800, 0x0000);
 
         let mut out = Vec::new();
-        write_ul(&mut out, 0x0000, body.len() as u32);
+        write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
         out.extend_from_slice(&body);
 
         let err = parse_command_set(&out, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -980,7 +981,7 @@ mod tests {
         write_us(&mut unknown, 0x9999, 1);
         bytes.extend_from_slice(&unknown);
         let err = parse_command_set(&bytes, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -991,7 +992,7 @@ mod tests {
         write_us(&mut duplicate, 0x0110, 2);
         bytes.extend_from_slice(&duplicate);
         let err = parse_command_set(&bytes, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1003,11 +1004,11 @@ mod tests {
         write_us(&mut body, 0x0110, 1);
 
         let mut out = Vec::new();
-        write_ul(&mut out, 0x0000, body.len() as u32);
+        write_ul(&mut out, 0x0000, u32::try_from(body.len()).map_err(|_| "command set length exceeds u32".to_string()).unwrap_or(u32::MAX));
         out.extend_from_slice(&body);
 
         let err = parse_command_set(&out, &DimseLimits::default()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[cfg(feature = "dimse-c-find")]

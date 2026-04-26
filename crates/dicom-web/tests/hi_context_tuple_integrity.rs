@@ -32,7 +32,7 @@ fn context_tuple_validation_fails_closed_on_uid_mismatch() {
     };
 
     let err = validate_context_tuple(&expected, &observed).expect_err("must fail closed");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn context_tuple_validation_requires_expected_frame_index() {
     };
 
     let err = validate_context_tuple(&expected, &observed).expect_err("frame index required");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
 }
 
 #[test]

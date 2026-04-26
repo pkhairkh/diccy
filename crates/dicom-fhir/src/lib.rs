@@ -688,61 +688,31 @@ mod tests {
 
     fn patient_dataset() -> Dataset {
         let mut ds = Dataset::new();
-        ds.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PAT001".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_PATIENT_NAME,
-            vr: Vr::Pn,
-            value: Value::Str("Smith^John^M".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_PATIENT_BIRTH_DATE,
-            vr: Vr::Da,
-            value: Value::Str("19800101".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_PATIENT_SEX,
-            vr: Vr::Cs,
-            value: Value::Str("M".to_string()),
-        });
+        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Smith^John^M".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_PATIENT_BIRTH_DATE, Vr::Da, Value::Str("19800101".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string()),
+        ).unwrap());
         ds
     }
 
     fn study_dataset() -> Dataset {
         let mut ds = Dataset::new();
-        ds.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PAT001".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_STUDY_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.840.113619.2.55.3".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_STUDY_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20240115".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_STUDY_DESCRIPTION,
-            vr: Vr::Lo,
-            value: Value::Str("CT Chest with Contrast".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_ACCESSION_NUMBER,
-            vr: Vr::Sh,
-            value: Value::Str("ACC12345".to_string()),
-        });
-        ds.insert(Element {
-            tag: TAG_MODALITY,
-            vr: Vr::Cs,
-            value: Value::Str("CT".to_string()),
-        });
+        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_STUDY_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.840.113619.2.55.3".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20240115".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_STUDY_DESCRIPTION, Vr::Lo, Value::Str("CT Chest with Contrast".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str("ACC12345".to_string()),
+        ).unwrap());
+        ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
+        ).unwrap());
         ds
     }
 
@@ -804,21 +774,12 @@ mod tests {
         let mut study = adapter.map_imaging_study(&ds).expect("study");
 
         let mut series_ds = Dataset::new();
-        series_ds.insert(Element {
-            tag: TAG_SERIES_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Str("1.2.840.113619.2.55.3.1".to_string()),
-        });
-        series_ds.insert(Element {
-            tag: TAG_MODALITY,
-            vr: Vr::Cs,
-            value: Value::Str("CT".to_string()),
-        });
-        series_ds.insert(Element {
-            tag: TAG_SERIES_DESCRIPTION,
-            vr: Vr::Lo,
-            value: Value::Str("Axial 5mm".to_string()),
-        });
+        series_ds.insert(Element::new(TAG_SERIES_INSTANCE_UID, Vr::Ui, Value::Str("1.2.840.113619.2.55.3.1".to_string()),
+        ).unwrap());
+        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
+        ).unwrap());
+        series_ds.insert(Element::new(TAG_SERIES_DESCRIPTION, Vr::Lo, Value::Str("Axial 5mm".to_string()),
+        ).unwrap());
 
         adapter
             .add_series_to_study(&mut study, &series_ds)
@@ -836,32 +797,20 @@ mod tests {
 
         // Add series first
         let mut series_ds = Dataset::new();
-        series_ds.insert(Element {
-            tag: TAG_SERIES_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Str("1.2.3.4.5".to_string()),
-        });
-        series_ds.insert(Element {
-            tag: TAG_MODALITY,
-            vr: Vr::Cs,
-            value: Value::Str("CT".to_string()),
-        });
+        series_ds.insert(Element::new(TAG_SERIES_INSTANCE_UID, Vr::Ui, Value::Str("1.2.3.4.5".to_string()),
+        ).unwrap());
+        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
+        ).unwrap());
         adapter
             .add_series_to_study(&mut study, &series_ds)
             .expect("add series");
 
         // Add instance
         let mut instance_ds = Dataset::new();
-        instance_ds.insert(Element {
-            tag: TAG_SOP_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Str("1.2.3.4.5.6".to_string()),
-        });
-        instance_ds.insert(Element {
-            tag: TAG_SOP_CLASS_UID,
-            vr: Vr::Ui,
-            value: Value::Str("1.2.840.10008.5.1.4.1.1.2".to_string()),
-        });
+        instance_ds.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Str("1.2.3.4.5.6".to_string()),
+        ).unwrap());
+        instance_ds.insert(Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Str("1.2.840.10008.5.1.4.1.1.2".to_string()),
+        ).unwrap());
 
         adapter
             .add_instance_to_series(&mut study, "1.2.3.4.5", &instance_ds)
@@ -981,40 +930,22 @@ mod tests {
         let adapter = FhirAdapter::new("https://fhir.example.com");
 
         let mut male_ds = Dataset::new();
-        male_ds.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PAT001".to_string()),
-        });
-        male_ds.insert(Element {
-            tag: TAG_PATIENT_NAME,
-            vr: Vr::Pn,
-            value: Value::Str("Smith^John".to_string()),
-        });
-        male_ds.insert(Element {
-            tag: TAG_PATIENT_SEX,
-            vr: Vr::Cs,
-            value: Value::Str("M".to_string()),
-        });
+        male_ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
+        ).unwrap());
+        male_ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Smith^John".to_string()),
+        ).unwrap());
+        male_ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string()),
+        ).unwrap());
         let male = adapter.map_patient(&male_ds).expect("male");
         assert_eq!(male.gender.as_deref(), Some("male"));
 
         let mut female_ds = Dataset::new();
-        female_ds.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PAT002".to_string()),
-        });
-        female_ds.insert(Element {
-            tag: TAG_PATIENT_NAME,
-            vr: Vr::Pn,
-            value: Value::Str("Doe^Jane".to_string()),
-        });
-        female_ds.insert(Element {
-            tag: TAG_PATIENT_SEX,
-            vr: Vr::Cs,
-            value: Value::Str("F".to_string()),
-        });
+        female_ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT002".to_string()),
+        ).unwrap());
+        female_ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Doe^Jane".to_string()),
+        ).unwrap());
+        female_ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("F".to_string()),
+        ).unwrap());
         let female = adapter.map_patient(&female_ds).expect("female");
         assert_eq!(female.gender.as_deref(), Some("female"));
     }

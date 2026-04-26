@@ -5,6 +5,7 @@
 use dicom_core::{
     parse_f64_strict, parse_i32_strict, Dataset, Error, ErrorKind, Result, Tag, Value,
 };
+#[cfg(feature = "rendering")]
 use dicom_pixel::{DisplayFrame, PixelFormat};
 
 /// RT Dose Storage SOP Class UID.
@@ -188,6 +189,7 @@ impl RtDoseGrid {
     }
 
     /// Create a deterministic overlay for a single frame index.
+    #[cfg(feature = "rendering")]
     pub fn overlay_frame(&self, frame_index: u16) -> Result<DisplayFrame> {
         if frame_index >= self.frames {
             return Err(invalid_tag_value(
@@ -269,6 +271,7 @@ impl RtDoseGrid {
     }
 
     /// Create a deterministic overlay for a single frame index after alignment checks.
+    #[cfg(feature = "rendering")]
     pub fn overlay_on(
         &self,
         reference: &RtReferenceGeometry,
@@ -278,6 +281,14 @@ impl RtDoseGrid {
         self.overlay_frame(frame_index)
     }
 }
+
+/// Domain-level descriptor for an RT dose overlay, containing grid geometry,
+/// dose values, and spatial metadata without any rendering dependency.
+///
+/// This is a type alias for [`RtDoseGrid`] since the dose grid fields are
+/// all pure domain data. Use this type when you need a rendering-independent
+/// reference to the parsed RT dose data.
+pub type RtOverlayDescriptor = RtDoseGrid;
 
 impl RtStructureSet {
     /// Parse an RT Structure Set with planar contours.
@@ -343,6 +354,7 @@ impl RtStructureSet {
     }
 
     /// Create a deterministic overlay for contours aligned to a reference geometry.
+    #[cfg(feature = "rendering")]
     pub fn overlay_on(&self, reference: &RtReferenceGeometry) -> Result<DisplayFrame> {
         if self.frame_of_reference_uid != reference.frame_of_reference_uid {
             return Err(invalid_geometry("frame of reference UID mismatch"));
@@ -432,8 +444,10 @@ const TAG_REFERENCED_STRUCTURE_SET_SEQUENCE: Tag = Tag(0x300C, 0x0060);
 const TAG_REFERENCED_SOP_INSTANCE_UID: Tag = Tag(0x0008, 0x1155);
 
 const DEFAULT_CONTOUR_COLOR: [u8; 3] = [0xFF, 0x00, 0x00];
+#[cfg(feature = "rendering")]
 const STRUCTURE_ALPHA: u8 = 200;
 
+#[cfg(feature = "rendering")]
 fn dose_colormap(value: f64) -> (u8, u8, u8) {
     let v = value.clamp(0.0, 1.0);
     let r = (v * 255.0) as u8;
@@ -444,7 +458,7 @@ fn dose_colormap(value: f64) -> (u8, u8, u8) {
 
 fn read_str(dataset: &Dataset, tag: Tag) -> Result<Option<&str>> {
     match dataset.get(tag) {
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => Ok(Some(value.as_str())),
             Value::Uid(value) => Ok(Some(value.as_str())),
             _ => Err(invalid_tag_value(tag, "expected string")),
@@ -512,7 +526,7 @@ fn read_f64_vec(dataset: &Dataset, tag: Tag) -> Result<Vec<f64>> {
 
 fn read_bytes(dataset: &Dataset, tag: Tag) -> Result<&[u8]> {
     match dataset.get(tag) {
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => Ok(bytes.as_slice()),
             _ => Err(invalid_tag_value(tag, "expected bytes")),
         },
@@ -522,7 +536,7 @@ fn read_bytes(dataset: &Dataset, tag: Tag) -> Result<&[u8]> {
 
 fn read_sequence(dataset: &Dataset, tag: Tag) -> Result<Option<&[Dataset]>> {
     match dataset.get(tag) {
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Sequence(items) => Ok(Some(items.as_slice())),
             _ => Err(invalid_tag_value(tag, "expected sequence")),
         },
@@ -552,7 +566,7 @@ fn read_rgb(dataset: &Dataset, tag: Tag) -> Result<Option<[u8; 3]>> {
 fn read_u16_optional(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::I32(value) if *value >= 0 && *value <= u16::MAX as i32 => {
                 Ok(Some(*value as u16))
             }
@@ -623,6 +637,7 @@ fn clamp_index(value: f64, max: i32) -> i32 {
     idx
 }
 
+#[cfg(feature = "rendering")]
 fn draw_polyline(
     out: &mut [u8],
     width: i32,
@@ -644,6 +659,7 @@ fn draw_polyline(
     }
 }
 
+#[cfg(feature = "rendering")]
 fn draw_line(
     out: &mut [u8],
     width: i32,
@@ -676,6 +692,7 @@ fn draw_line(
     }
 }
 
+#[cfg(feature = "rendering")]
 fn plot_rgba(out: &mut [u8], width: i32, height: i32, x: i32, y: i32, color: [u8; 3]) {
     if x < 0 || y < 0 || x >= width || y >= height {
         return;
@@ -783,7 +800,7 @@ mod tests {
         // REQ-FEAT-302
         assert!(!RtPack::enabled());
         let err = RtPack::ensure_supported(SOP_CLASS_RT_DOSE).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+        assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
     }
 
     #[test]
@@ -810,61 +827,28 @@ mod tests {
     fn dose_grid_scaling_applied() {
         // REQ-VOL-925, REQ-RT-350, REQ-RT-352
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_ROWS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_COLUMNS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_NUMBER_OF_FRAMES,
-            vr: Vr::Is,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("1\\1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_POSITION,
-            vr: Vr::Ds,
-            value: Value::Str("0\\0\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_ORIENTATION,
-            vr: Vr::Ds,
-            value: Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_FRAME_OF_REFERENCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_GRID_FRAME_OFFSET_VECTOR,
-            vr: Vr::Ds,
-            value: Value::Str("0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_DOSE_GRID_SCALING,
-            vr: Vr::Ds,
-            value: Value::Str("0.5".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_BITS_ALLOCATED,
-            vr: Vr::Us,
-            value: Value::Str("16".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_DATA,
-            vr: Vr::Ob,
-            value: Value::Bytes(vec![2, 0]),
-        });
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("0.5".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![2, 0]),
+        ).unwrap());
         let dose = RtDoseGrid::from_dataset(&dataset).expect("dose parse");
         assert_eq!(dose.values, vec![1.0]);
         let reference = RtReferenceGeometry {
@@ -885,124 +869,58 @@ mod tests {
     fn grid_frame_offset_vector_mismatch_fails() {
         // REQ-VOL-926, REQ-RT-351
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_ROWS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_COLUMNS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_NUMBER_OF_FRAMES,
-            vr: Vr::Is,
-            value: Value::Str("2".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("1\\1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_POSITION,
-            vr: Vr::Ds,
-            value: Value::Str("0\\0\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_ORIENTATION,
-            vr: Vr::Ds,
-            value: Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_FRAME_OF_REFERENCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_GRID_FRAME_OFFSET_VECTOR,
-            vr: Vr::Ds,
-            value: Value::Str("0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_DOSE_GRID_SCALING,
-            vr: Vr::Ds,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_BITS_ALLOCATED,
-            vr: Vr::Us,
-            value: Value::Str("16".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_DATA,
-            vr: Vr::Ob,
-            value: Value::Bytes(vec![0, 0, 0, 0]),
-        });
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0, 0, 0]),
+        ).unwrap());
         let err = RtDoseGrid::from_dataset(&dataset).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+        assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
     }
 
     #[test]
     fn rt_alignment_mismatch_fails() {
         // REQ-VOL-926, REQ-RT-351
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_ROWS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_COLUMNS,
-            vr: Vr::Us,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_NUMBER_OF_FRAMES,
-            vr: Vr::Is,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_SPACING,
-            vr: Vr::Ds,
-            value: Value::Str("1\\1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_POSITION,
-            vr: Vr::Ds,
-            value: Value::Str("0\\0\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_IMAGE_ORIENTATION,
-            vr: Vr::Ds,
-            value: Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_FRAME_OF_REFERENCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_GRID_FRAME_OFFSET_VECTOR,
-            vr: Vr::Ds,
-            value: Value::Str("0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_DOSE_GRID_SCALING,
-            vr: Vr::Ds,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_BITS_ALLOCATED,
-            vr: Vr::Us,
-            value: Value::Str("16".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_PIXEL_DATA,
-            vr: Vr::Ob,
-            value: Value::Bytes(vec![0, 0]),
-        });
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0]),
+        ).unwrap());
         let dose = RtDoseGrid::from_dataset(&dataset).expect("dose parse");
         let reference = RtReferenceGeometry {
             rows: 1,
@@ -1013,55 +931,31 @@ mod tests {
             frame_of_reference_uid: "1.2.3".to_string(),
         };
         let err = dose.overlay_on(&reference, 0).unwrap_err();
-        assert_eq!(err.code, "DVF.GEOM.INVALID");
+        assert_eq!(err.code(), "DVF.GEOM.INVALID");
     }
 
     fn build_structure_dataset_with_type(points: &str, contour_type: &str) -> Dataset {
         let mut contour = Dataset::new();
-        contour.insert(Element {
-            tag: TAG_CONTOUR_GEOMETRIC_TYPE,
-            vr: Vr::Cs,
-            value: Value::Str(contour_type.to_string()),
-        });
-        contour.insert(Element {
-            tag: TAG_NUMBER_OF_CONTOUR_POINTS,
-            vr: Vr::Is,
-            value: Value::Str("4".to_string()),
-        });
-        contour.insert(Element {
-            tag: TAG_CONTOUR_DATA,
-            vr: Vr::Ds,
-            value: Value::Str(points.to_string()),
-        });
+        contour.insert(Element::new(TAG_CONTOUR_GEOMETRIC_TYPE, Vr::Cs, Value::Str(contour_type.to_string()),
+        ).unwrap());
+        contour.insert(Element::new(TAG_NUMBER_OF_CONTOUR_POINTS, Vr::Is, Value::Str("4".to_string()),
+        ).unwrap());
+        contour.insert(Element::new(TAG_CONTOUR_DATA, Vr::Ds, Value::Str(points.to_string()),
+        ).unwrap());
 
         let mut roi = Dataset::new();
-        roi.insert(Element {
-            tag: TAG_ROI_DISPLAY_COLOR,
-            vr: Vr::Is,
-            value: Value::Str("255\\0\\0".to_string()),
-        });
-        roi.insert(Element {
-            tag: TAG_CONTOUR_SEQUENCE,
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![contour]),
-        });
+        roi.insert(Element::new(TAG_ROI_DISPLAY_COLOR, Vr::Is, Value::Str("255\\0\\0".to_string()),
+        ).unwrap());
+        roi.insert(Element::new(TAG_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![contour]),
+        ).unwrap());
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_SOP_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3.4".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_FRAME_OF_REFERENCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("9.8.7".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_ROI_CONTOUR_SEQUENCE,
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![roi]),
-        });
+        dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_ROI_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![roi]),
+        ).unwrap());
         dataset
     }
 
@@ -1122,7 +1016,7 @@ mod tests {
             frame_of_reference_uid: "9.8.7".to_string(),
         };
         let err = structure.overlay_on(&reference).unwrap_err();
-        assert_eq!(err.code, "DVF.GEOM.INVALID");
+        assert_eq!(err.code(), "DVF.GEOM.INVALID");
     }
 
     #[test]
@@ -1133,27 +1027,15 @@ mod tests {
         ))
         .expect("structure parse");
         let mut plan = Dataset::new();
-        plan.insert(Element {
-            tag: TAG_FRAME_OF_REFERENCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("9.8.7".to_string()),
-        });
-        plan.insert(Element {
-            tag: TAG_RT_PLAN_LABEL,
-            vr: Vr::Sh,
-            value: Value::Str("PLAN".to_string()),
-        });
+        plan.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
+        ).unwrap());
+        plan.insert(Element::new(TAG_RT_PLAN_LABEL, Vr::Sh, Value::Str("PLAN".to_string()),
+        ).unwrap());
         let mut ref_item = Dataset::new();
-        ref_item.insert(Element {
-            tag: TAG_REFERENCED_SOP_INSTANCE_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3.4".to_string()),
-        });
-        plan.insert(Element {
-            tag: TAG_REFERENCED_STRUCTURE_SET_SEQUENCE,
-            vr: Vr::Sq,
-            value: Value::Sequence(vec![ref_item]),
-        });
+        ref_item.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
+        ).unwrap());
+        plan.insert(Element::new(TAG_REFERENCED_STRUCTURE_SET_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_item]),
+        ).unwrap());
         let summary = RtPlanSummary::from_dataset(&plan).expect("plan parse");
         summary
             .validate_structure_set(&structure)

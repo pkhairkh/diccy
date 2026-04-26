@@ -138,7 +138,7 @@ impl Index {
         enforce_limit(
             "max_dataset_elements",
             self.total_instances + 1,
-            self.limits.max_dataset_elements,
+            self.limits.max_dataset_elements(),
         )?;
 
         let study_entry = self
@@ -252,7 +252,7 @@ fn require_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     enforce_limit(
         "max_string_bytes",
         value.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     validate_uid_strict(tag, value)?;
     Ok(value.to_string())
@@ -287,26 +287,14 @@ mod tests {
 
     fn dataset_with_uids(study: &str, series: &str, sop: &str, sop_class: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(study.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SERIES_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(series.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SOP_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(sop.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SOP_CLASS_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(sop_class.to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Uid(sop_class.to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -314,14 +302,11 @@ mod tests {
     fn extract_requires_required_uids() {
         // REQ-META-300: required UIDs must be present and valid.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
         let err = extract_indexed_instance(&dataset, &limits(), "hash".to_string(), 10)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
@@ -350,16 +335,13 @@ mod tests {
         let i2 = extract_indexed_instance(&dataset, &limits(), "h2".to_string(), 10).unwrap();
         index.insert(i1).unwrap();
         let err = index.insert(i2).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
     }
 
     #[test]
     fn index_enforces_max_instances() {
         // REQ-META-302: max_dataset_elements bounds total indexed instances.
-        let limits = Limits {
-            max_dataset_elements: 1,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_dataset_elements(1).build().unwrap();
         let mut index = Index::new(limits);
         let d1 = dataset_with_uids("1.1", "2.2", "3.3", "1.2.840.10008.1.1");
         let d2 = dataset_with_uids("1.1", "2.2", "4.4", "1.2.840.10008.1.1");
@@ -367,7 +349,7 @@ mod tests {
         let i2 = extract_indexed_instance(&d2, &Limits::default(), "h2".to_string(), 10).unwrap();
         index.insert(i1).unwrap();
         let err = index.insert(i2).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]

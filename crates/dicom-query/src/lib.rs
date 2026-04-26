@@ -196,7 +196,7 @@ pub fn query(datasets: &[Dataset], query: &Query, limits: &Limits) -> Result<Vec
         enforce_limit(
             "max_dataset_elements",
             (matches.len() as u64) + 1,
-            limits.max_dataset_elements,
+            limits.max_dataset_elements(),
         )?;
 
         matches.push(QueryMatch {
@@ -236,7 +236,7 @@ pub fn paginate_query_matches(
     enforce_limit(
         "max_dataset_elements",
         page_size as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
     let offset = cursor.map(|token| token.offset).unwrap_or(0);
     if offset >= matches.len() {
@@ -275,7 +275,7 @@ pub fn enforce_query_guardrails(
 
 /// Classify query failures into deterministic metric buckets.
 pub fn classify_query_failure(error: &Error) -> QueryFailureMetric {
-    match &error.kind {
+    match error.kind() {
         ErrorKind::LimitExceeded { limit_name, .. } => {
             if *limit_name == "max_query_duration_ms" {
                 QueryFailureMetric::Timeout
@@ -298,7 +298,7 @@ pub fn query_from_identifier(dataset: &Dataset, limits: &Limits) -> Result<Query
     enforce_limit(
         "max_dataset_elements",
         dataset.len() as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
 
     let mut keys = Vec::new();
@@ -311,7 +311,7 @@ pub fn query_from_identifier(dataset: &Dataset, limits: &Limits) -> Result<Query
     let mut seen_study_date: Option<String> = None;
 
     for element in dataset.elements() {
-        let tag = element.tag;
+        let tag = *element.tag();
         let slot = match tag {
             TAG_STUDY_UID => &mut seen_study,
             TAG_SERIES_UID => &mut seen_series,
@@ -323,7 +323,7 @@ pub fn query_from_identifier(dataset: &Dataset, limits: &Limits) -> Result<Query
             _ => return Err(decode_error("unsupported query key")),
         };
 
-        let value = match (&element.value, is_uid_key(tag)) {
+        let value = match (element.value(), is_uid_key(tag)) {
             (Value::Uid(value), _) => value.as_str(),
             (Value::Str(value), _) => value.as_str(),
             _ if is_uid_key(tag) => return Err(decode_error("query key must be a UID value")),
@@ -338,7 +338,7 @@ pub fn query_from_identifier(dataset: &Dataset, limits: &Limits) -> Result<Query
         enforce_limit(
             "max_string_bytes",
             value.len() as u64,
-            limits.max_string_bytes,
+            limits.max_string_bytes(),
         )?;
         if is_uid_key(tag) {
             validate_uid_strict(tag, value)?;
@@ -369,7 +369,7 @@ fn validate_query(query: &Query, limits: &Limits) -> Result<()> {
     enforce_limit(
         "max_dataset_elements",
         query.keys.len() as u64,
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
     )?;
 
     for key in &query.keys {
@@ -379,7 +379,7 @@ fn validate_query(query: &Query, limits: &Limits) -> Result<()> {
         enforce_limit(
             "max_string_bytes",
             key.value.len() as u64,
-            limits.max_string_bytes,
+            limits.max_string_bytes(),
         )?;
         if is_uid_key(key.tag) {
             validate_uid_strict(key.tag, &key.value)?;
@@ -405,7 +405,7 @@ fn matches_query(dataset: &Dataset, query: &Query, limits: &Limits) -> Result<bo
             enforce_limit(
                 "max_string_bytes",
                 value.len() as u64,
-                limits.max_string_bytes,
+                limits.max_string_bytes(),
             )?;
             validate_text_key_value(key.tag, value, "candidate query value")?;
             if value != key.value {
@@ -455,7 +455,7 @@ fn require_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     enforce_limit(
         "max_string_bytes",
         value.len() as u64,
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
     )?;
     validate_uid_strict(tag, value)?;
     Ok(value.to_string())
@@ -545,21 +545,12 @@ mod tests {
 
     fn dataset_with_uids(study: &str, series: &str, sop: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(study.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SERIES_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(series.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SOP_UID,
-            vr: Vr::Ui,
-            value: Value::Uid(sop.to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -571,16 +562,10 @@ mod tests {
         modality: &str,
     ) -> Dataset {
         let mut dataset = dataset_with_uids(study, series, sop);
-        dataset.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str(patient_id.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_MODALITY,
-            vr: Vr::Cs,
-            value: Value::Str(modality.to_string()),
-        });
+        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -594,16 +579,10 @@ mod tests {
         study_date: &str,
     ) -> Dataset {
         let mut dataset = dataset_with_metadata(study, series, sop, patient_id, modality);
-        dataset.insert(Element {
-            tag: TAG_ACCESSION_NUMBER,
-            vr: Vr::Lo,
-            value: Value::Str(accession_number.to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_STUDY_DATE,
-            vr: Vr::Da,
-            value: Value::Str(study_date.to_string()),
-        });
+        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str(accession_number.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str(study_date.to_string()),
+        ).unwrap());
         dataset
     }
 
@@ -682,7 +661,7 @@ mod tests {
             }],
         };
         let err = query(&datasets, &query_request, &limits()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -746,7 +725,7 @@ mod tests {
             }],
         };
         let err = query(&datasets, &query_request, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -776,12 +755,9 @@ mod tests {
             level: QueryLevel::Study,
             keys: Vec::new(),
         };
-        let limits = Limits {
-            max_dataset_elements: 1,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_dataset_elements(1).build().unwrap();
         let err = query(&datasets, &query_request, &limits).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
@@ -796,18 +772,15 @@ mod tests {
             }],
         };
         let err = query(&datasets, &query_request, &limits()).expect_err("error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
     fn query_rejects_candidate_missing_required_uid_for_level() {
         // REQ-QR-303: candidate datasets missing required UIDs must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
 
         let query_request = Query {
             level: QueryLevel::Series,
@@ -815,7 +788,7 @@ mod tests {
         };
         let err = query(&[dataset], &query_request, &limits()).expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::MissingRequiredTag {
                 tag: TAG_SERIES_UID
             }
@@ -826,39 +799,27 @@ mod tests {
     fn query_rejects_candidate_invalid_required_uid_for_level() {
         // REQ-QR-303: candidate datasets with invalid required UIDs must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SERIES_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("2.3.x".to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("2.3.x".to_string()),
+        ).unwrap());
 
         let query_request = Query {
             level: QueryLevel::Series,
             keys: Vec::new(),
         };
         let err = query(&[dataset], &query_request, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
     fn identifier_query_builds_from_dataset() {
         // REQ-QR-300: supported UID keys are parsed from identifier datasets.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_SERIES_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3.4".to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
+        ).unwrap());
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Series);
         assert_eq!(query.keys.len(), 2);
@@ -868,24 +829,17 @@ mod tests {
     fn identifier_query_rejects_unsupported_key() {
         // REQ-QR-300: unsupported keys must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: Tag(0x0008, 0x1030),
-            vr: Vr::Lo,
-            value: Value::Str("CT HEAD".to_string()),
-        });
+        dataset.insert(Element::new(Tag(0x0008, 0x1030), Vr::Lo, Value::Str("CT HEAD".to_string())).unwrap());
         let err = query_from_identifier(&dataset, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
     fn identifier_query_accepts_patient_id() {
         // REQ-QR-300: Patient ID is accepted as a supported identifier key.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_PATIENT_ID,
-            vr: Vr::Lo,
-            value: Value::Str("PATIENT_A".to_string()),
-        });
+        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
+        ).unwrap());
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 1);
@@ -897,16 +851,10 @@ mod tests {
     fn identifier_query_accepts_accession_and_study_date() {
         // REQ-QR-300: Accession Number and Study Date are accepted identifier keys.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_ACCESSION_NUMBER,
-            vr: Vr::Lo,
-            value: Value::Str("ACC123".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_STUDY_DATE,
-            vr: Vr::Da,
-            value: Value::Str("20260211".to_string()),
-        });
+        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str("ACC123".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260211".to_string()),
+        ).unwrap());
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 2);
@@ -920,18 +868,12 @@ mod tests {
     fn identifier_query_rejects_conflicting_values() {
         // REQ-QR-302: UID values must be strictly validated and consistent.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("1.2.3".to_string()),
-        });
-        dataset.insert(Element {
-            tag: TAG_STUDY_UID,
-            vr: Vr::Ui,
-            value: Value::Uid("9.9".to_string()),
-        });
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
+        ).unwrap());
         let err = query_from_identifier(&dataset, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]

@@ -6,8 +6,9 @@ publish = false
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
-dicom-pixel = { path = "../dicom-pixel" }
+dicom-pixel = { path = "../dicom-pixel", optional = true }
 
 [features]
 default = []
 gsps = []
+rendering = ["dicom-pixel"]

@@ -690,66 +690,66 @@ fn parse_tls_material(
 fn parse_limits() -> std::io::Result<Limits> {
     // Defaults and bounds in this parser are the runtime source for docs/09 and docs/14.
     let mut limits = Limits::default();
-    limits.max_input_bytes = parse_u64(
+    limits.set_max_input_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_INPUT_BYTES",
-        limits.max_input_bytes,
+        limits.max_input_bytes(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_dataset_elements = parse_u64(
+    )?);
+    limits.set_max_dataset_elements(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_DATASET_ELEMENTS",
-        limits.max_dataset_elements,
+        limits.max_dataset_elements(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_sequence_depth = parse_u64(
+    )?);
+    limits.set_max_sequence_depth(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_SEQUENCE_DEPTH",
-        limits.max_sequence_depth,
+        limits.max_sequence_depth(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_string_bytes = parse_u64(
+    )?);
+    limits.set_max_string_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_STRING_BYTES",
-        limits.max_string_bytes,
+        limits.max_string_bytes(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_element_vl_bytes = parse_u64(
+    )?);
+    limits.set_max_element_vl_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_ELEMENT_VL_BYTES",
-        limits.max_element_vl_bytes,
+        limits.max_element_vl_bytes(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_frames_per_instance = parse_u64(
+    )?);
+    limits.set_max_frames_per_instance(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_FRAMES_PER_INSTANCE",
-        limits.max_frames_per_instance,
+        limits.max_frames_per_instance(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_pixels_per_frame = parse_u64(
+    )?);
+    limits.set_max_pixels_per_frame(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_PIXELS_PER_FRAME",
-        limits.max_pixels_per_frame,
+        limits.max_pixels_per_frame(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_decompressed_bytes = parse_u64(
+    )?);
+    limits.set_max_decompressed_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_DECOMPRESSED_BYTES",
-        limits.max_decompressed_bytes,
+        limits.max_decompressed_bytes(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_gpu_texture_bytes = parse_u64(
+    )?);
+    limits.set_max_gpu_texture_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_GPU_TEXTURE_BYTES",
-        limits.max_gpu_texture_bytes,
+        limits.max_gpu_texture_bytes(),
         NumericBounds::at_least(1),
-    )?;
-    limits.max_cache_bytes = parse_u64(
+    )?);
+    limits.set_max_cache_bytes(parse_u64(
         DIMSE_SERVICE_NAME,
         "DICOM_DIMSE_MAX_CACHE_BYTES",
-        limits.max_cache_bytes,
+        limits.max_cache_bytes(),
         NumericBounds::at_least(1),
-    )?;
+    )?);
     Ok(limits)
 }
 
@@ -808,7 +808,7 @@ fn parse_role_config() -> std::io::Result<DimseRoleConfig> {
 }
 
 fn parse_operation_size_limits(limits: &Limits) -> std::io::Result<DimseOperationSizeConfig> {
-    let default_limit = limits.max_input_bytes;
+    let default_limit = limits.max_input_bytes();
     Ok(DimseOperationSizeConfig {
         c_echo_data_set_bytes: parse_u64(
             DIMSE_SERVICE_NAME,
@@ -1354,7 +1354,7 @@ mod tests {
         std::env::remove_var("DICOM_DIMSE_MAX_INPUT_BYTES");
 
         let limits = parse_limits().expect("production limits defaults");
-        assert_eq!(limits.max_input_bytes, Limits::default().max_input_bytes);
+        assert_eq!(limits.max_input_bytes(), Limits::default().max_input_bytes());
 
         match prev_test_max {
             Some(value) => std::env::set_var("DICOM_DIMSE_TEST_MAX_BYTES", value),

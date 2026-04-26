@@ -713,60 +713,28 @@ pub fn encode_registration_iod(result: &RegistrationResult, study_uid: &str, ser
     let mut ds = Dataset::new();
 
     // SOP Class UID for Spatial Registration Storage (1.2.840.10008.5.1.4.1.1.66.1)
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0016),
-        vr: Vr::Ui,
-        value: Value::Uid("1.2.840.10008.5.1.4.1.1.66.1".to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.66.1".to_string()))?);
 
     // SOP Instance UID (generate deterministic from content)
     let sop_uid = format!("1.2.840.113619.6.4.{}.{}", study_uid.len(), series_uid.len());
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0018),
-        vr: Vr::Ui,
-        value: Value::Uid(sop_uid),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
 
     // Study Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000D),
-        vr: Vr::Ui,
-        value: Value::Uid(study_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
 
     // Series Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000E),
-        vr: Vr::Ui,
-        value: Value::Uid(series_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
 
     // Registration Sequence
     let mut reg_item = Dataset::new();
 
     // Matrix Registration Type Code Sequence
     let mut matrix_type_item = Dataset::new();
-    matrix_type_item.insert(Element {
-        tag: Tag(0x0008, 0x0100),
-        vr: Vr::Sh,
-        value: Value::Str("RIGID".to_string()),
-    });
-    matrix_type_item.insert(Element {
-        tag: Tag(0x0008, 0x0102),
-        vr: Vr::Sh,
-        value: Value::Str("99DICOM_REG".to_string()),
-    });
-    matrix_type_item.insert(Element {
-        tag: Tag(0x0008, 0x0104),
-        vr: Vr::Lo,
-        value: Value::Str("Rigid".to_string()),
-    });
+    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("RIGID".to_string())).unwrap());
+    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("99DICOM_REG".to_string())).unwrap());
+    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Rigid".to_string())).unwrap());
 
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x030D),
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![matrix_type_item]),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x030D), Vr::Sq, Value::Sequence(vec![matrix_type_item])).unwrap());
 
     // Registration Matrix (4x4 rigid transform)
     // Row-major: rotation matrix + translation
@@ -792,17 +760,9 @@ pub fn encode_registration_iod(result: &RegistrationResult, study_uid: &str, ser
         r20, r21, r22, result.transform.tz,
     );
 
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x030C),
-        vr: Vr::Fd,
-        value: Value::Str(matrix_values),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x030C), Vr::Fd, Value::Str(matrix_values)).unwrap());
 
-    ds.insert(Element {
-        tag: Tag(0x0070, 0x0308),
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![reg_item]),
-    });
+    ds.insert(Element::new(Tag(0x0070, 0x0308), Vr::Sq, Value::Sequence(vec![reg_item]))?);
 
     Ok(ds)
 }
@@ -1244,11 +1204,7 @@ pub fn encode_deformable_registration_iod(
     let mut ds = Dataset::new();
 
     // SOP Class UID for Deformable Spatial Registration Storage (1.2.840.10008.5.1.4.1.1.66.3)
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0016),
-        vr: Vr::Ui,
-        value: Value::Uid("1.2.840.10008.5.1.4.1.1.66.3".to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.66.3".to_string()))?);
 
     // SOP Instance UID
     let sop_uid = format!(
@@ -1257,80 +1213,36 @@ pub fn encode_deformable_registration_iod(
         series_uid.len(),
         dvf.width
     );
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0018),
-        vr: Vr::Ui,
-        value: Value::Uid(sop_uid),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
 
     // Study Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000D),
-        vr: Vr::Ui,
-        value: Value::Uid(study_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
 
     // Series Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000E),
-        vr: Vr::Ui,
-        value: Value::Uid(series_uid.to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
 
     // Deformable Registration Sequence
     let mut reg_item = Dataset::new();
 
     // Deformable Registration Type Code Sequence
     let mut type_item = Dataset::new();
-    type_item.insert(Element {
-        tag: Tag(0x0008, 0x0100),
-        vr: Vr::Sh,
-        value: Value::Str("DEFORMABLE".to_string()),
-    });
-    type_item.insert(Element {
-        tag: Tag(0x0008, 0x0102),
-        vr: Vr::Sh,
-        value: Value::Str("99DICOM_REG".to_string()),
-    });
-    type_item.insert(Element {
-        tag: Tag(0x0008, 0x0104),
-        vr: Vr::Lo,
-        value: Value::Str("Deformable".to_string()),
-    });
+    type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("DEFORMABLE".to_string())).unwrap());
+    type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("99DICOM_REG".to_string())).unwrap());
+    type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Deformable".to_string())).unwrap());
 
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x030D),
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![type_item]),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x030D), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
 
     // Grid dimensions
     let (nx, ny, nz) = bspline.grid_dimensions;
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x0305),
-        vr: Vr::Us,
-        value: Value::I32(nx as i32),
-    });
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x0306),
-        vr: Vr::Us,
-        value: Value::I32(ny as i32),
-    });
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x0307),
-        vr: Vr::Us,
-        value: Value::I32(nz as i32),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x0305), Vr::Us, Value::I32(nx as i32)).unwrap());
+    reg_item.insert(Element::new(Tag(0x0070, 0x0306), Vr::Us, Value::I32(ny as i32)).unwrap());
+    reg_item.insert(Element::new(Tag(0x0070, 0x0307), Vr::Us, Value::I32(nz as i32)).unwrap());
 
     // Grid spacing
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x0308),
-        vr: Vr::Ds,
-        value: Value::Str(format!(
-            "{:.6}\\\\{:.6}\\\\{:.6}",
-            bspline.grid_spacing.0, bspline.grid_spacing.1, bspline.grid_spacing.2
-        )),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x0308), Vr::Ds, Value::Str(format!(
+        "{:.6}\\\\{:.6}\\\\{:.6}",
+        bspline.grid_spacing.0, bspline.grid_spacing.1, bspline.grid_spacing.2
+    ))).unwrap());
 
     // Vector Grid Data (DVF displacements as OD)
     let mut dvf_bytes = Vec::new();
@@ -1343,17 +1255,9 @@ pub fn encode_deformable_registration_iod(
         dvf_bytes.extend_from_slice(&dz_bytes);
     }
 
-    reg_item.insert(Element {
-        tag: Tag(0x0070, 0x0309),
-        vr: Vr::Of,
-        value: Value::Bytes(dvf_bytes),
-    });
+    reg_item.insert(Element::new(Tag(0x0070, 0x0309), Vr::Of, Value::Bytes(dvf_bytes)).unwrap());
 
-    ds.insert(Element {
-        tag: Tag(0x0070, 0x0308),
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![reg_item]),
-    });
+    ds.insert(Element::new(Tag(0x0070, 0x0308), Vr::Sq, Value::Sequence(vec![reg_item]))?);
 
     Ok(ds)
 }

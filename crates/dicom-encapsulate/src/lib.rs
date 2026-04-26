@@ -188,69 +188,33 @@ pub fn encapsulate(request: &EncapsulateRequest) -> Result<Dataset> {
     let mut ds = Dataset::new();
 
     // SOP Class UID
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0016),
-        vr: Vr::Ui,
-        value: Value::Uid(request.mime_type.sop_class_uid().to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid(request.mime_type.sop_class_uid().to_string())).unwrap());
 
     // SOP Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0008, 0x0018),
-        vr: Vr::Ui,
-        value: Value::Uid(request.sop_instance_uid.clone()),
-    });
+    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(request.sop_instance_uid.clone())).unwrap());
 
     // Study Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000D),
-        vr: Vr::Ui,
-        value: Value::Uid(request.study_uid.clone()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(request.study_uid.clone())).unwrap());
 
     // Series Instance UID
-    ds.insert(Element {
-        tag: Tag(0x0020, 0x000E),
-        vr: Vr::Ui,
-        value: Value::Uid(request.series_uid.clone()),
-    });
+    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(request.series_uid.clone())).unwrap());
 
     // Patient ID
-    ds.insert(Element {
-        tag: Tag(0x0010, 0x0020),
-        vr: Vr::Lo,
-        value: Value::Str(request.patient_id.clone()),
-    });
+    ds.insert(Element::new(Tag(0x0010, 0x0020), Vr::Lo, Value::Str(request.patient_id.clone())).unwrap());
 
     // Patient Name
-    ds.insert(Element {
-        tag: Tag(0x0010, 0x0010),
-        vr: Vr::Pn,
-        value: Value::Str(request.patient_name.clone()),
-    });
+    ds.insert(Element::new(Tag(0x0010, 0x0010), Vr::Pn, Value::Str(request.patient_name.clone())).unwrap());
 
     // MIME Type of Encapsulated Document
-    ds.insert(Element {
-        tag: Tag(0x0042, 0x0012),
-        vr: Vr::Lo,
-        value: Value::Str(request.mime_type.mime_type().to_string()),
-    });
+    ds.insert(Element::new(Tag(0x0042, 0x0012), Vr::Lo, Value::Str(request.mime_type.mime_type().to_string())).unwrap());
 
     // Document Title
     if !request.document_title.is_empty() {
-        ds.insert(Element {
-            tag: Tag(0x0042, 0x0010),
-            vr: Vr::Lo,
-            value: Value::Str(request.document_title.clone()),
-        });
+        ds.insert(Element::new(Tag(0x0042, 0x0010), Vr::Lo, Value::Str(request.document_title.clone())).unwrap());
     }
 
     // Encapsulated Document (pixel data for non-image types)
-    ds.insert(Element {
-        tag: Tag(0x7FE0, 0x0010),
-        vr: Vr::Ob,
-        value: Value::Str(format!("encapsulated:{}", request.data.len())),
-    });
+    ds.insert(Element::new(Tag(0x7FE0, 0x0010), Vr::Ob, Value::Bytes(request.data.clone())).unwrap());
 
     Ok(ds)
 }

@@ -145,29 +145,27 @@ fn runtime_capability_and_builder_contracts_are_deterministic() {
     let default_config = Config::default();
     assert_eq!(default_config.capabilities, caps);
 
-    let custom_limits = Limits {
-        max_input_bytes: 123,
-        max_cache_bytes: 456,
-        ..Limits::default()
-    };
-    let custom_caps = Capabilities {
-        tier1_deflate: !caps.tier1_deflate,
-        codec_jpegls: !caps.codec_jpegls,
-        codec_j2k: !caps.codec_j2k,
-        raster_io: !caps.raster_io,
-        gsps: !caps.gsps,
-        modality_ct: !caps.modality_ct,
-        modality_pet: !caps.modality_pet,
-        modality_mg: !caps.modality_mg,
-        modality_xr: !caps.modality_xr,
-        pack_enhanced: !caps.pack_enhanced,
-        pack_us: !caps.pack_us,
-        pack_nm: !caps.pack_nm,
-        pack_xa: !caps.pack_xa,
-        pack_seg: !caps.pack_seg,
-        pack_rt: !caps.pack_rt,
-        pack_sr: !caps.pack_sr,
-    };
+    let mut custom_limits = Limits::default();
+    custom_limits.set_max_input_bytes(123);
+    custom_limits.set_max_cache_bytes(456);
+    let mut custom_caps = Capabilities::new(
+        !caps.tier1_deflate(),
+        !caps.codec_jpegls(),
+        !caps.codec_j2k(),
+        !caps.raster_io(),
+        !caps.gsps(),
+        !caps.modality_ct(),
+        !caps.modality_pet(),
+        !caps.modality_mg(),
+        !caps.modality_xr(),
+        !caps.pack_enhanced(),
+        !caps.pack_us(),
+        !caps.pack_nm(),
+        !caps.pack_xa(),
+        !caps.pack_seg(),
+        !caps.pack_rt(),
+        !caps.pack_sr(),
+    );
 
     let built = Config::builder()
         .limits(custom_limits.clone())

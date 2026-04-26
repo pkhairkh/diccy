@@ -72,7 +72,7 @@ mod tests {
         // REQ-FEAT-302, REQ-SOP-301: CR pack requires explicit Cargo feature.
         assert!(!CrPack::enabled());
         let err = CrPack::ensure_cr_supported(SOP_CLASS_CR).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+        assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
     }
 
     #[test]
@@ -90,7 +90,7 @@ mod tests {
             CrPack::ensure_physical_measurements_enabled().expect("cr pack enabled");
         } else {
             let err = CrPack::ensure_physical_measurements_enabled().unwrap_err();
-            assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+            assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
         }
     }
 }

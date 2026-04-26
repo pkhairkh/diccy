@@ -151,7 +151,7 @@ impl WasmViewer {
 
     /// Ingest DICOM P10 bytes from the host boundary with fail-closed limit checks.
     pub fn ingest_bytes(&mut self, bytes: &[u8]) -> bool {
-        if bytes.len() as u64 > self.limits.max_input_bytes {
+        if bytes.len() as u64 > self.limits.max_input_bytes() {
             return false;
         }
         let preview = match decode_preview_frame(bytes, &self.limits) {
@@ -896,7 +896,7 @@ fn display_frame_to_rgba(frame: DisplayFrame, limits: &Limits) -> Option<Preview
         return None;
     }
     let rgba_len = pixel_count.checked_mul(4)?;
-    if (rgba_len as u64) > limits.max_decompressed_bytes {
+    if (rgba_len as u64) > limits.max_decompressed_bytes() {
         return None;
     }
 
@@ -990,7 +990,7 @@ impl WasmViewer {
             Some(value) => value,
             None => return Vec::new(),
         };
-        if (out_len as u64) > self.limits.max_decompressed_bytes {
+        if (out_len as u64) > self.limits.max_decompressed_bytes() {
             return Vec::new();
         }
         let (start_x, start_y, src_w, src_h) = match self.source_window() {
@@ -1202,14 +1202,14 @@ mod tests {
             P10Reader::with_limits(BytesSource::new(bytes.to_vec()), limits.clone());
         let meta = match meta_reader.read_meta() {
             Ok(meta) => meta,
-            Err(err) => return format!("read_meta failed: {:?}", err.kind),
+            Err(err) => return format!("read_meta failed: {:?}", err.kind()),
         };
 
         let mut dataset_reader =
             P10Reader::with_limits(BytesSource::new(bytes.to_vec()), limits.clone());
         let dataset = match dataset_reader.read_dataset() {
             Ok(dataset) => dataset,
-            Err(err) => return format!("read_dataset failed: {:?}", err.kind),
+            Err(err) => return format!("read_dataset failed: {:?}", err.kind()),
         };
 
         let pipeline = PixelPipeline::new(PixelPipelineConfig {
@@ -1222,7 +1222,7 @@ mod tests {
             frame_index: 0,
         }) {
             Ok(frame) => frame,
-            Err(err) => return format!("decode_input failed: {:?}", err.kind),
+            Err(err) => return format!("decode_input failed: {:?}", err.kind()),
         };
 
         match display_frame_to_rgba(frame, &limits) {

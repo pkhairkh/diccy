@@ -575,7 +575,7 @@ mod tests {
         // REQ-FEAT-302, REQ-SOP-301: MG pack requires explicit Cargo feature.
         assert!(!MgPack::enabled());
         let err = MgPack::ensure_mg_supported(SOP_CLASS_MG_PRESENTATION).unwrap_err();
-        assert_eq!(err.code, "DVF.DICOM.UNSUPPORTED_SOP");
+        assert_eq!(err.code(), "DVF.DICOM.UNSUPPORTED_SOP");
     }
 
     #[test]
@@ -602,7 +602,7 @@ mod tests {
         for uid in MG_SOP_CLASS_UIDS {
             if uid.is_empty() || uid.starts_with('.') || uid.ends_with('.') {
                 let err = invalid_tag_value(TAG_SOP_CLASS_UID, "invalid UID format");
-                assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+                assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
             }
             assert!(uid.chars().all(|ch| ch.is_ascii_digit() || ch == '.'));
         }
@@ -615,7 +615,7 @@ mod tests {
             MgPack::ensure_physical_measurements_enabled().expect("mg pack enabled");
         } else {
             let err = MgPack::ensure_physical_measurements_enabled().unwrap_err();
-            assert_eq!(err.code, "DVF.PIXEL.INVALID_TRANSFORM");
+            assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
         }
     }
 

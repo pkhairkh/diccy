@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![deny(clippy::cast_possible_truncation)]
 
 //! DICOM Part 10 IO and input boundary handling.
 
@@ -118,7 +119,7 @@ impl BytesSource {
 
 impl DicomSource for BytesSource {
     fn len_hint(&self) -> Option<u64> {
-        Some(self.bytes.len() as u64)
+        Some(u64::try_from(self.bytes.len()).unwrap_or(u64::MAX))
     }
 
     fn read_to_end(&mut self) -> Result<Vec<u8>> {
@@ -342,7 +343,7 @@ impl<S: DicomSource> P10Reader<S> {
     pub fn read_meta(&mut self) -> Result<FileMeta> {
         self.enforce_len_hint()?;
         let data = self.source.read_to_end()?;
-        self.enforce_input_limit(data.len() as u64)?;
+        self.enforce_input_limit(u64::try_from(data.len()).map_err(|_| decode_error("p10", "input length exceeds u64"))?)?;
         let (meta, _, _, warnings) = parse_meta_with_raw_mode(&data, &self.limits, &self.options)?;
         self.warnings = warnings;
         Ok(meta)
@@ -358,7 +359,7 @@ impl<S: DicomSource> P10Reader<S> {
     pub fn read_dataset_with_diagnostics(&mut self) -> Result<DatasetDiagnostics> {
         self.enforce_len_hint()?;
         let data = self.source.read_to_end()?;
-        self.enforce_input_limit(data.len() as u64)?;
+        self.enforce_input_limit(u64::try_from(data.len()).map_err(|_| decode_error("p10", "input length exceeds u64"))?)?;
         let (meta, offset, raw_mode_used, mut warnings) =
             parse_meta_with_raw_mode(&data, &self.limits, &self.options)?;
         let transfer_syntax =
@@ -403,11 +404,11 @@ impl<S: DicomSource> P10Reader<S> {
     }
 
     fn enforce_input_limit(&self, len: u64) -> Result<()> {
-        if len > self.limits.max_input_bytes {
+        if len > self.limits.max_input_bytes() {
             return Err(limit_exceeded(
                 "max_input_bytes",
                 len,
-                self.limits.max_input_bytes,
+                self.limits.max_input_bytes(),
             ));
         }
         Ok(())
@@ -420,11 +421,12 @@ pub fn parse_dataset_bytes(
     transfer_syntax_uid: &str,
     limits: &Limits,
 ) -> Result<Dataset> {
-    if data.len() as u64 > limits.max_input_bytes {
+    let data_len_u64 = u64::try_from(data.len()).map_err(|_| decode_error("dataset", "input length exceeds u64"))?;
+    if data_len_u64 > limits.max_input_bytes() {
         return Err(limit_exceeded(
             "max_input_bytes",
-            data.len() as u64,
-            limits.max_input_bytes,
+            data_len_u64,
+            limits.max_input_bytes(),
         ));
     }
     let transfer_syntax = transfer_syntax_from_uid(transfer_syntax_uid)?;
@@ -513,7 +515,7 @@ fn charset_warnings(dataset: &Dataset) -> Vec<ParserWarning> {
     let Some(element) = dataset.get(Tag(0x0008, 0x0005)) else {
         return warnings;
     };
-    let Value::Str(value) = &element.value else {
+    let Value::Str(value) = element.value() else {
         warnings.push(ParserWarning {
             code: "DVF.IO.CHARSET_INVALID",
             detail: "Specific Character Set has non-string value".to_string(),
@@ -546,17 +548,21 @@ fn capture_debug_offsets(data: &[u8], offset: usize) -> Vec<ElementDebugMeta> {
                 if cursor + 12 > data.len() {
                     break;
                 }
-                let len = u32::from_le_bytes([
+                let len_u32 = u32::from_le_bytes([
                     data[cursor + 8],
                     data[cursor + 9],
                     data[cursor + 10],
                     data[cursor + 11],
-                ]) as usize;
+                ]);
+                let len = match usize::try_from(len_u32) {
+                    Ok(l) => l,
+                    Err(_) => break,
+                };
                 (12usize, len)
             }
             _ => {
-                let len = u16::from_le_bytes([data[cursor + 6], data[cursor + 7]]) as usize;
-                (8usize, len)
+                let len = u16::from_le_bytes([data[cursor + 6], data[cursor + 7]]);
+                (8usize, usize::from(len))
             }
         };
         if cursor
@@ -607,7 +613,8 @@ fn parse_p10_meta(data: &[u8], limits: &Limits) -> Result<(FileMeta, usize)> {
 
         let (vr, length) = parser.read_explicit_vr_and_len()?;
         parser.enforce_element_length(length)?;
-        let value_bytes = parser.read_bytes(length as usize)?;
+        let value_len = usize::try_from(length).map_err(|_| decode_error("p10", "element value length exceeds usize"))?;
+        let value_bytes = parser.read_bytes(value_len)?;
 
         match tag {
             Tag(0x0002, 0x0010) => {
@@ -692,12 +699,12 @@ fn inflate_dataset(data: &[u8], offset: usize, limits: &Limits) -> Result<Vec<u8
         if read == 0 {
             break;
         }
-        total = total.saturating_add(read as u64);
-        if total > limits.max_decompressed_bytes {
+        total = total.saturating_add(u64::try_from(read).unwrap_or(u64::MAX));
+        if total > limits.max_decompressed_bytes() {
             return Err(limit_exceeded(
                 "max_decompressed_bytes",
                 total,
-                limits.max_decompressed_bytes,
+                limits.max_decompressed_bytes(),
             ));
         }
         out.extend_from_slice(&buf[..read]);
@@ -763,29 +770,29 @@ fn is_supported_sop_class(sop_class_uid: &str) -> bool {
     }
 
     let caps = dicom_core::capabilities();
-    if caps.pack_enhanced && matches!(sop_class_uid, SOP_CLASS_ENHANCED_CT | SOP_CLASS_ENHANCED_MR)
+    if caps.pack_enhanced() && matches!(sop_class_uid, SOP_CLASS_ENHANCED_CT | SOP_CLASS_ENHANCED_MR)
     {
         return true;
     }
-    if caps.pack_us && matches!(sop_class_uid, SOP_CLASS_US | SOP_CLASS_US_MF) {
+    if caps.pack_us() && matches!(sop_class_uid, SOP_CLASS_US | SOP_CLASS_US_MF) {
         return true;
     }
-    if caps.pack_nm && sop_class_uid == SOP_CLASS_NM {
+    if caps.pack_nm() && sop_class_uid == SOP_CLASS_NM {
         return true;
     }
-    if caps.pack_xa && matches!(sop_class_uid, SOP_CLASS_XA | SOP_CLASS_XRF) {
+    if caps.pack_xa() && matches!(sop_class_uid, SOP_CLASS_XA | SOP_CLASS_XRF) {
         return true;
     }
-    if caps.modality_pet && sop_class_uid == SOP_CLASS_PET {
+    if caps.modality_pet() && sop_class_uid == SOP_CLASS_PET {
         return true;
     }
-    if caps.modality_xr && matches!(sop_class_uid, SOP_CLASS_CR | SOP_CLASS_DX_PRESENTATION) {
+    if caps.modality_xr() && matches!(sop_class_uid, SOP_CLASS_CR | SOP_CLASS_DX_PRESENTATION) {
         return true;
     }
-    if caps.pack_seg && sop_class_uid == SOP_CLASS_SEG {
+    if caps.pack_seg() && sop_class_uid == SOP_CLASS_SEG {
         return true;
     }
-    if caps.pack_rt
+    if caps.pack_rt()
         && matches!(
             sop_class_uid,
             SOP_CLASS_RT_DOSE | SOP_CLASS_RT_STRUCTURE | SOP_CLASS_RT_PLAN
@@ -793,7 +800,7 @@ fn is_supported_sop_class(sop_class_uid: &str) -> bool {
     {
         return true;
     }
-    if caps.pack_sr
+    if caps.pack_sr()
         && matches!(
             sop_class_uid,
             SOP_CLASS_SR_BASIC_TEXT | SOP_CLASS_SR_COMPREHENSIVE
@@ -801,7 +808,7 @@ fn is_supported_sop_class(sop_class_uid: &str) -> bool {
     {
         return true;
     }
-    if caps.gsps && sop_class_uid == SOP_CLASS_GSPS {
+    if caps.gsps() && sop_class_uid == SOP_CLASS_GSPS {
         return true;
     }
 
@@ -891,7 +898,7 @@ fn missing_required_tag(tag: Tag) -> Box<Error> {
 fn read_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<String>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Uid(value) => Ok(Some(value.clone())),
             Value::Str(value) => Ok(Some(value.clone())),
             Value::Bytes(bytes) => Ok(Some(parse_uid(bytes, limits)?)),
@@ -903,7 +910,7 @@ fn read_uid(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<Strin
 fn read_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<String>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => Ok(Some(value.clone())),
             Value::Uid(value) => Ok(Some(value.clone())),
             Value::Bytes(bytes) => Ok(Some(parse_string(bytes, limits)?)),
@@ -915,9 +922,9 @@ fn read_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<St
 fn read_u16(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
-            Value::I32(value) if *value >= 0 && *value <= u16::MAX as i32 => {
-                Ok(Some(*value as u16))
+        Some(element) => match element.value() {
+            Value::I32(value) if *value >= 0 && *value <= i32::from(u16::MAX) => {
+                Ok(Some(u16::try_from(*value).map_err(|_| invalid_tag_value(tag, "i32 value out of u16 range"))?))
             }
             Value::Bytes(bytes) => Ok(Some(parse_u16_le(bytes, tag)?)),
             _ => Err(invalid_tag_value(tag, "expected u16 value")),
@@ -938,11 +945,11 @@ fn parse_dataset_internal(
     transfer_syntax: TransferSyntax,
     depth: u64,
 ) -> Result<Dataset> {
-    if depth > parser.limits.max_sequence_depth {
+    if depth > parser.limits.max_sequence_depth() {
         return Err(limit_exceeded(
             "max_sequence_depth",
             depth,
-            parser.limits.max_sequence_depth,
+            parser.limits.max_sequence_depth(),
         ));
     }
 
@@ -981,21 +988,21 @@ fn parse_dataset_internal(
         if length == u32::MAX {
             if tag == Tag(0x7FE0, 0x0010) {
                 let bytes = parse_fragments(parser)?;
-                dataset.insert(Element {
+                dataset.insert(Element::new(
                     tag,
                     vr,
-                    value: Value::Bytes(bytes),
-                });
+                    Value::Bytes(bytes),
+                )?);
                 continue;
             }
             if is_undefined_length_sequence_container(parser, vr, transfer_syntax) {
                 let items = parse_sequence(parser, transfer_syntax, depth + 1, None)?;
                 let effective_vr = if vr == Vr::Un { Vr::Sq } else { vr };
-                dataset.insert(Element {
+                dataset.insert(Element::new(
                     tag,
-                    vr: effective_vr,
-                    value: Value::Sequence(items),
-                });
+                    effective_vr,
+                    Value::Sequence(items),
+                )?);
                 continue;
             }
 
@@ -1006,20 +1013,21 @@ fn parse_dataset_internal(
         }
 
         parser.enforce_element_length(length)?;
-        let value_bytes = parser.read_bytes(length as usize)?;
+        let value_len_usize = usize::try_from(length).map_err(|_| decode_error("dataset", "element value length exceeds usize"))?;
+        let value_bytes = parser.read_bytes(value_len_usize)?;
 
         if vr == Vr::Sq {
             let items = parse_sequence(parser, transfer_syntax, depth + 1, Some(length))?;
-            dataset.insert(Element {
+            dataset.insert(Element::new(
                 tag,
                 vr,
-                value: Value::Sequence(items),
-            });
+                Value::Sequence(items),
+            )?);
             continue;
         }
 
         let value = value_from_bytes(vr, value_bytes, &parser.limits)?;
-        dataset.insert(Element { tag, vr, value });
+        dataset.insert(Element::new(tag, vr, value)?);
     }
 
     Ok(dataset)
@@ -1046,7 +1054,12 @@ fn parse_sequence(
     length: Option<u32>,
 ) -> Result<Vec<Dataset>> {
     let mut items = Vec::new();
-    let end_offset = length.map(|len| parser.offset().saturating_add(len as usize));
+    let end_offset = length.map(|len| {
+        usize::try_from(len)
+            .ok()
+            .and_then(|l| parser.offset().checked_add(l))
+            .unwrap_or(usize::MAX)
+    });
 
     loop {
         if let Some(end) = end_offset {
@@ -1070,7 +1083,8 @@ fn parse_sequence(
         let item_end = if item_len == u32::MAX {
             None
         } else {
-            Some(parser.offset().saturating_add(item_len as usize))
+            let item_len_usize = usize::try_from(item_len).map_err(|_| decode_error("sequence", "item length exceeds usize"))?;
+            Some(parser.offset().checked_add(item_len_usize).ok_or_else(|| decode_error("sequence", "offset overflow"))?)
         };
         let item_dataset = parse_dataset_internal(parser, item_end, transfer_syntax, depth)?;
         items.push(item_dataset);
@@ -1098,15 +1112,16 @@ fn parse_fragments(parser: &mut Parser<'_>) -> Result<Vec<u8>> {
         if item_len == u32::MAX {
             return Err(decode_error("fragments", "undefined fragment length"));
         }
-        let new_len = bytes.len() as u64 + item_len as u64;
-        if new_len > parser.limits.max_element_vl_bytes {
+        let item_len_usize = usize::try_from(item_len).map_err(|_| decode_error("fragments", "fragment length exceeds usize"))?;
+        let new_len = u64::try_from(bytes.len()).map_err(|_| decode_error("fragments", "accumulated length exceeds u64"))? + u64::from(item_len);
+        if new_len > parser.limits.max_element_vl_bytes() {
             return Err(limit_exceeded(
                 "max_element_vl_bytes",
                 new_len,
-                parser.limits.max_element_vl_bytes,
+                parser.limits.max_element_vl_bytes(),
             ));
         }
-        let frag = parser.read_bytes(item_len as usize)?;
+        let frag = parser.read_bytes(item_len_usize)?;
         bytes.extend_from_slice(frag);
     }
 
@@ -1139,11 +1154,12 @@ fn parse_uid(bytes: &[u8], limits: &Limits) -> Result<String> {
 }
 
 fn parse_string(bytes: &[u8], limits: &Limits) -> Result<String> {
-    if bytes.len() as u64 > limits.max_string_bytes {
+    let bytes_len_u64 = u64::try_from(bytes.len()).map_err(|_| decode_error("string", "string length exceeds u64"))?;
+    if bytes_len_u64 > limits.max_string_bytes() {
         return Err(limit_exceeded(
             "max_string_bytes",
-            bytes.len() as u64,
-            limits.max_string_bytes,
+            bytes_len_u64,
+            limits.max_string_bytes(),
         ));
     }
     Ok(String::from_utf8_lossy(bytes).into_owned())
@@ -1211,7 +1227,7 @@ impl<'a> Parser<'a> {
                 let _ = self.read_u16()?;
                 self.read_u32()?
             }
-            _ => self.read_u16()? as u32,
+            _ => u32::from(self.read_u16()?),
         };
         Ok((vr, length))
     }
@@ -1230,11 +1246,11 @@ impl<'a> Parser<'a> {
     }
 
     fn enforce_element_length(&self, length: u32) -> Result<()> {
-        if length as u64 > self.limits.max_element_vl_bytes {
+        if u64::from(length) > self.limits.max_element_vl_bytes() {
             return Err(limit_exceeded(
                 "max_element_vl_bytes",
-                length as u64,
-                self.limits.max_element_vl_bytes,
+                u64::from(length),
+                self.limits.max_element_vl_bytes(),
             ));
         }
         Ok(())
@@ -1242,11 +1258,11 @@ impl<'a> Parser<'a> {
 
     fn increment_element_count(&mut self) -> Result<()> {
         self.element_count += 1;
-        if self.element_count > self.limits.max_dataset_elements {
+        if self.element_count > self.limits.max_dataset_elements() {
             return Err(limit_exceeded(
                 "max_dataset_elements",
                 self.element_count,
-                self.limits.max_dataset_elements,
+                self.limits.max_dataset_elements(),
             ));
         }
         Ok(())
@@ -1357,7 +1373,7 @@ mod tests {
         if bytes.len() % 2 == 1 {
             bytes.push(0);
         }
-        buf.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+        buf.extend_from_slice(&u16::try_from(bytes.len()).map_err(|_| "test: bytes exceed u16".to_string()).unwrap_or_default().to_le_bytes());
         buf.extend_from_slice(&bytes);
         buf
     }
@@ -1366,7 +1382,7 @@ mod tests {
         let mut buf = Vec::new();
         buf.extend_from_slice(&tag.0.to_le_bytes());
         buf.extend_from_slice(&tag.1.to_le_bytes());
-        buf.extend_from_slice(&(value.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&u32::try_from(value.len()).map_err(|_| "test: value exceeds u32".to_string()).unwrap_or_default().to_le_bytes());
         buf.extend_from_slice(value);
         buf
     }
@@ -1407,10 +1423,10 @@ mod tests {
         match &vr {
             b"OB" | b"OW" | b"SQ" | b"UN" | b"UT" => {
                 buf.extend_from_slice(&0u16.to_le_bytes());
-                buf.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&u32::try_from(bytes.len()).map_err(|_| "test: bytes exceed u32".to_string()).unwrap_or_default().to_le_bytes());
             }
             _ => {
-                buf.extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+                buf.extend_from_slice(&u16::try_from(bytes.len()).map_err(|_| "test: bytes exceed u16".to_string()).unwrap_or_default().to_le_bytes());
             }
         }
         buf.extend_from_slice(&bytes);
@@ -1637,10 +1653,11 @@ mod tests {
                 }
                 _ => {
                     let len_bytes = &dataset[offset + 6..offset + 8];
-                    (u16::from_le_bytes([len_bytes[0], len_bytes[1]]) as u32, 8)
+                    (u32::from(u16::from_le_bytes([len_bytes[0], len_bytes[1]])), 8)
                 }
             };
-            let element_end = offset + header_len + (len as usize);
+            let len_usize = usize::try_from(len).unwrap_or(usize::MAX);
+            let element_end = offset + header_len + len_usize;
             if tag != study_tag {
                 stripped.extend_from_slice(&dataset[offset..element_end]);
             }
@@ -1714,10 +1731,7 @@ mod tests {
     #[test]
     fn p10reader_uses_explicit_limits() {
         // REQ-SEC-402: explicit limits override defaults.
-        let limits = Limits {
-            max_input_bytes: 1,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_input_bytes(1).build().unwrap();
         let reader = P10Reader::with_limits(EmptySource, limits.clone());
         assert_eq!(reader.limits(), &limits);
     }
@@ -1730,7 +1744,7 @@ mod tests {
         let err = strict
             .read_dataset()
             .expect_err("strict mode must reject raw bytes");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
 
         let mut raw_reader = P10Reader::with_limits_and_options(
             BytesSource::new(dataset),
@@ -1790,8 +1804,8 @@ mod tests {
         // REQ-IO-010: malformed P10 prefix is rejected.
         let mut reader = P10Reader::new(BytesSource::new(vec![0u8; 10]));
         let err = reader.read_meta().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
-        assert_eq!(err.code, "DVF.DICOM.DECODE_ERROR");
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
+        assert_eq!(err.code(), "DVF.DICOM.DECODE_ERROR");
     }
 
     #[test]
@@ -1806,13 +1820,10 @@ mod tests {
     fn read_dataset_respects_max_input_bytes() {
         // REQ-API-210: limit violations return LimitExceeded.
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &[]);
-        let limits = Limits {
-            max_input_bytes: 4,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_input_bytes(4).build().unwrap();
         let mut reader = P10Reader::with_limits(BytesSource::new(bytes), limits);
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
@@ -1833,7 +1844,7 @@ mod tests {
             0x0008, 0x1115,
         )));
         let item_payload = dataset_element_implicit(Tag(0x0008, 0x1155), b"1.2.3");
-        dataset.extend_from_slice(&item_tag_with_length(item_payload.len() as u32));
+        dataset.extend_from_slice(&item_tag_with_length(u32::try_from(item_payload.len()).map_err(|_| "test: payload exceeds u32".to_string()).unwrap_or_default()));
         dataset.extend_from_slice(&item_payload);
         dataset.extend_from_slice(&sequence_delim_tag());
 
@@ -1841,7 +1852,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let parsed = reader.read_dataset().expect("dataset");
         let seq = parsed.get(Tag(0x0008, 0x1115)).expect("sequence element");
-        match &seq.value {
+        match seq.value() {
             dicom_core::Value::Sequence(items) => assert_eq!(items.len(), 1),
             _ => panic!("expected sequence value"),
         }
@@ -1858,7 +1869,7 @@ mod tests {
         let bytes = build_p10(TS_IMPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected decode error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -1869,17 +1880,14 @@ mod tests {
         dataset.extend_from_slice(&Tag(0x0010, 0x0010).0.to_le_bytes());
         dataset.extend_from_slice(&Tag(0x0010, 0x0010).1.to_le_bytes());
         dataset.extend_from_slice(b"LO");
-        dataset.extend_from_slice(&(value.len() as u16).to_le_bytes());
+        dataset.extend_from_slice(&u16::try_from(value.len()).map_err(|_| "test: value exceeds u16".to_string()).unwrap_or_default().to_le_bytes());
         dataset.extend_from_slice(&value);
 
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
-        let limits = Limits {
-            max_element_vl_bytes: 4,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_element_vl_bytes(4).build().unwrap();
         let mut reader = P10Reader::with_limits(BytesSource::new(bytes), limits);
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
@@ -1890,7 +1898,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -1903,7 +1911,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -1917,7 +1925,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -1990,7 +1998,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -2026,7 +2034,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -2040,7 +2048,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -2065,7 +2073,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -2090,7 +2098,7 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::UnsupportedTransferSyntax { .. }
         ));
     }
@@ -2113,39 +2121,39 @@ mod tests {
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_deferred_enhanced_ct_sop_when_pack_disabled() {
         // REQ-SOP-301: deferred pack SOP classes must fail closed when pack is not enabled.
-        if dicom_core::capabilities().pack_enhanced {
+        if dicom_core::capabilities().pack_enhanced() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_ENHANCED_CT);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_enhanced_mr_sop_when_pack_disabled() {
         // REQ-SOP-301: pack SOP classes must fail closed when pack is not enabled.
-        if dicom_core::capabilities().pack_enhanced {
+        if dicom_core::capabilities().pack_enhanced() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_ENHANCED_MR);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_enhanced_ct_mr_sops_when_pack_enabled() {
         // REQ-CONF-084/REQ-SOP-301: enhanced SOP classes are accepted when pack-enhanced is enabled.
-        if !dicom_core::capabilities().pack_enhanced {
+        if !dicom_core::capabilities().pack_enhanced() {
             return;
         }
         assert_dataset_accepted(minimal_enhanced_dataset_explicit(
@@ -2159,7 +2167,7 @@ mod tests {
     #[test]
     fn read_dataset_rejects_us_sops_when_pack_disabled() {
         // REQ-SOP-301: US SOP classes fail closed when pack-us is disabled.
-        if dicom_core::capabilities().pack_us {
+        if dicom_core::capabilities().pack_us() {
             return;
         }
         for sop in [super::SOP_CLASS_US, super::SOP_CLASS_US_MF] {
@@ -2167,14 +2175,14 @@ mod tests {
             let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
             let mut reader = P10Reader::new(BytesSource::new(bytes));
             let err = reader.read_dataset().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+            assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
         }
     }
 
     #[test]
     fn read_dataset_accepts_us_sops_when_pack_enabled() {
         // REQ-CONF-085/REQ-SOP-301: US SOP classes are accepted when pack-us is enabled.
-        if !dicom_core::capabilities().pack_us {
+        if !dicom_core::capabilities().pack_us() {
             return;
         }
         assert_dataset_accepted(minimal_sc_dataset_explicit(super::SOP_CLASS_US));
@@ -2184,20 +2192,20 @@ mod tests {
     #[test]
     fn read_dataset_rejects_nm_sop_when_pack_disabled() {
         // REQ-SOP-301: NM SOP class fails closed when pack-nm is disabled.
-        if dicom_core::capabilities().pack_nm {
+        if dicom_core::capabilities().pack_nm() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_NM);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_nm_sop_when_pack_enabled() {
         // REQ-CONF-085/REQ-SOP-301: NM SOP class is accepted when pack-nm is enabled.
-        if !dicom_core::capabilities().pack_nm {
+        if !dicom_core::capabilities().pack_nm() {
             return;
         }
         assert_dataset_accepted(minimal_sc_dataset_explicit(super::SOP_CLASS_NM));
@@ -2206,7 +2214,7 @@ mod tests {
     #[test]
     fn read_dataset_rejects_xa_xrf_sops_when_pack_disabled() {
         // REQ-SOP-301: XA/XRF SOP classes fail closed when pack-xa is disabled.
-        if dicom_core::capabilities().pack_xa {
+        if dicom_core::capabilities().pack_xa() {
             return;
         }
         for sop in [super::SOP_CLASS_XA, super::SOP_CLASS_XRF] {
@@ -2214,14 +2222,14 @@ mod tests {
             let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
             let mut reader = P10Reader::new(BytesSource::new(bytes));
             let err = reader.read_dataset().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+            assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
         }
     }
 
     #[test]
     fn read_dataset_accepts_xa_xrf_sops_when_pack_enabled() {
         // REQ-CONF-085/REQ-SOP-301: XA/XRF SOP classes are accepted when pack-xa is enabled.
-        if !dicom_core::capabilities().pack_xa {
+        if !dicom_core::capabilities().pack_xa() {
             return;
         }
         assert_dataset_accepted(minimal_sc_dataset_explicit(super::SOP_CLASS_XA));
@@ -2231,20 +2239,20 @@ mod tests {
     #[test]
     fn read_dataset_rejects_deferred_pet_sop_when_feature_not_enabled() {
         // REQ-SOP-301: deferred modality SOP classes must fail closed when feature is not enabled.
-        if dicom_core::capabilities().modality_pet {
+        if dicom_core::capabilities().modality_pet() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_PET);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_pet_sop_when_feature_enabled() {
         // REQ-CONF-002/REQ-SOP-301: promoted modality SOP classes are accepted when feature is enabled.
-        if !dicom_core::capabilities().modality_pet {
+        if !dicom_core::capabilities().modality_pet() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_PET);
@@ -2257,33 +2265,33 @@ mod tests {
     #[test]
     fn read_dataset_rejects_cr_sop_when_feature_not_enabled() {
         // REQ-SOP-301: CR SOP class fails closed when modality-xr is disabled.
-        if dicom_core::capabilities().modality_xr {
+        if dicom_core::capabilities().modality_xr() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_CR);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_dx_presentation_sop_when_feature_not_enabled() {
         // REQ-SOP-301: DX SOP class fails closed when modality-xr is disabled.
-        if dicom_core::capabilities().modality_xr {
+        if dicom_core::capabilities().modality_xr() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_DX_PRESENTATION);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_cr_sop_when_feature_enabled() {
         // REQ-CONF-002/REQ-SOP-301: promoted CR SOP class is accepted when modality-xr is enabled.
-        if !dicom_core::capabilities().modality_xr {
+        if !dicom_core::capabilities().modality_xr() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_CR);
@@ -2296,7 +2304,7 @@ mod tests {
     #[test]
     fn read_dataset_accepts_dx_presentation_sop_when_feature_enabled() {
         // REQ-CONF-002/REQ-SOP-301: promoted DX SOP class is accepted when modality-xr is enabled.
-        if !dicom_core::capabilities().modality_xr {
+        if !dicom_core::capabilities().modality_xr() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_DX_PRESENTATION);
@@ -2309,20 +2317,20 @@ mod tests {
     #[test]
     fn read_dataset_rejects_seg_sop_when_pack_disabled() {
         // REQ-SOP-301: SEG SOP class fails closed when pack-seg is disabled.
-        if dicom_core::capabilities().pack_seg {
+        if dicom_core::capabilities().pack_seg() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_SEG);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_seg_sop_when_pack_enabled() {
         // REQ-CONF-086/REQ-SOP-301: SEG SOP class is accepted when pack-seg is enabled.
-        if !dicom_core::capabilities().pack_seg {
+        if !dicom_core::capabilities().pack_seg() {
             return;
         }
         assert_dataset_accepted(minimal_seg_dataset_explicit(None));
@@ -2331,7 +2339,7 @@ mod tests {
     #[test]
     fn read_dataset_rejects_rt_sops_when_pack_disabled() {
         // REQ-SOP-301: RT SOP classes fail closed when pack-rt is disabled.
-        if dicom_core::capabilities().pack_rt {
+        if dicom_core::capabilities().pack_rt() {
             return;
         }
         for sop in [
@@ -2343,14 +2351,14 @@ mod tests {
             let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
             let mut reader = P10Reader::new(BytesSource::new(bytes));
             let err = reader.read_dataset().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+            assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
         }
     }
 
     #[test]
     fn read_dataset_accepts_rt_sops_when_pack_enabled() {
         // REQ-CONF-087/REQ-SOP-301: RT SOP classes are accepted when pack-rt is enabled.
-        if !dicom_core::capabilities().pack_rt {
+        if !dicom_core::capabilities().pack_rt() {
             return;
         }
         assert_dataset_accepted(minimal_rt_dose_dataset_explicit(None));
@@ -2361,7 +2369,7 @@ mod tests {
     #[test]
     fn read_dataset_rejects_sr_sops_when_pack_disabled() {
         // REQ-SOP-301: SR SOP classes fail closed when pack-sr is disabled.
-        if dicom_core::capabilities().pack_sr {
+        if dicom_core::capabilities().pack_sr() {
             return;
         }
         for sop in [
@@ -2372,14 +2380,14 @@ mod tests {
             let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
             let mut reader = P10Reader::new(BytesSource::new(bytes));
             let err = reader.read_dataset().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+            assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
         }
     }
 
     #[test]
     fn read_dataset_accepts_sr_sops_when_pack_enabled() {
         // REQ-CONF-088/REQ-SOP-301: SR SOP classes are accepted when pack-sr is enabled.
-        if !dicom_core::capabilities().pack_sr {
+        if !dicom_core::capabilities().pack_sr() {
             return;
         }
         assert_dataset_accepted(minimal_sc_dataset_explicit(super::SOP_CLASS_SR_BASIC_TEXT));
@@ -2391,20 +2399,20 @@ mod tests {
     #[test]
     fn read_dataset_rejects_gsps_sop_when_feature_disabled() {
         // REQ-SOP-301: GSPS SOP class fails closed when gsps feature is disabled.
-        if dicom_core::capabilities().gsps {
+        if dicom_core::capabilities().gsps() {
             return;
         }
         let dataset = minimal_sc_dataset_explicit(super::SOP_CLASS_GSPS);
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+        assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
     }
 
     #[test]
     fn read_dataset_accepts_gsps_sop_when_feature_enabled() {
         // REQ-CONF-089/REQ-SOP-301: GSPS SOP class is accepted when gsps is enabled.
-        if !dicom_core::capabilities().gsps {
+        if !dicom_core::capabilities().gsps() {
             return;
         }
         assert_dataset_accepted(minimal_sc_dataset_explicit(super::SOP_CLASS_GSPS));
@@ -2413,7 +2421,7 @@ mod tests {
     #[test]
     fn read_dataset_rejects_mammography_sops_even_when_modality_mg_enabled() {
         // REQ-CONF-002: MG SOP classes remain out-of-envelope in the IO conformance matrix and fail closed.
-        if !dicom_core::capabilities().modality_mg {
+        if !dicom_core::capabilities().modality_mg() {
             return;
         }
         for sop in [
@@ -2424,7 +2432,7 @@ mod tests {
             let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
             let mut reader = P10Reader::new(BytesSource::new(bytes));
             let err = reader.read_dataset().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::UnsupportedSopClass { .. }));
+            assert!(matches!(err.kind(), ErrorKind::UnsupportedSopClass { .. }));
         }
     }
 
@@ -2435,59 +2443,59 @@ mod tests {
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_rt_dose_missing_geometry() {
         // REQ-CONF-087
-        if !dicom_core::capabilities().pack_rt {
+        if !dicom_core::capabilities().pack_rt() {
             return;
         }
         let dataset = minimal_rt_dose_dataset_explicit(Some(Tag(0x0020, 0x0037)));
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_rt_structure_missing_contours() {
         // REQ-CONF-003
-        if !dicom_core::capabilities().pack_rt {
+        if !dicom_core::capabilities().pack_rt() {
             return;
         }
         let dataset = minimal_rt_structure_dataset_explicit(Some(Tag(0x3006, 0x0039)));
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_rt_plan_missing_reference() {
         // REQ-CONF-003
-        if !dicom_core::capabilities().pack_rt {
+        if !dicom_core::capabilities().pack_rt() {
             return;
         }
         let dataset = minimal_rt_plan_dataset_explicit(Some(Tag(0x300C, 0x0060)));
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
     fn read_dataset_rejects_seg_missing_frame_of_reference() {
         // REQ-CONF-086
-        if !dicom_core::capabilities().pack_seg {
+        if !dicom_core::capabilities().pack_seg() {
             return;
         }
         let dataset = minimal_seg_dataset_explicit(Some(Tag(0x0020, 0x0052)));
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
@@ -2502,7 +2510,7 @@ mod tests {
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
@@ -2517,7 +2525,7 @@ mod tests {
             symlink(&target_path, &link_path).expect("symlink");
             let mut reader = P10Reader::new(FileSource::new(&link_path));
             let err = reader.read_meta().expect_err("expected error");
-            assert!(matches!(err.kind, ErrorKind::IoError { .. }));
+            assert!(matches!(err.kind(), ErrorKind::IoError { .. }));
             let _ = fs::remove_file(&link_path);
             let _ = fs::remove_file(&target_path);
         }

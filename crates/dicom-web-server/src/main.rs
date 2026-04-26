@@ -622,7 +622,7 @@ fn handle_connection(
             Ok(request) => request,
             Err(err) => {
                 let response =
-                    http_error_response(400, "Bad Request", err.code, &err.message, false);
+                    http_error_response(400, "Bad Request", err.code(), &err.message(), false);
                 stream.write_all(&response)?;
                 return Ok(());
             }
@@ -681,7 +681,7 @@ fn handle_connection(
         Ok(request) => request,
         Err(err) => {
             let (status, label) = status_for_error(&err);
-            let response = http_error_response(status, label, err.code, &err.message, false);
+            let response = http_error_response(status, label, err.code(), &err.message(), false);
             stream.write_all(&response)?;
             return Ok(());
         }
@@ -703,7 +703,7 @@ fn handle_connection(
         Ok(response) => http_success_response(response, head_only),
         Err(err) => {
             let (status, label) = status_for_error(&err);
-            http_error_response(status, label, err.code, &err.message, head_only)
+            http_error_response(status, label, err.code(), &err.message(), head_only)
         }
     };
     if let Ok(mut tracker) = route_performance_tracker.lock() {
@@ -783,8 +783,8 @@ fn read_http_request(stream: &mut TcpStream, limits: &Limits) -> std::io::Result
     let mut temp = [0u8; 8192];
     let mut total_len: Option<usize> = None;
     let hard_cap = limits
-        .max_input_bytes
-        .saturating_add(limits.max_string_bytes) as usize;
+        .max_input_bytes()
+        .saturating_add(limits.max_string_bytes()) as usize;
 
     loop {
         let n = stream.read(&mut temp)?;
@@ -1797,10 +1797,8 @@ mod tests {
 
     #[test]
     fn status_for_error_uses_structured_not_found_code() {
-        let error = Error::new(
-            dicom_web::DICOM_WEB_NOT_FOUND_CODE,
-            ErrorKind::DecodeError {
-                stage: "dicom-web".to_string(),
+        let error = Error::from_kind(
+            ErrorKind::NotFound {
                 detail: "requested WADO instance not found".to_string(),
             },
             "not found",

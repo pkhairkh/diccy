@@ -31,110 +31,53 @@ fn build_dose_dataset(
     pixel_bytes: Vec<u8>,
 ) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_ROWS,
-        vr: Vr::Us,
-        value: Value::Str("1".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_COLUMNS,
-        vr: Vr::Us,
-        value: Value::Str("1".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_NUMBER_OF_FRAMES,
-        vr: Vr::Is,
-        value: Value::Str(frames.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PIXEL_SPACING,
-        vr: Vr::Ds,
-        value: Value::Str("1\\1".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_IMAGE_POSITION,
-        vr: Vr::Ds,
-        value: Value::Str("0\\0\\0".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_IMAGE_ORIENTATION,
-        vr: Vr::Ds,
-        value: Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_FRAME_OF_REFERENCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid("1.2.3".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_GRID_FRAME_OFFSET_VECTOR,
-        vr: Vr::Ds,
-        value: Value::Str(grid_offsets.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_DOSE_GRID_SCALING,
-        vr: Vr::Ds,
-        value: Value::Str(scaling.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_BITS_ALLOCATED,
-        vr: Vr::Us,
-        value: Value::Str(bits_allocated.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PIXEL_DATA,
-        vr: Vr::Ob,
-        value: Value::Bytes(pixel_bytes),
-    });
+    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(frames.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str(grid_offsets.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str(scaling.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str(bits_allocated.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_bytes),
+    ).unwrap());
     dataset
 }
 
 fn build_structure_dataset_with_type(points: &str, contour_type: &str) -> Dataset {
     let mut contour = Dataset::new();
-    contour.insert(Element {
-        tag: TAG_CONTOUR_GEOMETRIC_TYPE,
-        vr: Vr::Cs,
-        value: Value::Str(contour_type.to_string()),
-    });
-    contour.insert(Element {
-        tag: TAG_NUMBER_OF_CONTOUR_POINTS,
-        vr: Vr::Is,
-        value: Value::Str("4".to_string()),
-    });
-    contour.insert(Element {
-        tag: TAG_CONTOUR_DATA,
-        vr: Vr::Ds,
-        value: Value::Str(points.to_string()),
-    });
+    contour.insert(Element::new(TAG_CONTOUR_GEOMETRIC_TYPE, Vr::Cs, Value::Str(contour_type.to_string()),
+    ).unwrap());
+    contour.insert(Element::new(TAG_NUMBER_OF_CONTOUR_POINTS, Vr::Is, Value::Str("4".to_string()),
+    ).unwrap());
+    contour.insert(Element::new(TAG_CONTOUR_DATA, Vr::Ds, Value::Str(points.to_string()),
+    ).unwrap());
 
     let mut roi = Dataset::new();
-    roi.insert(Element {
-        tag: TAG_ROI_DISPLAY_COLOR,
-        vr: Vr::Is,
-        value: Value::Str("255\\0\\0".to_string()),
-    });
-    roi.insert(Element {
-        tag: TAG_CONTOUR_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![contour]),
-    });
+    roi.insert(Element::new(TAG_ROI_DISPLAY_COLOR, Vr::Is, Value::Str("255\\0\\0".to_string()),
+    ).unwrap());
+    roi.insert(Element::new(TAG_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![contour]),
+    ).unwrap());
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid("1.2.3.4".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_FRAME_OF_REFERENCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid("9.8.7".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_ROI_CONTOUR_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![roi]),
-    });
+    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_ROI_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![roi]),
+    ).unwrap());
     dataset
 }
 
@@ -144,7 +87,7 @@ fn rt_dose_overlay_contract_validates_scaling_alignment_and_frame_bounds() {
     let invalid_scaling = build_dose_dataset(1, "0", "0", 16, vec![0, 0]);
     let scaling_err = RtDoseGrid::from_dataset(&invalid_scaling).expect_err("scaling");
     assert!(matches!(
-        scaling_err.kind,
+        scaling_err.kind(),
         ErrorKind::InvalidTagValue { .. }
     ));
 
@@ -163,7 +106,7 @@ fn rt_dose_overlay_contract_validates_scaling_alignment_and_frame_bounds() {
     assert_eq!(first.bytes, second.bytes);
 
     let frame_err = dose.overlay_on(&reference, 1).expect_err("frame index");
-    assert!(matches!(frame_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(frame_err.kind(), ErrorKind::InvalidTagValue { .. }));
 
     let mismatch = RtReferenceGeometry {
         rows: 1,
@@ -174,7 +117,7 @@ fn rt_dose_overlay_contract_validates_scaling_alignment_and_frame_bounds() {
         frame_of_reference_uid: "1.2.3".to_string(),
     };
     let align_err = dose.overlay_on(&mismatch, 0).expect_err("alignment");
-    assert!(matches!(align_err.kind, ErrorKind::InvalidGeometry { .. }));
+    assert!(matches!(align_err.kind(), ErrorKind::InvalidGeometry { .. }));
 }
 
 #[test]
@@ -183,13 +126,13 @@ fn rt_structure_contract_rejects_invalid_contours_and_plane_mismatch() {
     let unsupported = build_structure_dataset_with_type("0\\0\\0\\1\\0\\0", "BEZIER");
     let unsupported_err = RtStructureSet::from_dataset(&unsupported).expect_err("unsupported");
     assert!(matches!(
-        unsupported_err.kind,
+        unsupported_err.kind(),
         ErrorKind::InvalidTagValue { .. }
     ));
 
     let bad_points = build_structure_dataset_with_type("0\\0\\0\\1", "CLOSED_PLANAR");
     let points_err = RtStructureSet::from_dataset(&bad_points).expect_err("point length");
-    assert!(matches!(points_err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(points_err.kind(), ErrorKind::InvalidTagValue { .. }));
 
     let valid =
         build_structure_dataset_with_type("0\\0\\1\\1\\0\\1\\1\\1\\1\\0\\1\\1", "CLOSED_PLANAR");
@@ -205,7 +148,7 @@ fn rt_structure_contract_rejects_invalid_contours_and_plane_mismatch() {
     let plane_err = structure
         .overlay_on(&reference)
         .expect_err("plane mismatch");
-    assert!(matches!(plane_err.kind, ErrorKind::InvalidGeometry { .. }));
+    assert!(matches!(plane_err.kind(), ErrorKind::InvalidGeometry { .. }));
 }
 
 #[test]
@@ -218,31 +161,19 @@ fn rt_plan_summary_requires_matching_structure_set_reference() {
     .expect("structure parse");
 
     let mut plan = Dataset::new();
-    plan.insert(Element {
-        tag: TAG_FRAME_OF_REFERENCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid("9.8.7".to_string()),
-    });
-    plan.insert(Element {
-        tag: TAG_RT_PLAN_LABEL,
-        vr: Vr::Sh,
-        value: Value::Str("PLAN".to_string()),
-    });
+    plan.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
+    ).unwrap());
+    plan.insert(Element::new(TAG_RT_PLAN_LABEL, Vr::Sh, Value::Str("PLAN".to_string()),
+    ).unwrap());
     let mut ref_item = Dataset::new();
-    ref_item.insert(Element {
-        tag: TAG_REFERENCED_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid("9.9.9.9".to_string()),
-    });
-    plan.insert(Element {
-        tag: TAG_REFERENCED_STRUCTURE_SET_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![ref_item]),
-    });
+    ref_item.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.9.9".to_string()),
+    ).unwrap());
+    plan.insert(Element::new(TAG_REFERENCED_STRUCTURE_SET_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_item]),
+    ).unwrap());
 
     let summary = RtPlanSummary::from_dataset(&plan).expect("plan parse");
     let err = summary
         .validate_structure_set(&structure)
         .expect_err("reference mismatch");
-    assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
 }

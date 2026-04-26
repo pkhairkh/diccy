@@ -159,7 +159,7 @@ fn ingest_runtime_distinguishes_inserted_duplicate_and_integrity_conflict_outcom
     let err = storage
         .ingest_bytes(conflict)
         .expect_err("mismatched SOP/hash tuple must fail closed");
-    assert!(matches!(err.kind, ErrorKind::IntegrityError { .. }));
+    assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
     assert_eq!(storage.log().len(), 1);
 }
 
@@ -220,7 +220,7 @@ fn durable_runtime_recovery_and_corruption_handling_follow_fail_closed_contracts
     fs::write(&corrupt_path, b"BAD!").expect("corrupt wal");
     let err = Storage::open(Limits::default(), &corrupt_path).expect_err("must fail closed");
     assert!(matches!(
-        err.kind,
+        err.kind(),
         ErrorKind::IntegrityError { .. } | ErrorKind::IoError { .. }
     ));
     let _ = fs::remove_file(&corrupt_path);

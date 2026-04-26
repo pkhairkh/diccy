@@ -41,63 +41,33 @@ fn cleanup_with_rotations(path: &Path, max_rotations: usize) {
 
 fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time: &str) -> Dataset {
     let mut item = Dataset::new();
-    item.insert(Element {
-        tag: TAG_SPS_ID,
-        vr: Vr::Sh,
-        value: Value::Str(step_id.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_MODALITY,
-        vr: Vr::Cs,
-        value: Value::Str(modality.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str(start_date.to_string()),
-    });
-    item.insert(Element {
-        tag: TAG_SPS_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str(start_time.to_string()),
-    });
+    item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(start_date.to_string()),
+    ).unwrap());
+    item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(start_time.to_string()),
+    ).unwrap());
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SPS_SEQUENCE,
-        vr: Vr::Sq,
-        value: Value::Sequence(vec![item]),
-    });
+    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
+    ).unwrap());
     dataset
 }
 
 fn mpps_dataset(status: &str, sop_instance_uid: &str) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element {
-        tag: TAG_SOP_INSTANCE_UID,
-        vr: Vr::Ui,
-        value: Value::Uid(sop_instance_uid.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_STATUS,
-        vr: Vr::Cs,
-        value: Value::Str(status.to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_PERFORMED_STEP_ID,
-        vr: Vr::Sh,
-        value: Value::Str("STEP-RUNTIME".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_DATE,
-        vr: Vr::Da,
-        value: Value::Str("20260214".to_string()),
-    });
-    dataset.insert(Element {
-        tag: TAG_START_TIME,
-        vr: Vr::Tm,
-        value: Value::Str("101500".to_string()),
-    });
+    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_instance_uid.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP-RUNTIME".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
+    ).unwrap());
+    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string()),
+    ).unwrap());
     dataset
 }
 

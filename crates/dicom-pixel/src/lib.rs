@@ -99,7 +99,7 @@ pub fn decode_raster_bytes(
     enforce_limit(
         "max_input_bytes",
         bytes.len() as u64,
-        limits.max_input_bytes,
+        limits.max_input_bytes(),
     )?;
 
     let (width, height) = raster_dimensions(format, bytes, limits)?;
@@ -113,7 +113,7 @@ pub fn decode_raster_bytes(
             enforce_limit(
                 "max_decompressed_bytes",
                 buf.len() as u64,
-                limits.max_decompressed_bytes,
+                limits.max_decompressed_bytes(),
             )?;
             Ok(DisplayFrame {
                 width,
@@ -131,7 +131,7 @@ pub fn decode_raster_bytes(
             enforce_limit(
                 "max_decompressed_bytes",
                 out.len() as u64,
-                limits.max_decompressed_bytes,
+                limits.max_decompressed_bytes(),
             )?;
             Ok(DisplayFrame {
                 width,
@@ -145,7 +145,7 @@ pub fn decode_raster_bytes(
             enforce_limit(
                 "max_decompressed_bytes",
                 buf.len() as u64,
-                limits.max_decompressed_bytes,
+                limits.max_decompressed_bytes(),
             )?;
             Ok(DisplayFrame {
                 width,
@@ -191,8 +191,8 @@ fn raster_dimensions(format: RasterFormat, bytes: &[u8], limits: &Limits) -> Res
 
     let pixels = (width as u64)
         .checked_mul(height as u64)
-        .ok_or_else(|| limit_overflow("max_pixels_per_frame", limits.max_pixels_per_frame))?;
-    enforce_limit("max_pixels_per_frame", pixels, limits.max_pixels_per_frame)?;
+        .ok_or_else(|| limit_overflow("max_pixels_per_frame", limits.max_pixels_per_frame()))?;
+    enforce_limit("max_pixels_per_frame", pixels, limits.max_pixels_per_frame())?;
     Ok((width, height))
 }
 
@@ -602,13 +602,13 @@ impl PixelMeta {
         enforce_limit(
             "max_frames_per_instance",
             self.number_of_frames as u64,
-            limits.max_frames_per_instance,
+            limits.max_frames_per_instance(),
         )?;
         let pixels_per_frame = (self.rows as u64).saturating_mul(self.cols as u64);
         enforce_limit(
             "max_pixels_per_frame",
             pixels_per_frame,
-            limits.max_pixels_per_frame,
+            limits.max_pixels_per_frame(),
         )?;
 
         let bytes_per_sample = (self.bits_allocated / 8) as u64;
@@ -616,18 +616,18 @@ impl PixelMeta {
             .checked_mul(self.samples_per_pixel as u64)
             .and_then(|v| v.checked_mul(bytes_per_sample))
             .ok_or_else(|| {
-                limit_overflow("max_decompressed_bytes", limits.max_decompressed_bytes)
+                limit_overflow("max_decompressed_bytes", limits.max_decompressed_bytes())
             })?;
 
         let total_bytes = bytes_per_frame
             .checked_mul(self.number_of_frames as u64)
             .ok_or_else(|| {
-                limit_overflow("max_decompressed_bytes", limits.max_decompressed_bytes)
+                limit_overflow("max_decompressed_bytes", limits.max_decompressed_bytes())
             })?;
         enforce_limit(
             "max_decompressed_bytes",
             total_bytes,
-            limits.max_decompressed_bytes,
+            limits.max_decompressed_bytes(),
         )?;
         Ok(())
     }
@@ -673,7 +673,7 @@ fn decode_pixels(
         .into())
     };
     let pixel_data = match dataset.get(tags::TAG_PIXEL_DATA) {
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => bytes.as_slice(),
             _ => {
                 return Err(invalid_tag_value(
@@ -998,10 +998,10 @@ fn decode_packbits(data: &[u8], expected: usize, limits: &Limits) -> Result<Vec<
             i += 1;
             out.extend(std::iter::repeat_n(value, count));
         }
-        if out.len() as u64 > limits.max_decompressed_bytes {
+        if out.len() as u64 > limits.max_decompressed_bytes() {
             return Err(limit_overflow(
                 "max_decompressed_bytes",
-                limits.max_decompressed_bytes,
+                limits.max_decompressed_bytes(),
             ));
         }
     }
@@ -1108,7 +1108,7 @@ fn decode_jpegls(data: &[u8], meta: &PixelMeta, config: &PixelPipelineConfig) ->
     enforce_limit(
         "max_decompressed_bytes",
         decoded.len() as u64,
-        config.limits.max_decompressed_bytes,
+        config.limits.max_decompressed_bytes(),
     )?;
 
     let mut samples = Vec::with_capacity(pixels_per_frame * meta.samples_per_pixel as usize);
@@ -1194,7 +1194,7 @@ fn decode_jpeg2000(
     enforce_limit(
         "max_decompressed_bytes",
         bitmap.data.len() as u64,
-        config.limits.max_decompressed_bytes,
+        config.limits.max_decompressed_bytes(),
     )?;
 
     let mut samples = Vec::with_capacity(bitmap.data.len());
@@ -1622,7 +1622,7 @@ fn apply_overlays(
 ) -> Result<()> {
     let overlay_data = match dataset.get(tags::TAG_OVERLAY_DATA) {
         None => return Ok(()),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => bytes,
             _ => {
                 return Err(invalid_tag_value(
@@ -1734,7 +1734,7 @@ fn read_u16_required(dataset: &Dataset, tag: Tag) -> Result<u16> {
 fn read_u16(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => parse_u16_from_bytes(tag, bytes).map(Some),
             Value::Str(value) => dicom_core::parse_i32_strict(tag, trim_dicom_padding(value))
                 .map(|v| v as u16)
@@ -1747,12 +1747,12 @@ fn read_u16(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
 fn read_optional_i32(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<i32>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 dicom_core::parse_i32_strict(tag, trim_dicom_padding(value)).map(Some)
             }
@@ -1765,7 +1765,7 @@ fn read_optional_i32(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Opt
 fn read_optional_i16(dataset: &Dataset, tag: Tag) -> Result<Option<i16>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => parse_i16_from_bytes(tag, bytes).map(Some),
             Value::Str(value) => dicom_core::parse_i32_strict(tag, trim_dicom_padding(value))
                 .map(|v| v as i16)
@@ -1778,12 +1778,12 @@ fn read_optional_i16(dataset: &Dataset, tag: Tag) -> Result<Option<i16>> {
 fn read_optional_f64(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<f64>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 dicom_core::parse_f64_strict(tag, trim_dicom_padding(value)).map(Some)
             }
@@ -1791,7 +1791,7 @@ fn read_optional_f64(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Opt
                 enforce_limit(
                     "max_string_bytes",
                     bytes.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 let s = String::from_utf8_lossy(bytes);
                 dicom_core::parse_f64_strict(tag, trim_dicom_padding(&s)).map(Some)
@@ -1804,12 +1804,12 @@ fn read_optional_f64(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Opt
 fn read_optional_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<Option<String>> {
     match dataset.get(tag) {
         None => Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(Some(value.clone()))
             }
@@ -1817,7 +1817,7 @@ fn read_optional_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(Some(value.clone()))
             }
@@ -1825,7 +1825,7 @@ fn read_optional_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<
                 enforce_limit(
                     "max_string_bytes",
                     bytes.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(Some(String::from_utf8_lossy(bytes).into_owned()))
             }
@@ -1837,12 +1837,12 @@ fn read_optional_string(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<
 fn read_overlay_origin(dataset: &Dataset, limits: &Limits) -> Result<(i32, i32)> {
     match dataset.get(tags::TAG_OVERLAY_ORIGIN) {
         None => Ok((1, 1)),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => {
                 enforce_limit(
                     "max_element_vl_bytes",
                     bytes.len() as u64,
-                    limits.max_element_vl_bytes,
+                    limits.max_element_vl_bytes(),
                 )?;
                 if bytes.len() == 4 {
                     let row = i16::from_le_bytes([bytes[0], bytes[1]]) as i32;
@@ -1863,7 +1863,7 @@ fn read_overlay_origin(dataset: &Dataset, limits: &Limits) -> Result<(i32, i32)>
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 let parts: Vec<&str> = value.split('\\').collect();
                 if parts.len() != 2 {
@@ -1887,12 +1887,12 @@ fn read_overlay_origin(dataset: &Dataset, limits: &Limits) -> Result<(i32, i32)>
 fn read_string_required(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<String> {
     match dataset.get(tag) {
         None => Err(missing_required_tag(tag)),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Str(value) => {
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(value.clone())
             }
@@ -1900,7 +1900,7 @@ fn read_string_required(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<
                 enforce_limit(
                     "max_string_bytes",
                     value.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(value.clone())
             }
@@ -1908,7 +1908,7 @@ fn read_string_required(dataset: &Dataset, tag: Tag, limits: &Limits) -> Result<
                 enforce_limit(
                     "max_string_bytes",
                     bytes.len() as u64,
-                    limits.max_string_bytes,
+                    limits.max_string_bytes(),
                 )?;
                 Ok(String::from_utf8_lossy(bytes).into_owned())
             }
@@ -1928,7 +1928,7 @@ fn trim_dicom_cs_padding(value: &str) -> &str {
 fn read_bytes_required(dataset: &Dataset, tag: Tag) -> Result<Vec<u8>> {
     match dataset.get(tag) {
         None => Err(missing_required_tag(tag)),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Bytes(bytes) => Ok(bytes.clone()),
             _ => Err(invalid_tag_value(tag, "expected bytes")),
         },
@@ -2025,7 +2025,7 @@ fn read_lut_sequence(
 ) -> Result<Option<Lut>> {
     let sequence = match dataset.get(tag) {
         None => return Ok(None),
-        Some(element) => match &element.value {
+        Some(element) => match element.value() {
             Value::Sequence(items) => items,
             _ => return Err(invalid_tag_value(tag, "LUT Sequence must be a sequence")),
         },
@@ -2081,7 +2081,7 @@ fn read_lut_sequence(
     enforce_limit(
         "max_element_vl_bytes",
         data_bytes.len() as u64,
-        limits.max_element_vl_bytes,
+        limits.max_element_vl_bytes(),
     )?;
 
     Ok(Some(Lut {
@@ -2148,60 +2148,30 @@ mod tests {
         pixel_data: Vec<u8>,
     ) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: tags::TAG_ROWS,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(rows.to_le_bytes().to_vec()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_COLUMNS,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(cols.to_le_bytes().to_vec()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_SAMPLES_PER_PIXEL,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_PHOTOMETRIC_INTERPRETATION,
-            vr: dicom_core::Vr::Cs,
-            value: Value::Str(photometric.to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_BITS_ALLOCATED,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_BITS_STORED,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(bits_stored.to_le_bytes().to_vec()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_HIGH_BIT,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(high_bit.to_le_bytes().to_vec()),
-        });
+        dataset.insert(Element::new(tags::TAG_ROWS, dicom_core::Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_COLUMNS, dicom_core::Vr::Us, Value::Bytes(cols.to_le_bytes().to_vec()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_SAMPLES_PER_PIXEL, dicom_core::Vr::Us, Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_PHOTOMETRIC_INTERPRETATION, dicom_core::Vr::Cs, Value::Str(photometric.to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_BITS_ALLOCATED, dicom_core::Vr::Us, Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_BITS_STORED, dicom_core::Vr::Us, Value::Bytes(bits_stored.to_le_bytes().to_vec()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_HIGH_BIT, dicom_core::Vr::Us, Value::Bytes(high_bit.to_le_bytes().to_vec()),
+        ).unwrap());
         if photometric.starts_with("MONOCHROME") {
-            dataset.insert(Element {
-                tag: tags::TAG_PIXEL_REPRESENTATION,
-                vr: dicom_core::Vr::Us,
-                value: Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
-            });
+            dataset.insert(Element::new(tags::TAG_PIXEL_REPRESENTATION, dicom_core::Vr::Us, Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
+            ).unwrap());
         }
         if let Some(planar) = planar_configuration {
-            dataset.insert(Element {
-                tag: tags::TAG_PLANAR_CONFIGURATION,
-                vr: dicom_core::Vr::Us,
-                value: Value::Bytes(planar.to_le_bytes().to_vec()),
-            });
+            dataset.insert(Element::new(tags::TAG_PLANAR_CONFIGURATION, dicom_core::Vr::Us, Value::Bytes(planar.to_le_bytes().to_vec()),
+            ).unwrap());
         }
-        dataset.insert(Element {
-            tag: tags::TAG_PIXEL_DATA,
-            vr: dicom_core::Vr::Ob,
-            value: Value::Bytes(pixel_data),
-        });
+        dataset.insert(Element::new(tags::TAG_PIXEL_DATA, dicom_core::Vr::Ob, Value::Bytes(pixel_data),
+        ).unwrap());
         dataset
     }
 
@@ -2218,11 +2188,8 @@ mod tests {
     fn enhanced_sop_uid_uid_value_is_accepted_in_optional_string_path() {
         // REQ-PIX-245: UID-valued SOP Class tags must be accepted on optional string reads.
         let mut dataset = Dataset::new();
-        dataset.insert(Element {
-            tag: tags::TAG_SOP_CLASS_UID,
-            vr: dicom_core::Vr::Ui,
-            value: Value::Uid(SOP_CLASS_ENHANCED_CT.to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_SOP_CLASS_UID, dicom_core::Vr::Ui, Value::Uid(SOP_CLASS_ENHANCED_CT.to_string()),
+        ).unwrap());
         assert!(is_enhanced_sop_class(&dataset, &Limits::default()).expect("enhanced sop"));
     }
 
@@ -2234,7 +2201,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::MissingRequiredTag { .. }));
+        assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));
     }
 
     #[test]
@@ -2252,16 +2219,10 @@ mod tests {
     fn decode_accepts_padded_rescale_values() {
         // REQ-PIX-245
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 16, 16, 15, 0, None, vec![1, 0]);
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_INTERCEPT,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("0 ".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_SLOPE,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1 ".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("0 ".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1 ".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2285,28 +2246,22 @@ mod tests {
             vec![128u8],
         );
         let mut config = PixelPipelineConfig::default();
-        config.limits.max_pixels_per_frame = 1_000;
+        config.limits.set_max_pixels_per_frame(1_000);
         let pipeline = PixelPipeline::new(config);
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::LimitExceeded { .. }));
+        assert!(matches!(err.kind(), ErrorKind::LimitExceeded { .. }));
     }
 
     #[test]
     fn monochrome1_inversion_applied_after_voi() {
         // REQ-PIX-242
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME1", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_CENTER,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("128".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_WIDTH,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("256".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("128".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("256".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2319,26 +2274,14 @@ mod tests {
     fn voi_linear_exact_boundary() {
         // REQ-PIX-265
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![0u8]);
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_CENTER,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("0".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_WIDTH,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("2".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_VOI_LUT_FUNCTION,
-            vr: dicom_core::Vr::Cs,
-            value: Value::Str("LINEAR_EXACT".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_PIXEL_DATA,
-            vr: dicom_core::Vr::Ob,
-            value: Value::Bytes(vec![0u8]),
-        });
+        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("0".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("2".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_VOI_LUT_FUNCTION, dicom_core::Vr::Cs, Value::Str("LINEAR_EXACT".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_PIXEL_DATA, dicom_core::Vr::Ob, Value::Bytes(vec![0u8]),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2386,26 +2329,14 @@ mod tests {
             None,
             vec![0x80, 0x00],
         );
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_INTERCEPT,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("-1024".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_SLOPE,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_CENTER,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("40".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_WIDTH,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("400".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("-1024".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("40".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("400".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let baseline = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2441,7 +2372,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
     }
 
     #[test]
@@ -2457,7 +2388,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
     }
 
     #[test]
@@ -2473,7 +2404,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
     }
 
     #[test]
@@ -2491,29 +2422,23 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
     fn non_finite_rescale_rejected() {
         // REQ-PIX-220
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_SLOPE,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1e309".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_INTERCEPT,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("0".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1e309".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("0".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::InvalidTagValue { .. } | ErrorKind::InvalidPixelTransform { .. }
         ));
     }
@@ -2533,16 +2458,10 @@ mod tests {
             None,
             i16::MAX.to_le_bytes().to_vec(),
         );
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_SLOPE,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1e308".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_RESCALE_INTERCEPT,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1e308".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1e308".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("1e308".to_string()),
+        ).unwrap());
         let config = PixelPipelineConfig {
             window_level: WindowLevel::Explicit {
                 center: 0.0,
@@ -2554,7 +2473,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
     }
 
     #[test]
@@ -2670,7 +2589,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
@@ -2692,7 +2611,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
@@ -2703,7 +2622,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG_BASELINE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -2712,16 +2631,13 @@ mod tests {
         // when offset-table indexing support is not enabled.
         let dataset = make_dataset(1, 1, 3, "RGB", 8, 8, 7, 0, Some(0), sample_jpeg_rgb());
         let mut dataset = dataset;
-        dataset.insert(Element {
-            tag: tags::TAG_NUMBER_OF_FRAMES,
-            vr: dicom_core::Vr::Is,
-            value: Value::Str("2".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG_BASELINE, 0)
             .expect_err("expected multi-frame rejection");
-        match &err.kind {
+        match &err.kind() {
             ErrorKind::DecodeError { detail, .. } => {
                 assert!(detail.contains("offset table support"));
             }
@@ -2737,7 +2653,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG_BASELINE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -2754,16 +2670,10 @@ mod tests {
         let encoded = charls.encode(frame, 0, &[128u8]).expect("encode");
 
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, encoded);
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_CENTER,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("128".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_WIDTH,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("256".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("128".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("256".to_string()),
+        ).unwrap());
 
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
@@ -2791,7 +2701,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_JPEGLS_LOSSLESS, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -2807,16 +2717,13 @@ mod tests {
         };
         let encoded = charls.encode(frame, 0, &[42u8]).expect("encode");
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, encoded);
-        dataset.insert(Element {
-            tag: tags::TAG_NUMBER_OF_FRAMES,
-            vr: dicom_core::Vr::Is,
-            value: Value::Str("2".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEGLS_LOSSLESS, 0)
             .expect_err("expected multi-frame rejection");
-        match &err.kind {
+        match &err.kind() {
             ErrorKind::DecodeError { detail, .. } => {
                 assert!(detail.contains("offset table support"));
             }
@@ -2839,13 +2746,13 @@ mod tests {
 
         let dataset = make_dataset(1, 2, 1, "MONOCHROME2", 8, 8, 7, 0, None, encoded);
         let mut config = PixelPipelineConfig::default();
-        config.limits.max_decompressed_bytes = 1;
+        config.limits.set_max_decompressed_bytes(1);
         let pipeline = PixelPipeline::new(config);
         let err = pipeline
             .decode_frame(&dataset, TS_JPEGLS_LOSSLESS, 0)
             .expect_err("expected error");
         assert!(matches!(
-            err.kind,
+            err.kind(),
             ErrorKind::LimitExceeded {
                 limit_name: "max_decompressed_bytes",
                 ..
@@ -2940,16 +2847,13 @@ mod tests {
             if samples_per_pixel > 1 { Some(0) } else { None },
             bytes,
         );
-        dataset.insert(Element {
-            tag: tags::TAG_NUMBER_OF_FRAMES,
-            vr: dicom_core::Vr::Is,
-            value: Value::Str("2".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG2000_LOSSLESS, 0)
             .expect_err("expected multi-frame rejection");
-        match &err.kind {
+        match &err.kind() {
             ErrorKind::DecodeError { detail, .. } => {
                 assert!(detail.contains("offset table support"));
             }
@@ -2965,69 +2869,45 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
     fn voi_function_rejects_sigmoid() {
         // REQ-PIX-262
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_CENTER,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("1".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_WINDOW_WIDTH,
-            vr: dicom_core::Vr::Ds,
-            value: Value::Str("2".to_string()),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_VOI_LUT_FUNCTION,
-            vr: dicom_core::Vr::Cs,
-            value: Value::Str("SIGMOID".to_string()),
-        });
+        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("1".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("2".to_string()),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_VOI_LUT_FUNCTION, dicom_core::Vr::Cs, Value::Str("SIGMOID".to_string()),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+        assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
     }
 
     #[test]
     fn overlay_bounds_rejected() {
         // REQ-PIX-280
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element {
-            tag: tags::TAG_OVERLAY_ROWS,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(vec![0x02, 0x00]),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_OVERLAY_COLUMNS,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(vec![0x02, 0x00]),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_OVERLAY_BITS_ALLOCATED,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(vec![0x01, 0x00]),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_OVERLAY_BIT_POSITION,
-            vr: dicom_core::Vr::Us,
-            value: Value::Bytes(vec![0x00, 0x00]),
-        });
-        dataset.insert(Element {
-            tag: tags::TAG_OVERLAY_DATA,
-            vr: dicom_core::Vr::Ob,
-            value: Value::Bytes(vec![0xFF]),
-        });
+        dataset.insert(Element::new(tags::TAG_OVERLAY_ROWS, dicom_core::Vr::Us, Value::Bytes(vec![0x02, 0x00]),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_OVERLAY_COLUMNS, dicom_core::Vr::Us, Value::Bytes(vec![0x02, 0x00]),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_OVERLAY_BITS_ALLOCATED, dicom_core::Vr::Us, Value::Bytes(vec![0x01, 0x00]),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_OVERLAY_BIT_POSITION, dicom_core::Vr::Us, Value::Bytes(vec![0x00, 0x00]),
+        ).unwrap());
+        dataset.insert(Element::new(tags::TAG_OVERLAY_DATA, dicom_core::Vr::Ob, Value::Bytes(vec![0xFF]),
+        ).unwrap());
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     #[test]
@@ -3038,7 +2918,7 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_RLE_LOSSLESS, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind, ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
     fn sample_jpeg_rgb() -> Vec<u8> {

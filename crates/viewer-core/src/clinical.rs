@@ -681,7 +681,7 @@ pub struct FusionOverlayState {
     /// Overlay visibility.
     pub visible: bool,
     /// Blend factor in `[0,1]`.
-    pub blend: f32,
+    blend: f64,
     /// Primary modality label.
     pub primary_modality: String,
     /// Secondary modality label.
@@ -707,15 +707,14 @@ impl FusionOverlayState {
         self.visible = visible;
     }
 
-    /// Set blend factor deterministically.
-    pub fn set_blend(&mut self, blend: f32) -> Result<(), ClinicalError> {
-        if !(0.0..=1.0).contains(&blend) {
-            return Err(ClinicalError::InvalidInput {
-                detail: "fusion blend must be in [0,1]".to_string(),
-            });
-        }
-        self.blend = blend;
-        Ok(())
+    /// Return the blend factor.
+    pub fn blend(&self) -> f64 {
+        self.blend
+    }
+
+    /// Set blend factor, clamping to `[0.0, 1.0]`.
+    pub fn set_blend(&mut self, value: f64) {
+        self.blend = value.clamp(0.0, 1.0);
     }
 
     /// Mark registration success.
@@ -737,9 +736,9 @@ pub struct RtDoseOverlayState {
     /// Visibility toggle.
     pub visible: bool,
     /// Dose window lower bound.
-    pub window_min: f64,
+    window_min: f64,
     /// Dose window upper bound.
-    pub window_max: f64,
+    window_max: f64,
 }
 
 impl Default for RtDoseOverlayState {
@@ -753,6 +752,16 @@ impl Default for RtDoseOverlayState {
 }
 
 impl RtDoseOverlayState {
+    /// Return the dose window lower bound.
+    pub fn window_min(&self) -> f64 {
+        self.window_min
+    }
+
+    /// Return the dose window upper bound.
+    pub fn window_max(&self) -> f64 {
+        self.window_max
+    }
+
     /// Set RT dose window range.
     pub fn set_window(&mut self, min: f64, max: f64) -> Result<(), ClinicalError> {
         if !min.is_finite() || !max.is_finite() || min >= max {
@@ -1975,13 +1984,17 @@ mod tests {
     #[test]
     fn fusion_overlay_blend_validation() {
         let mut fusion = FusionOverlayState::new("CT", "PET");
-        assert!(fusion.set_blend(0.0).is_ok());
-        assert!(fusion.set_blend(0.5).is_ok());
-        assert!(fusion.set_blend(1.0).is_ok());
-        let err = fusion.set_blend(-0.1).expect_err("negative blend");
-        assert!(matches!(err, ClinicalError::InvalidInput { .. }));
-        let err = fusion.set_blend(1.5).expect_err("blend > 1.0");
-        assert!(matches!(err, ClinicalError::InvalidInput { .. }));
+        fusion.set_blend(0.0);
+        assert!((fusion.blend() - 0.0).abs() < f64::EPSILON);
+        fusion.set_blend(0.5);
+        assert!((fusion.blend() - 0.5).abs() < f64::EPSILON);
+        fusion.set_blend(1.0);
+        assert!((fusion.blend() - 1.0).abs() < f64::EPSILON);
+        // Out-of-range values are clamped
+        fusion.set_blend(-0.1);
+        assert!((fusion.blend() - 0.0).abs() < f64::EPSILON);
+        fusion.set_blend(1.5);
+        assert!((fusion.blend() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
