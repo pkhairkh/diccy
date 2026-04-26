@@ -9,7 +9,7 @@ dicom-core = { path = "../dicom-core" }
 
 [dev-dependencies]
 dicom-io = { path = "../dicom-io" }
-sha2 = "0.10"
+sha2 = { workspace = true }
 
 [features]
 default = []

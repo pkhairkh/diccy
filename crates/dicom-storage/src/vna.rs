@@ -201,6 +201,10 @@ impl VnaEngine {
 }
 
 /// Lifecycle policy for tiered S3 storage.
+///
+/// **STUB:** The `apply()` method on this type does not perform actual storage
+/// tier transitions. It always returns 0. A production implementation would
+/// integrate with S3 lifecycle APIs.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LifecyclePolicy {
     /// Days before transitioning to infrequent access storage.
@@ -282,9 +286,14 @@ impl LifecyclePolicy {
     }
 
     /// Apply lifecycle policy to stored objects (simulated).
+    ///
+    /// **STUB:** This implementation does not actually transition objects between
+    /// storage tiers. It always returns 0 (no objects transitioned). A real
+    /// implementation would invoke S3 lifecycle APIs or equivalent.
     pub(crate) fn apply(&self, objects: &mut BTreeMap<String, Vec<u8>>) -> usize {
-        // In a real implementation, this would transition objects between
-        // storage tiers. For the stub, we just return 0.
+        // STUB: In a real implementation, this would transition objects between
+        // storage tiers (Standard → IA → Glacier → Expiration). For the stub,
+        // we just return 0 to indicate no objects were transitioned.
         let _ = objects;
         0
     }

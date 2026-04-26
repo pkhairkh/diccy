@@ -11,4 +11,4 @@ cade-hooks = []
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true }

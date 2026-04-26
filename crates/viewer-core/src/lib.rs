@@ -7,6 +7,117 @@
 pub use dicom_types::{PatientPosition, WindowLevel};
 
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+// ===========================================================================
+// S12-T6: Monotonic Tick & TickProvider
+// ===========================================================================
+
+/// A monotonically increasing tick value that can only be advanced, never
+/// decremented or set to an arbitrary value.
+///
+/// The internal `u64` is private; the only way to obtain a new value is via
+/// [`MonotonicTick::zero`] (the origin) or [`MonotonicTick::next`] (increment).
+/// This guarantees, at the type level, that ticks never go backwards within a
+/// single provider.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MonotonicTick(u64);
+
+impl MonotonicTick {
+    /// The origin tick (value 0).
+    pub const fn zero() -> Self {
+        MonotonicTick(0)
+    }
+
+    /// Advance to the next tick. Saturates at `u64::MAX`.
+    pub fn next(self) -> Self {
+        MonotonicTick(self.0.saturating_add(1))
+    }
+
+    /// Return the raw `u64` value of this tick.
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+}
+
+impl Default for MonotonicTick {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl fmt::Display for MonotonicTick {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Trait for types that provide monotonically increasing ticks.
+///
+/// Implementors guarantee that every call to [`TickProvider::next_tick`] returns
+/// a value strictly greater than the previous one (until `u64::MAX` saturation).
+pub trait TickProvider {
+    /// Return the current tick without advancing it.
+    fn current_tick(&self) -> MonotonicTick;
+
+    /// Advance the tick and return the new value.
+    fn next_tick(&mut self) -> MonotonicTick;
+}
+
+/// A global tick provider backed by an `AtomicU64`, suitable for coordinating
+/// ticks across multiple stores (`MeasurementStore`, `SegmentationStore`,
+/// `Annotation3dStore`, `ViewerModel`, etc.) so that no two subsystems ever
+/// produce the same tick value.
+///
+/// Thread-safe: the interior mutability is handled via atomic operations.
+pub struct GlobalTickProvider {
+    counter: AtomicU64,
+}
+
+impl Default for GlobalTickProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GlobalTickProvider {
+    /// Create a new provider starting at tick 0.
+    pub fn new() -> Self {
+        Self {
+            counter: AtomicU64::new(0),
+        }
+    }
+
+    /// Create a provider starting at a given tick value.
+    ///
+    /// Intended for restoring from persisted state; the tick will only
+    /// advance from here via `next_tick()`.
+    pub fn starting_at(initial: u64) -> Self {
+        Self {
+            counter: AtomicU64::new(initial),
+        }
+    }
+}
+
+impl TickProvider for GlobalTickProvider {
+    fn current_tick(&self) -> MonotonicTick {
+        MonotonicTick(self.counter.load(Ordering::SeqCst))
+    }
+
+    fn next_tick(&mut self) -> MonotonicTick {
+        // fetch_add returns the *previous* value; add 1 for the new one.
+        let prev = self.counter.fetch_add(1, Ordering::SeqCst);
+        MonotonicTick(prev.saturating_add(1))
+    }
+}
+
+impl fmt::Debug for GlobalTickProvider {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GlobalTickProvider")
+            .field("current", &self.current_tick())
+            .finish()
+    }
+}
 
 pub mod cache;
 pub mod clinical;
@@ -27,6 +138,7 @@ pub use clinical::{
     VolumeWorkflowStatus, compute_roi_statistics, interpolate_slices_linear,
     interpolate_slices_morphological, region_grow, threshold_segment_volume,
 };
+// S12-T6: Monotonic tick types (defined above, already in scope)
 pub use gsdf::{
     DisplayCalibrationConfig, GsdfError, GsdfLut, GSDF_P_VALUE_COUNT,
     apply_calibration, compute_conformance, generate_calibration_table, generate_gsdf_lut,

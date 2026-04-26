@@ -14,5 +14,5 @@ dicom-core = { path = "../dicom-core" }
 viewer-core = { path = "../viewer-core", optional = true }
 
 [dev-dependencies]
-sha2 = "0.10"
+sha2 = { workspace = true }
 viewer-core = { path = "../viewer-core" }

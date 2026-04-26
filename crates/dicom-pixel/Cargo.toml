@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 dicom-core = { path = "../dicom-core" }
 jpeg-decoder = "0.3"
-image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "tiff"], optional = true }
+image = { workspace = true, features = ["bmp", "png", "jpeg", "tiff"], optional = true }
 charls = { version = "0.3", features = ["static"], optional = true }
 hayro-jpeg2000 = { version = "0.1", optional = true }
 pack-enhanced = { path = "../pack-enhanced", optional = true }
@@ -23,7 +23,7 @@ codec-hevc = []
 pack-enhanced = ["dep:pack-enhanced"]
 
 [dev-dependencies]
-serde = { version = "1", features = ["derive"] }
-sha2 = "0.10"
+serde = { workspace = true }
+sha2 = { workspace = true }
 toml = "0.8"
 jpeg-encoder = "0.6"

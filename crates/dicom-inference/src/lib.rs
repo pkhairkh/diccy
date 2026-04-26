@@ -79,6 +79,11 @@ pub trait InferenceRuntime: fmt::Debug + Send + Sync {
 
     /// Get the names of model output tensors.
     fn get_output_names(&self) -> Vec<String>;
+
+    /// Return `true` if this is a stub implementation not suitable for production.
+    fn is_stub(&self) -> bool {
+        false
+    }
 }
 
 /// Output from an inference run.
@@ -94,9 +99,10 @@ pub struct InferenceOutput {
 
 /// ONNX Runtime stub implementation.
 ///
-/// This struct provides a stub implementation of the `InferenceRuntime` trait
-/// that works without actual ONNX Runtime. It is suitable for testing and
-/// development until a real ONNX Runtime integration is available.
+/// **STUB:** This implementation is not production-ready. It simulates
+/// model loading and inference without any actual ONNX Runtime bindings.
+/// The `load_model()` and `run_inference()` methods return synthetic data.
+/// Do not use this for clinical decision support.
 #[derive(Debug, Clone)]
 pub struct OnnxRuntime {
     /// Whether a model is currently loaded.
@@ -125,12 +131,18 @@ impl OnnxRuntime {
 }
 
 impl InferenceRuntime for OnnxRuntime {
+    fn is_stub(&self) -> bool {
+        true
+    }
     fn load_model(&mut self, model_path: &str) -> Result<ModelManifest> {
         if model_path.is_empty() {
             return Err(inference_error("model path must not be empty"));
         }
 
-        // Stub: create a synthetic manifest based on the model path
+        // STUB: This method returns a synthetic manifest. A real implementation
+        // would load an ONNX model from disk. Callers that require real inference
+        // should check `is_stub()` on the InferenceRuntime trait or use a
+        // production-grade backend.
         let manifest = ModelManifest::new(
             vec![1, 1, 512, 512],
             vec![1, 1, 512, 512],
@@ -1289,6 +1301,20 @@ mod tests_inference {
         let runtime = OnnxRuntime::new();
         let result = runtime.run_inference(&[1.0f32]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn onnx_runtime_is_stub() {
+        let runtime = OnnxRuntime::new();
+        assert!(runtime.is_stub());
+    }
+
+    #[test]
+    fn onnx_runtime_stub_load_returns_synthetic_data() {
+        let mut runtime = OnnxRuntime::new();
+        let manifest = runtime.load_model("/models/test.onnx").expect("load");
+        // STUB: the UID contains ".stub" marker
+        assert!(manifest.model_uid.contains(".stub"), "stub manifest should contain .stub in UID");
     }
 
     #[test]

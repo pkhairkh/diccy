@@ -1062,6 +1062,138 @@ fn xr_error(detail: impl Into<String>) -> Box<Error> {
 }
 
 // ===========================================================================
+// S12-T2: Stub renderers with runtime assertions
+// ===========================================================================
+
+/// XR volume renderer stub.
+///
+/// **STUB:** This implementation is not production-ready. It does not perform
+/// any actual XR rendering. Calling `render_frame()` will always return an error.
+/// A real implementation would use OpenXR/WebXR APIs to render stereoscopic
+/// frames to the XR device.
+#[derive(Debug, Clone)]
+pub struct XrRenderer {
+    /// Whether the renderer has been initialized.
+    pub initialized: bool,
+}
+
+impl Default for XrRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl XrRenderer {
+    /// Create a new XR renderer stub.
+    pub fn new() -> Self {
+        Self { initialized: false }
+    }
+
+    /// Initialize the renderer.
+    pub fn initialize(&mut self) -> Result<()> {
+        self.initialized = true;
+        Ok(())
+    }
+
+    /// Render a stereoscopic frame for the given eye.
+    ///
+    /// **STUB:** Always returns an error. A production implementation would
+    /// submit a rendered frame to the XR compositor.
+    pub fn render_frame(&self, _eye: Eye, _session: &XrViewerSession) -> Result<()> {
+        Err(Error::from_kind(
+            ErrorKind::InternalError {
+                detail: "XrRenderer::render_frame() is a stub — no actual XR rendering is implemented".to_string(),
+            },
+            "STUB: XrRenderer cannot render frames",
+        )
+        .into())
+    }
+}
+
+/// AR overlay rendering engine stub.
+///
+/// **STUB:** This implementation is not production-ready. It does not perform
+/// any actual AR overlay rendering. Calling `render_overlay()` will always
+/// return an error. A real implementation would composite holographic overlays
+/// onto the AR device's pass-through camera feed.
+#[derive(Debug, Clone)]
+pub struct ArOverlayEngine {
+    /// Whether the engine has been initialized.
+    pub initialized: bool,
+}
+
+impl Default for ArOverlayEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ArOverlayEngine {
+    /// Create a new AR overlay engine stub.
+    pub fn new() -> Self {
+        Self { initialized: false }
+    }
+
+    /// Initialize the engine.
+    pub fn initialize(&mut self) -> Result<()> {
+        self.initialized = true;
+        Ok(())
+    }
+
+    /// Render an AR overlay for the given session.
+    ///
+    /// **STUB:** Always returns an error. A production implementation would
+    /// render holographic overlays composited on the camera pass-through.
+    pub fn render_overlay(&self, _session: &ArOverlaySession) -> Result<()> {
+        Err(Error::from_kind(
+            ErrorKind::InternalError {
+                detail: "ArOverlayEngine::render_overlay() is a stub — no actual AR rendering is implemented".to_string(),
+            },
+            "STUB: ArOverlayEngine cannot render overlays",
+        )
+        .into())
+    }
+}
+
+// ===========================================================================
+// Tests: S12-T2 Stub runtime assertions
+// ===========================================================================
+
+#[cfg(test)]
+mod tests_stub_assertions {
+    use super::*;
+
+    #[test]
+    fn xr_renderer_stub_returns_error() {
+        let renderer = XrRenderer::new();
+        let config = XrRenderConfig::default();
+        let session = XrViewerSession::new(config, "1.2.3").expect("session");
+        let result = renderer.render_frame(Eye::Left, &session);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.to_lowercase().contains("stub"), "error should mention stub: {err}");
+    }
+
+    #[test]
+    fn ar_overlay_engine_stub_returns_error() {
+        let engine = ArOverlayEngine::new();
+        let session = ArOverlaySession::new(ArPlatform::HoloLens2, "1.2.3");
+        let result = engine.render_overlay(&session);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.to_lowercase().contains("stub"), "error should mention stub: {err}");
+    }
+
+    #[test]
+    fn xr_and_ar_stubs_are_not_initialized_by_default() {
+        assert!(!XrRenderer::new().initialized);
+        assert!(!ArOverlayEngine::new().initialized);
+    }
+}
+
+// ===========================================================================
 // Tests: S5-T3 XR Visualization (minimum 10)
 // ===========================================================================
 

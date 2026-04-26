@@ -1007,7 +1007,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
 
 **Tasks:**
 
-- [ ] **S12-T1** Add `[workspace.dependencies]` to root `Cargo.toml`
+- [x] **S12-T1** Add `[workspace.dependencies]` to root `Cargo.toml`
   - Add `[workspace.dependencies]` table with pinned versions of all shared dependencies:
     - `serde = "1.0.210"`, `serde_json = "1.0.128"`, `sha2 = "0.10.8"`, `image = "0.25.5"`, `thiserror = "2.0"`, `secrecy = "0.8"`, etc.
   - Update all 48 crate `Cargo.toml` files to use `workspace = true` for shared deps
@@ -1017,7 +1017,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
   - **Acceptance:** `cargo tree --duplicates` shows zero duplicate versions; all crates use `workspace = true`
   - **Estimated effort:** 2 days
 
-- [ ] **S12-T2** Mark stubs and add runtime assertions
+- [x] **S12-T2** Mark stubs and add runtime assertions
   - Add `#[doc = "⚠️ STUB: This implementation is not production-ready"]` to all stub types
   - Add `compile_error!` or `panic!` in stub implementations that would be dangerous in production:
     - `S3Backend`: panic if `std::env::var("DICCY_ALLOW_STUBS")` is not set
@@ -1031,7 +1031,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
   - **Acceptance:** `rg "STUB" crates/` lists all stub implementations; production builds fail if stubs are used without explicit opt-in
   - **Estimated effort:** 3 days
 
-- [ ] **S12-T3** Create shared test infrastructure (`dicom-test-util`)
+- [x] **S12-T3** Create shared test infrastructure (`dicom-test-util`)
   - Create new crate `crates/dicom-test-util` (dev-dependency only)
   - Add factory functions: `make_minimal_dataset()`, `make_ct_dataset()`, `make_mr_dataset()`, `make_sr_dataset()`
   - Add assertion macros: `assert_error_kind!(result, ErrorKind::...)`, `assert_error_code!(result, code)`
@@ -1043,7 +1043,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
   - **Acceptance:** `dicom-test-util` used as dev-dependency by 10+ crates; test boilerplate reduced significantly
   - **Estimated effort:** 5 days
 
-- [ ] **S12-T4** Rationalize feature flags
+- [x] **S12-T4** Rationalize feature flags
   - Create feature groups in `dicom-core/Cargo.toml`:
     - `codecs = ["codec-jpegls", "codec-j2k", "codec-rle"]`
     - `modalities = ["modality-ct", "modality-mr", "modality-pet", "modality-xr", "modality-us", "modality-nm", "modality-xa", "modality-mg"]`
@@ -1057,7 +1057,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
   - **Acceptance:** Feature groups compile; CI matrix tests 10 combinations; `FEATURES.md` exists; invalid combinations fail at compile time
   - **Estimated effort:** 4 days
 
-- [ ] **S12-T5** Replace type aliases with newtypes in `dicom-collab`
+- [x] **S12-T5** Replace type aliases with newtypes in `dicom-collab`
   - Replace `pub type SessionId = String` with `struct SessionId(String);` — add `Display`, `FromStr`, `Debug` impls
   - Replace `pub type UserId = String` with `struct UserId(String);` — add `Display`, `FromStr`, `Debug` impls
   - Replace `pub type Tick = u64` with `struct Tick(u64);` — add `Tick::next()`, `Tick::zero()`, `Ord` impl
@@ -1066,7 +1066,7 @@ performant Dataset, type-safe enums, deduplicated types, secure audit chain. **3
   - **Acceptance:** `rg "type SessionId" crates/` returns zero results; all type aliases replaced with newtypes
   - **Estimated effort:** 2 days
 
-- [ ] **S12-T6** Enforce monotonic tick at type level
+- [x] **S12-T6** Enforce monotonic tick at type level
   - Create `MonotonicTick` newtype in `viewer-core`: private `u64` field, only incrementable via `next()`, never settable directly
   - Add `TickProvider` trait: `fn current_tick(&self) -> MonotonicTick; fn next_tick(&mut self) -> MonotonicTick;`
   - Implement `GlobalTickProvider` that coordinates ticks across `MeasurementStore`, `SegmentationStore`, `Annotation3dStore`, and `ViewerModel`

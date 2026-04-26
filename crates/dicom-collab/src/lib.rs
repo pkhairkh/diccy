@@ -15,6 +15,8 @@ use dicom_core::{Error, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::hash::Hash;
+use std::str::FromStr;
 use std::sync::Arc;
 
 // ===========================================================================
@@ -22,13 +24,122 @@ use std::sync::Arc;
 // ===========================================================================
 
 /// Unique session identifier for a collaboration room.
-pub type SessionId = String;
+///
+/// Newtype wrapping `String` to prevent accidental mixing with other string-typed
+/// identifiers (e.g., `UserId`).
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SessionId(String);
+
+impl fmt::Debug for SessionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("SessionId").field(&self.0).finish()
+    }
+}
+
+impl fmt::Display for SessionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl FromStr for SessionId {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(SessionId(s.to_string()))
+    }
+}
+
+impl From<String> for SessionId {
+    fn from(s: String) -> Self {
+        SessionId(s)
+    }
+}
+
+impl AsRef<str> for SessionId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 /// Unique user identifier within a collaboration session.
-pub type UserId = String;
+///
+/// Newtype wrapping `String` to prevent accidental mixing with other string-typed
+/// identifiers (e.g., `SessionId`).
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct UserId(String);
+
+impl fmt::Debug for UserId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("UserId").field(&self.0).finish()
+    }
+}
+
+impl fmt::Display for UserId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl FromStr for UserId {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(UserId(s.to_string()))
+    }
+}
+
+impl From<String> for UserId {
+    fn from(s: String) -> Self {
+        UserId(s)
+    }
+}
+
+impl AsRef<str> for UserId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 /// Logical clock tick for operation ordering.
-pub type Tick = u64;
+///
+/// Newtype wrapping `u64` that provides type-safe tick values with `Copy` semantics
+/// and convenience constructors.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Tick(u64);
+
+impl fmt::Debug for Tick {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Tick").field(&self.0).finish()
+    }
+}
+
+impl fmt::Display for Tick {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Tick {
+    /// Create the zero tick.
+    pub const fn zero() -> Self {
+        Tick(0)
+    }
+
+    /// Advance to the next tick (saturating add).
+    pub fn next(self) -> Self {
+        Tick(self.0.saturating_add(1))
+    }
+
+    /// Return the raw `u64` tick value.
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+}
+
+impl Default for Tick {
+    fn default() -> Self {
+        Tick::zero()
+    }
+}
 
 /// Color assignment for user cursors and annotations.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,7 +207,7 @@ impl UserPresence {
             color,
             cursor_position: None,
             active_viewport: None,
-            last_active_tick: 0,
+            last_active_tick: Tick::zero(),
         }
     }
 }
@@ -481,7 +592,7 @@ impl CollabSession {
             annotations: OrSet::new(),
             operation_log: Vec::new(),
             vector_clock: BTreeMap::new(),
-            tick: 0,
+            tick: Tick::zero(),
             max_log_size: 10000,
             audit: None,
         }
@@ -501,7 +612,7 @@ impl CollabSession {
 
     /// Return the session identifier.
     pub fn session_id(&self) -> &str {
-        &self.session_id
+        self.session_id.as_ref()
     }
 
     /// Return the current tick.
@@ -522,24 +633,24 @@ impl CollabSession {
     /// Add a user to the collaboration session.
     pub fn join(&mut self, user_id: UserId, display_name: String) -> Result<()> {
         if self.users.contains_key(&user_id) {
-            return Err(collab_error(&self.session_id, "user already in session"));
+            return Err(collab_error(self.session_id.as_ref(), "user already in session"));
         }
         let color_index = self.users.len();
         let mut presence = UserPresence::new(user_id.clone(), display_name, color_index);
         presence.last_active_tick = self.tick;
         self.users.insert(user_id.clone(), presence);
-        self.vector_clock.insert(user_id.clone(), 0);
-        self.record_audit("join", &user_id);
+        self.vector_clock.insert(user_id.clone(), Tick::zero());
+        self.record_audit("join", user_id.as_ref());
         Ok(())
     }
 
     /// Remove a user from the collaboration session.
     pub fn leave(&mut self, user_id: &UserId) -> Result<()> {
         if !self.users.contains_key(user_id) {
-            return Err(collab_error(&self.session_id, "user not in session"));
+            return Err(collab_error(self.session_id.as_ref(), "user not in session"));
         }
         self.users.remove(user_id);
-        self.record_audit("leave", user_id);
+        self.record_audit("leave", user_id.as_ref());
         Ok(())
     }
 
@@ -547,12 +658,12 @@ impl CollabSession {
     pub fn apply_operation(&mut self, operation: CollabOperation) -> Result<()> {
         let user_id = operation.user_id().clone();
         if !self.users.contains_key(&user_id) {
-            return Err(collab_error(&self.session_id, "operation from unknown user"));
+            return Err(collab_error(self.session_id.as_ref(), "operation from unknown user"));
         }
 
         // Advance vector clock
-        self.tick = self.tick.saturating_add(1);
-        *self.vector_clock.entry(user_id.clone()).or_insert(0) = self.tick;
+        self.tick = self.tick.next();
+        *self.vector_clock.entry(user_id.clone()).or_insert(Tick::zero()) = self.tick;
 
         // Apply the operation
         match &operation {
@@ -610,7 +721,7 @@ impl CollabSession {
             self.operation_log.drain(..excess);
         }
 
-        self.record_audit("apply_operation", &user_id);
+        self.record_audit("apply_operation", user_id.as_ref());
         Ok(())
     }
 
@@ -641,7 +752,7 @@ impl CollabSession {
     /// Merge operations from another session (e.g., after network partition healing).
     pub fn merge_from(&mut self, other_log: &[CrdtEntry]) {
         for entry in other_log {
-            let user_tick = self.vector_clock.get(entry.operation.user_id()).copied().unwrap_or(0);
+            let user_tick = self.vector_clock.get(entry.operation.user_id()).copied().unwrap_or_default();
             if entry.operation.tick() > user_tick {
                 let _ = self.apply_operation(entry.operation.clone());
             }
@@ -661,7 +772,7 @@ impl CollabSession {
             vector_clock: self.vector_clock.clone(),
             users: self.users.values().cloned().collect(),
         };
-        serde_json::to_string(&state).map_err(|e| collab_error(&self.session_id, format!("serialization failed: {e}")))
+        serde_json::to_string(&state).map_err(|e| collab_error(self.session_id.as_ref(), format!("serialization failed: {e}")))
     }
 
     fn record_audit(&self, operation: &'static str, subject_id: &str) {
@@ -677,7 +788,7 @@ impl CollabSession {
                 },
                 AuditField {
                     key: "session_id",
-                    value: AuditValue::Plain(self.session_id.clone()),
+                    value: AuditValue::Plain(self.session_id.to_string()),
                 },
                 AuditField {
                     key: "user_id",
@@ -724,6 +835,21 @@ fn collab_error(session_id: impl Into<String>, detail: impl Into<String>) -> Box
 mod tests_collab {
     use super::*;
 
+    /// Helper to create a SessionId from a &str.
+    fn sid(s: &str) -> SessionId {
+        SessionId::from(s.to_string())
+    }
+
+    /// Helper to create a UserId from a &str.
+    fn uid(s: &str) -> UserId {
+        UserId::from(s.to_string())
+    }
+
+    /// Helper to create a Tick from a u64.
+    fn tk(v: u64) -> Tick {
+        Tick(v)
+    }
+
     #[test]
     fn user_color_hex_format() {
         // REQ-COLLAB-100: user colors must produce valid CSS hex
@@ -738,42 +864,42 @@ mod tests_collab {
 
     #[test]
     fn user_presence_creation() {
-        let presence = UserPresence::new("user1".to_string(), "Dr. Smith".to_string(), 0);
-        assert_eq!(presence.user_id, "user1");
+        let presence = UserPresence::new(uid("user1"), "Dr. Smith".to_string(), 0);
+        assert_eq!(presence.user_id, uid("user1"));
         assert_eq!(presence.display_name, "Dr. Smith");
         assert!(presence.cursor_position.is_none());
     }
 
     #[test]
     fn session_join_and_leave() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
         assert_eq!(session.user_count(), 1);
 
-        session.join("user2".to_string(), "Dr. Jones".to_string()).unwrap();
+        session.join(uid("user2"), "Dr. Jones".to_string()).unwrap();
         assert_eq!(session.user_count(), 2);
 
-        session.leave(&"user1".to_string()).unwrap();
+        session.leave(&uid("user1")).unwrap();
         assert_eq!(session.user_count(), 1);
     }
 
     #[test]
     fn session_rejects_duplicate_join() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
-        assert!(session.join("user1".to_string(), "Dr. Smith".to_string()).is_err());
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
+        assert!(session.join(uid("user1"), "Dr. Smith".to_string()).is_err());
     }
 
     #[test]
     fn session_rejects_unknown_leave() {
-        let mut session = CollabSession::new("session-1".to_string());
-        assert!(session.leave(&"ghost".to_string()).is_err());
+        let mut session = CollabSession::new(sid("session-1"));
+        assert!(session.leave(&uid("ghost")).is_err());
     }
 
     #[test]
     fn viewport_change_syncs() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         let state = SharedViewportState {
             pan_x: 10.0,
@@ -787,8 +913,8 @@ mod tests_collab {
 
         session.apply_operation(CollabOperation::ViewportChange {
             state: state.clone(),
-            tick: 1,
-            user_id: "user1".to_string(),
+            tick: tk(1),
+            user_id: uid("user1"),
         }).unwrap();
 
         let synced = session.viewport_state(0).unwrap();
@@ -798,45 +924,45 @@ mod tests_collab {
 
     #[test]
     fn cursor_move_updates_presence() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         session.apply_operation(CollabOperation::CursorMove {
             position: (100.0, 200.0),
             viewport_index: 0,
-            tick: 1,
-            user_id: "user1".to_string(),
+            tick: tk(1),
+            user_id: uid("user1"),
         }).unwrap();
 
         let cursors = session.viewport_cursors(0);
         assert_eq!(cursors.len(), 1);
-        assert_eq!(cursors[0].0, "user1");
+        assert_eq!(cursors[0].0, &uid("user1"));
         assert_eq!(cursors[0].1, (100.0, 200.0));
     }
 
     #[test]
     fn operation_from_unknown_user_rejected() {
-        let mut session = CollabSession::new("session-1".to_string());
+        let mut session = CollabSession::new(sid("session-1"));
         let result = session.apply_operation(CollabOperation::ViewportChange {
             state: SharedViewportState::default(),
-            tick: 1,
-            user_id: "unknown".to_string(),
+            tick: tk(1),
+            user_id: uid("unknown"),
         });
         assert!(result.is_err());
     }
 
     #[test]
     fn lww_register_last_writer_wins() {
-        let mut reg = LwwRegister::new(0, 0, "user1".to_string());
-        reg.write(10, 1, "user1".to_string());
-        reg.write(20, 2, "user2".to_string());
+        let mut reg = LwwRegister::new(0, tk(0), uid("user1"));
+        reg.write(10, tk(1), uid("user1"));
+        reg.write(20, tk(2), uid("user2"));
         assert_eq!(*reg.value(), 20);
     }
 
     #[test]
     fn lww_register_deterministic_tie_breaking() {
-        let mut reg = LwwRegister::new(0, 5, "user_b".to_string());
-        let other = LwwRegister::new(42, 5, "user_a".to_string());
+        let mut reg = LwwRegister::new(0, tk(5), uid("user_b"));
+        let other = LwwRegister::new(42, tk(5), uid("user_a"));
         reg.merge(&other);
         // "user_a" < "user_b" lexicographically, so user_a wins
         assert_eq!(*reg.value(), 42);
@@ -886,22 +1012,22 @@ mod tests_collab {
 
     #[test]
     fn annotation_add_and_remove_operations() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         session.apply_operation(CollabOperation::AnnotationAdd {
             annotation_id: "ann-1".to_string(),
             annotation_data: "{}".to_string(),
-            tick: 1,
-            user_id: "user1".to_string(),
+            tick: tk(1),
+            user_id: uid("user1"),
         }).unwrap();
 
         assert_eq!(session.annotations.len(), 1);
 
         session.apply_operation(CollabOperation::AnnotationRemove {
             annotation_id: "ann-1".to_string(),
-            tick: 2,
-            user_id: "user1".to_string(),
+            tick: tk(2),
+            user_id: uid("user1"),
         }).unwrap();
 
         assert_eq!(session.annotations.len(), 0);
@@ -909,15 +1035,15 @@ mod tests_collab {
 
     #[test]
     fn operation_log_trim() {
-        let mut session = CollabSession::with_max_log_size("session-1".to_string(), 5);
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::with_max_log_size(sid("session-1"), 5);
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         for i in 0..10 {
             session.apply_operation(CollabOperation::CursorMove {
                 position: (i as f64, i as f64),
                 viewport_index: 0,
-                tick: i as u64,
-                user_id: "user1".to_string(),
+                tick: tk(i),
+                user_id: uid("user1"),
             }).unwrap();
         }
 
@@ -926,8 +1052,8 @@ mod tests_collab {
 
     #[test]
     fn session_serialization() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         let json = session.to_json().unwrap();
         assert!(json.contains("session-1"));
@@ -936,19 +1062,19 @@ mod tests_collab {
 
     #[test]
     fn merge_from_another_session() {
-        let mut session1 = CollabSession::new("session-1".to_string());
-        session1.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session1 = CollabSession::new(sid("session-1"));
+        session1.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
-        let mut session2 = CollabSession::new("session-1".to_string());
-        session2.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
+        let mut session2 = CollabSession::new(sid("session-1"));
+        session2.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         session2.apply_operation(CollabOperation::ViewportChange {
             state: SharedViewportState {
                 zoom: 3.0,
                 ..SharedViewportState::default()
             },
-            tick: 10,
-            user_id: "user1".to_string(),
+            tick: tk(10),
+            user_id: uid("user1"),
         }).unwrap();
 
         session1.merge_from(session2.operation_log());
@@ -958,22 +1084,22 @@ mod tests_collab {
 
     #[test]
     fn multiple_users_cursors_in_viewport() {
-        let mut session = CollabSession::new("session-1".to_string());
-        session.join("user1".to_string(), "Dr. Smith".to_string()).unwrap();
-        session.join("user2".to_string(), "Dr. Jones".to_string()).unwrap();
+        let mut session = CollabSession::new(sid("session-1"));
+        session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
+        session.join(uid("user2"), "Dr. Jones".to_string()).unwrap();
 
         session.apply_operation(CollabOperation::CursorMove {
             position: (10.0, 20.0),
             viewport_index: 0,
-            tick: 1,
-            user_id: "user1".to_string(),
+            tick: tk(1),
+            user_id: uid("user1"),
         }).unwrap();
 
         session.apply_operation(CollabOperation::CursorMove {
             position: (30.0, 40.0),
             viewport_index: 0,
-            tick: 2,
-            user_id: "user2".to_string(),
+            tick: tk(2),
+            user_id: uid("user2"),
         }).unwrap();
 
         let cursors = session.viewport_cursors(0);
@@ -986,5 +1112,55 @@ mod tests_collab {
         assert_eq!(state.pan_x, 0.0);
         assert_eq!(state.zoom, 1.0);
         assert_eq!(state.frame_index, 0);
+    }
+
+    // --- S12-T5: Newtype-specific tests ---
+
+    #[test]
+    fn tick_zero_next_and_value() {
+        let t0 = Tick::zero();
+        assert_eq!(t0.value(), 0);
+        let t1 = t0.next();
+        assert_eq!(t1.value(), 1);
+        let t2 = t1.next();
+        assert_eq!(t2.value(), 2);
+    }
+
+    #[test]
+    fn tick_ordering() {
+        assert!(Tick(1) < Tick(2));
+        assert!(Tick(2) > Tick(1));
+        assert_eq!(Tick(3), Tick(3));
+    }
+
+    #[test]
+    fn tick_display() {
+        assert_eq!(format!("{}", Tick(42)), "42");
+    }
+
+    #[test]
+    fn session_id_display_and_as_ref() {
+        let sid = SessionId::from("abc".to_string());
+        assert_eq!(sid.as_ref(), "abc");
+        assert_eq!(format!("{}", sid), "abc");
+    }
+
+    #[test]
+    fn user_id_display_and_as_ref() {
+        let uid = UserId::from("dr-smith".to_string());
+        assert_eq!(uid.as_ref(), "dr-smith");
+        assert_eq!(format!("{}", uid), "dr-smith");
+    }
+
+    #[test]
+    fn session_id_from_str_roundtrip() {
+        let sid: SessionId = "hello".parse().unwrap();
+        assert_eq!(sid.as_ref(), "hello");
+    }
+
+    #[test]
+    fn user_id_from_str_roundtrip() {
+        let uid: UserId = "world".parse().unwrap();
+        assert_eq!(uid.as_ref(), "world");
     }
 }

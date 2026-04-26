@@ -55,3 +55,9 @@ members = [
   "crates/dicom-util",
   "crates/dicom-test-util",
 ]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+image = { version = "0.25", default-features = false }

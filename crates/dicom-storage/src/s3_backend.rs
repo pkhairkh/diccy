@@ -154,6 +154,11 @@ pub struct MultipartUploadResult {
 }
 
 /// Simulated S3 backend for testing (no actual network calls).
+///
+/// **STUB:** This implementation is not production-ready. It uses in-memory
+/// storage instead of real S3 network calls. Using this in production will
+/// result in data loss on restart and no actual cloud persistence.
+/// Set the `DICCY_ALLOW_STUBS` environment variable to acknowledge this.
 #[derive(Debug, Clone, PartialEq)]
 pub struct S3Backend {
     /// Configuration.
@@ -175,7 +180,12 @@ impl S3Backend {
     }
 
     /// Store data in the S3 backend (simulated).
+    ///
+    /// # Panics
+    /// Panics if the `DICCY_ALLOW_STUBS` environment variable is not set,
+    /// since this stub should not be used in production.
     pub fn put_object(&mut self, key: &str, data: Vec<u8>) -> Result<()> {
+        assert_stub_allowed();
         self.stored_objects.insert(key.to_string(), data);
         Ok(())
     }
@@ -237,6 +247,18 @@ impl S3Backend {
     /// Set the lifecycle policy.
     pub fn set_lifecycle_policy(&mut self, policy: super::vna::LifecyclePolicy) {
         self.lifecycle_policy = policy;
+    }
+}
+
+/// Assert that stub implementations are explicitly allowed via the `DICCY_ALLOW_STUBS`
+/// environment variable. Panics if the variable is not set, preventing accidental
+/// use of stub code in production deployments.
+fn assert_stub_allowed() {
+    if std::env::var("DICCY_ALLOW_STUBS").is_err() {
+        panic!(
+            "STUB: S3Backend is a simulated implementation not suitable for production. \
+             Set the DICCY_ALLOW_STUBS environment variable to explicitly opt in."
+        );
     }
 }
 
