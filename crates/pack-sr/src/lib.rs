@@ -764,6 +764,152 @@ fn invalid_tag_value(tag: Tag, detail: impl Into<String>) -> Box<Error> {
     .into()
 }
 
+// TID Template Constants and Structured SR Templates
+
+/// TID 1500 Measurement Report template identifier.
+pub const TID_MEASUREMENT_REPORT: &str = "1.2.840.10008.1.1.20.1.1";
+
+/// TID 300 Measurement template identifier.
+pub const TID_MEASUREMENT: &str = "1.2.840.10008.1.1.20.2.1";
+
+/// TID 1204 Language of Content Item template identifier.
+pub const TID_LANGUAGE: &str = "1.2.840.10008.1.1.20.3.1";
+
+/// Standard coded concepts for SR measurement reports.
+pub mod coded_concepts {
+    //! Standard DICOM/SNOMED CT coded concepts for SR templates.
+
+    /// Measurement Report concept.
+    pub fn measurement_report() -> super::Code {
+        super::Code {
+            code_value: "126000".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Measurement Report".to_string(),
+        }
+    }
+
+    /// Distance measurement concept.
+    pub fn distance() -> super::Code {
+        super::Code {
+            code_value: "121206".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Distance".to_string(),
+        }
+    }
+
+    /// Angle measurement concept.
+    pub fn angle() -> super::Code {
+        super::Code {
+            code_value: "121207".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Angle".to_string(),
+        }
+    }
+
+    /// Probe (pixel value) measurement concept.
+    pub fn probe() -> super::Code {
+        super::Code {
+            code_value: "121208".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Pixel Value".to_string(),
+        }
+    }
+
+    /// Millimeter unit code.
+    pub fn millimeter() -> super::Code {
+        super::Code {
+            code_value: "mm".to_string(),
+            scheme: "UCUM".to_string(),
+            meaning: "millimeter".to_string(),
+        }
+    }
+
+    /// Degree unit code.
+    pub fn degree() -> super::Code {
+        super::Code {
+            code_value: "deg".to_string(),
+            scheme: "UCUM".to_string(),
+            meaning: "degree".to_string(),
+        }
+    }
+
+    /// Pixel unit code (no unit).
+    pub fn pixel() -> super::Code {
+        super::Code {
+            code_value: "pixel".to_string(),
+            scheme: "UCUM".to_string(),
+            meaning: "pixel".to_string(),
+        }
+    }
+
+    /// Observation context container.
+    pub fn observation_context() -> super::Code {
+        super::Code {
+            code_value: "121005".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Observation Context".to_string(),
+        }
+    }
+
+    /// Container content item.
+    pub fn container() -> super::Code {
+        super::Code {
+            code_value: "111028".to_string(),
+            scheme: "DCM".to_string(),
+            meaning: "Container".to_string(),
+        }
+    }
+}
+
+/// Build a TID 1500 Measurement Report from measurement records.
+///
+/// Creates a CONTAINER content item with the Measurement Report concept,
+/// wrapping individual TID 300 measurement items derived from the provided
+/// measurement data. Each measurement includes its concept code, numeric
+/// value, units, and optional referenced SOP Instance UID.
+pub fn build_measurement_report(
+    study_uid: impl Into<String>,
+    series_uid: impl Into<String>,
+    sop_uid: impl Into<String>,
+    observer: impl Into<String>,
+    measurements: &[SrMeasurement],
+) -> SrAuthoredDocument {
+    let mut builder = SrAuthoringBuilder::new(study_uid, series_uid, sop_uid)
+        .with_defaults(SrBuilderDefaults {
+            observer: observer.into(),
+            authored_epoch_ms: 0,
+        })
+        .push_item(SrAuthoringContentItem::Code {
+            concept: coded_concepts::measurement_report(),
+            value: coded_concepts::container(),
+            referenced_sop_instance_uid: None,
+        });
+    for m in measurements {
+        builder = builder.push_item(SrAuthoringContentItem::Num {
+            concept: m.concept.clone(),
+            value: m.value,
+            units: m.units.clone(),
+            referenced_sop_instance_uid: m.referenced_sop_instance_uid.clone(),
+        });
+    }
+    builder.build()
+}
+
+/// Build a single TID 300 Measurement content item from measurement data.
+pub fn build_tid300_measurement(
+    concept: Code,
+    value: f64,
+    units: Code,
+    referenced_sop_instance_uid: Option<String>,
+) -> SrAuthoringContentItem {
+    SrAuthoringContentItem::Num {
+        concept,
+        value,
+        units,
+        referenced_sop_instance_uid,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1246,5 +1392,321 @@ mod tests {
         let extracted = extract_measurements(&serialized).expect("extract num");
         assert_eq!(extracted.len(), 1);
         assert_eq!(extracted[0].value, 12.25);
+    }
+
+    #[test]
+    fn tid_template_constants_are_valid_oids() {
+        // REQ-SR-1500
+        assert!(TID_MEASUREMENT_REPORT.starts_with("1.2.840"));
+        assert!(TID_MEASUREMENT.starts_with("1.2.840"));
+        assert!(TID_LANGUAGE.starts_with("1.2.840"));
+        assert!(!TID_MEASUREMENT_REPORT.is_empty());
+        assert!(!TID_MEASUREMENT.is_empty());
+        assert!(!TID_LANGUAGE.is_empty());
+        assert_ne!(TID_MEASUREMENT_REPORT, TID_MEASUREMENT);
+        assert_ne!(TID_MEASUREMENT_REPORT, TID_LANGUAGE);
+        assert_ne!(TID_MEASUREMENT, TID_LANGUAGE);
+    }
+
+    #[test]
+    fn coded_concepts_measurement_report_has_dcm_scheme() {
+        // REQ-SR-1500
+        let code = coded_concepts::measurement_report();
+        assert_eq!(code.scheme, "DCM");
+        assert_eq!(code.code_value, "126000");
+        assert!(!code.meaning.is_empty());
+    }
+
+    #[test]
+    fn coded_concepts_distance_uses_dcm_scheme() {
+        // REQ-SR-300
+        let code = coded_concepts::distance();
+        assert_eq!(code.scheme, "DCM");
+        assert_eq!(code.code_value, "121206");
+        assert_eq!(code.meaning, "Distance");
+    }
+
+    #[test]
+    fn coded_concepts_angle_uses_dcm_scheme() {
+        // REQ-SR-300
+        let code = coded_concepts::angle();
+        assert_eq!(code.scheme, "DCM");
+        assert_eq!(code.code_value, "121207");
+        assert_eq!(code.meaning, "Angle");
+    }
+
+    #[test]
+    fn coded_concepts_probe_uses_dcm_scheme() {
+        // REQ-SR-300
+        let code = coded_concepts::probe();
+        assert_eq!(code.scheme, "DCM");
+        assert_eq!(code.code_value, "121208");
+        assert_eq!(code.meaning, "Pixel Value");
+    }
+
+    #[test]
+    fn coded_concepts_units_use_ucum_scheme() {
+        // REQ-SR-300
+        assert_eq!(coded_concepts::millimeter().scheme, "UCUM");
+        assert_eq!(coded_concepts::millimeter().code_value, "mm");
+        assert_eq!(coded_concepts::degree().scheme, "UCUM");
+        assert_eq!(coded_concepts::degree().code_value, "deg");
+        assert_eq!(coded_concepts::pixel().scheme, "UCUM");
+        assert_eq!(coded_concepts::pixel().code_value, "pixel");
+    }
+
+    #[test]
+    fn coded_concepts_observation_context_and_container() {
+        // REQ-SR-1500
+        let obs = coded_concepts::observation_context();
+        assert_eq!(obs.scheme, "DCM");
+        assert_eq!(obs.code_value, "121005");
+        let cont = coded_concepts::container();
+        assert_eq!(cont.scheme, "DCM");
+        assert_eq!(cont.code_value, "111028");
+    }
+
+    #[test]
+    fn build_measurement_report_with_empty_measurements() {
+        // REQ-SR-1500
+        let doc = build_measurement_report(
+            "1.2.3",
+            "1.2.3.4",
+            "1.2.3.4.5",
+            "test-observer",
+            &[],
+        );
+        assert_eq!(doc.provenance.study_instance_uid, "1.2.3");
+        assert_eq!(doc.provenance.series_instance_uid, "1.2.3.4");
+        assert_eq!(doc.provenance.sop_instance_uid, "1.2.3.4.5");
+        assert_eq!(doc.provenance.observer, "test-observer");
+        assert_eq!(doc.version, 1);
+        // Should contain only the measurement report container code item
+        assert_eq!(doc.items.len(), 1);
+        assert!(matches!(
+            &doc.items[0],
+            SrAuthoringContentItem::Code { concept, value, .. }
+            if concept.code_value == "126000" && value.code_value == "111028"
+        ));
+    }
+
+    #[test]
+    fn build_measurement_report_with_multiple_measurements() {
+        // REQ-SR-1500, REQ-SR-300
+        let measurements = vec![
+            SrMeasurement {
+                concept: coded_concepts::distance(),
+                value: 42.5,
+                units: coded_concepts::millimeter(),
+                referenced_sop_instance_uid: Some("1.2.3.4.5.6".to_string()),
+            },
+            SrMeasurement {
+                concept: coded_concepts::angle(),
+                value: 90.0,
+                units: coded_concepts::degree(),
+                referenced_sop_instance_uid: None,
+            },
+            SrMeasurement {
+                concept: coded_concepts::probe(),
+                value: 128.0,
+                units: coded_concepts::pixel(),
+                referenced_sop_instance_uid: None,
+            },
+        ];
+        let doc = build_measurement_report(
+            "1.2.3",
+            "1.2.3.4",
+            "1.2.3.4.5",
+            "radiologist-1",
+            &measurements,
+        );
+        // 1 container code + 3 measurement items = 4 total
+        assert_eq!(doc.items.len(), 4);
+        // Items are sorted: CODE before NUM
+        let code_count = doc
+            .items
+            .iter()
+            .filter(|i| matches!(i, SrAuthoringContentItem::Code { .. }))
+            .count();
+        let num_count = doc
+            .items
+            .iter()
+            .filter(|i| matches!(i, SrAuthoringContentItem::Num { .. }))
+            .count();
+        assert_eq!(code_count, 1);
+        assert_eq!(num_count, 3);
+        assert_eq!(doc.provenance.observer, "radiologist-1");
+    }
+
+    #[test]
+    fn build_measurement_report_preserves_measurement_values() {
+        // REQ-SR-1500, REQ-SR-300
+        let measurements = vec![SrMeasurement {
+            concept: coded_concepts::distance(),
+            value: 123.456,
+            units: coded_concepts::millimeter(),
+            referenced_sop_instance_uid: Some("1.2.999".to_string()),
+        }];
+        let doc = build_measurement_report(
+            "1.2.3",
+            "1.2.3.4",
+            "1.2.3.4.5",
+            "observer",
+            &measurements,
+        );
+        let num_items: Vec<_> = doc
+            .items
+            .iter()
+            .filter_map(|i| match i {
+                SrAuthoringContentItem::Num { value, .. } => Some(*value),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(num_items.len(), 1);
+        assert!((num_items[0] - 123.456).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn build_measurement_report_serializable_and_parseable() {
+        // REQ-SR-1500
+        let measurements = vec![
+            SrMeasurement {
+                concept: coded_concepts::distance(),
+                value: 50.0,
+                units: coded_concepts::millimeter(),
+                referenced_sop_instance_uid: None,
+            },
+        ];
+        let doc = build_measurement_report(
+            "1.2.3",
+            "1.2.3.4",
+            "1.2.3.4.5",
+            "observer",
+            &measurements,
+        );
+        let serialized = serialize_authored_document(&doc);
+        let parsed = parse_authored_document(&serialized).expect("parse");
+        assert_eq!(parsed, doc);
+    }
+
+    #[test]
+    fn build_tid300_measurement_creates_num_item() {
+        // REQ-SR-300
+        let item = build_tid300_measurement(
+            coded_concepts::distance(),
+            99.9,
+            coded_concepts::millimeter(),
+            Some("1.2.3.4.5".to_string()),
+        );
+        match &item {
+            SrAuthoringContentItem::Num {
+                concept,
+                value,
+                units,
+                referenced_sop_instance_uid,
+            } => {
+                assert_eq!(concept.code_value, "121206");
+                assert!((*value - 99.9).abs() < f64::EPSILON);
+                assert_eq!(units.code_value, "mm");
+                assert_eq!(
+                    referenced_sop_instance_uid.as_deref(),
+                    Some("1.2.3.4.5")
+                );
+            }
+            _ => panic!("expected NUM item"),
+        }
+    }
+
+    #[test]
+    fn build_tid300_measurement_without_reference() {
+        // REQ-SR-300
+        let item = build_tid300_measurement(
+            coded_concepts::angle(),
+            45.0,
+            coded_concepts::degree(),
+            None,
+        );
+        match &item {
+            SrAuthoringContentItem::Num {
+                concept,
+                value,
+                units,
+                referenced_sop_instance_uid,
+            } => {
+                assert_eq!(concept.code_value, "121207");
+                assert_eq!(*value, 45.0);
+                assert_eq!(units.code_value, "deg");
+                assert!(referenced_sop_instance_uid.is_none());
+            }
+            _ => panic!("expected NUM item"),
+        }
+    }
+
+    #[test]
+    fn build_tid300_measurement_can_be_pushed_to_builder() {
+        // REQ-SR-300
+        let item = build_tid300_measurement(
+            coded_concepts::probe(),
+            255.0,
+            coded_concepts::pixel(),
+            None,
+        );
+        let doc = SrAuthoringBuilder::new("1.2.3", "1.2.3.4", "1.2.3.4.5")
+            .push_item(item)
+            .build();
+        assert_eq!(doc.items.len(), 1);
+        assert!(matches!(
+            &doc.items[0],
+            SrAuthoringContentItem::Num { concept, .. }
+            if concept.code_value == "121208"
+        ));
+    }
+
+    #[test]
+    fn measurement_report_extract_measurements_roundtrip() {
+        // REQ-SR-1500, REQ-SR-300
+        let measurements = vec![
+            SrMeasurement {
+                concept: coded_concepts::distance(),
+                value: 10.5,
+                units: coded_concepts::millimeter(),
+                referenced_sop_instance_uid: Some("1.2.3.4.5.6".to_string()),
+            },
+            SrMeasurement {
+                concept: coded_concepts::angle(),
+                value: 30.0,
+                units: coded_concepts::degree(),
+                referenced_sop_instance_uid: None,
+            },
+        ];
+        let doc = build_measurement_report(
+            "1.2.3",
+            "1.2.3.4",
+            "1.2.3.4.5",
+            "observer",
+            &measurements,
+        );
+        let serialized = serialize_authored_document(&doc);
+        let extracted = extract_measurements(&serialized).expect("extract");
+        assert_eq!(extracted.len(), 2);
+        // Check distance measurement
+        let dist = extracted
+            .iter()
+            .find(|m| m.concept.code_value == "121206")
+            .expect("distance measurement");
+        assert!((dist.value - 10.5).abs() < f64::EPSILON);
+        assert_eq!(dist.units.code_value, "mm");
+        assert_eq!(
+            dist.referenced_sop_instance_uid.as_deref(),
+            Some("1.2.3.4.5.6")
+        );
+        // Check angle measurement
+        let ang = extracted
+            .iter()
+            .find(|m| m.concept.code_value == "121207")
+            .expect("angle measurement");
+        assert!((ang.value - 30.0).abs() < f64::EPSILON);
+        assert_eq!(ang.units.code_value, "deg");
+        assert!(ang.referenced_sop_instance_uid.is_none());
     }
 }

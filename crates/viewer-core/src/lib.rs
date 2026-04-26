@@ -11,11 +11,14 @@ pub mod volume;
 
 pub use cache::{CacheMetrics, DeterministicCache};
 pub use clinical::{
-    Annotation3d, Annotation3dStore, ClinicalAuditEvent, ClinicalError, ExportBundle,
-    FusionOverlayState, FusionRegistrationState, MeasurementRecord, MeasurementStore,
-    MipProjectionMode, RtDoseOverlayState, RtssOverlayState, SegmentationDiff, SegmentationRecord,
-    SegmentationSource, SegmentationStore, SegmentationStyle, VolumeWorkflowCapabilities,
-    VolumeWorkflowState, VolumeWorkflowStatus,
+    Annotation3d, Annotation3dStore, BrushConfig, BrushMode, BrushStroke, ClinicalAuditEvent,
+    ClinicalError, ExportBundle, FusionOverlayState, FusionRegistrationState,
+    InterpolationMethod, LabelMap3D, MeasurementRecord, MeasurementStore, MipProjectionMode,
+    RegionGrowSeed, RoiShape, RoiStatistics, RtDoseOverlayState, RtssOverlayState,
+    SegmentationDiff, SegmentationRecord, SegmentationSource, SegmentationStore,
+    SegmentationStyle, ThresholdConfig, VolumeWorkflowCapabilities, VolumeWorkflowState,
+    VolumeWorkflowStatus, compute_roi_statistics, interpolate_slices_linear,
+    interpolate_slices_morphological, region_grow, threshold_segment_volume,
 };
 pub use mpr::{
     patient_request_to_voxel_request, quantize_plane_parameter, reslice_volume,

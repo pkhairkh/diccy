@@ -3,7 +3,8 @@
 //! GSPS pack: deterministic shutter and presentation state application.
 
 use dicom_core::{
-    parse_f64_strict, parse_i32_strict, Dataset, Error, ErrorKind, Result, Tag, Value,
+    parse_f64_strict, parse_i32_strict, Dataset, Element, Error, ErrorKind, Result, Tag, Value,
+    Vr,
 };
 use dicom_pixel::{DisplayFrame, DisplayTransform, PixelFormat};
 
@@ -132,6 +133,22 @@ pub struct PresentationState {
     pub shutter: Option<Shutter>,
     /// Graphic annotation objects.
     pub graphics: Vec<GraphicObject>,
+    /// Window center value for VOI LUT.
+    pub window_center: Option<f64>,
+    /// Window width value for VOI LUT.
+    pub window_width: Option<f64>,
+    /// Zoom factor (1.0 = no zoom).
+    pub zoom: Option<f64>,
+    /// Horizontal pan offset.
+    pub pan_x: Option<f64>,
+    /// Vertical pan offset.
+    pub pan_y: Option<f64>,
+    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
+    pub rotation_quadrants: Option<i32>,
+    /// Whether to flip horizontally.
+    pub flip_x: Option<bool>,
+    /// Whether to flip vertically.
+    pub flip_y: Option<bool>,
 }
 
 impl PresentationState {
@@ -197,7 +214,18 @@ impl PresentationState {
             }
         };
         let graphics = parse_graphics(dataset)?;
-        Ok(Self { shutter, graphics })
+        Ok(Self {
+            shutter,
+            graphics,
+            window_center: None,
+            window_width: None,
+            zoom: None,
+            pan_x: None,
+            pan_y: None,
+            rotation_quadrants: None,
+            flip_x: None,
+            flip_y: None,
+        })
     }
 
     /// Apply this presentation state to a display frame.
@@ -231,6 +259,20 @@ const TAG_GRAPHIC_ANNOTATION_SEQUENCE: Tag = Tag(0x0070, 0x0001);
 const TAG_GRAPHIC_OBJECT_SEQUENCE: Tag = Tag(0x0070, 0x0009);
 const TAG_GRAPHIC_DATA: Tag = Tag(0x0070, 0x0022);
 const TAG_GRAPHIC_TYPE: Tag = Tag(0x0070, 0x0023);
+
+// Tags for GSPS writeback
+const TAG_SOP_CLASS_UID: Tag = Tag(0x0008, 0x0016);
+const TAG_REFERENCED_SERIES_SEQUENCE: Tag = Tag(0x0008, 0x1115);
+const TAG_REFERENCED_IMAGE_SEQUENCE: Tag = Tag(0x0008, 0x1140);
+const TAG_REFERENCED_SOP_CLASS_UID: Tag = Tag(0x0008, 0x1150);
+const TAG_REFERENCED_SOP_INSTANCE_UID: Tag = Tag(0x0008, 0x1155);
+const TAG_WINDOW_CENTER: Tag = Tag(0x0028, 0x1050);
+const TAG_WINDOW_WIDTH: Tag = Tag(0x0028, 0x1051);
+const TAG_IMAGE_HORIZONTAL_FLIP: Tag = Tag(0x0070, 0x0202);
+const TAG_IMAGE_ROTATION: Tag = Tag(0x0070, 0x0204);
+const TAG_DISPLAYED_AREA_SELECTION_SEQUENCE: Tag = Tag(0x0070, 0x0050);
+const TAG_DISPLAYED_AREA_TOP_LEFT: Tag = Tag(0x0070, 0x0052);
+const TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO: Tag = Tag(0x0070, 0x0100);
 
 const GRAPHIC_LUMA: u8 = 0xFF;
 const GRAPHIC_COLOR: [u8; 3] = [0xFF, 0x00, 0x00];
@@ -909,6 +951,515 @@ fn invalid_tag_value(tag: Tag, detail: impl Into<String>) -> Box<Error> {
     .into()
 }
 
+// ---------------------------------------------------------------------------
+// GSPS writeback (encoding) support
+// ---------------------------------------------------------------------------
+
+/// Builder for constructing [`PresentationState`] objects for writeback.
+///
+/// Provides a fluent API for assembling presentation state attributes before
+/// encoding them to a DICOM GSPS dataset via [`encode_presentation_state`].
+///
+/// # Example
+///
+/// ```
+/// use pack_gsps::{PresentationStateBuilder, Shutter, encode_presentation_state};
+///
+/// let state = PresentationStateBuilder::new()
+///     .with_window_level(40.0, 400.0)
+///     .with_zoom(2.0)
+///     .build();
+/// let dataset = encode_presentation_state(&state);
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct PresentationStateBuilder {
+    /// Optional shutter.
+    shutter: Option<Shutter>,
+    /// Graphic annotation objects.
+    graphics: Vec<GraphicObject>,
+    /// Window center value.
+    window_center: Option<f64>,
+    /// Window width value.
+    window_width: Option<f64>,
+    /// Zoom factor (1.0 = no zoom).
+    zoom: Option<f64>,
+    /// Horizontal pan offset.
+    pan_x: Option<f64>,
+    /// Vertical pan offset.
+    pan_y: Option<f64>,
+    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
+    rotation_quadrants: Option<i32>,
+    /// Whether to flip horizontally.
+    flip_x: Option<bool>,
+    /// Whether to flip vertically.
+    flip_y: Option<bool>,
+}
+
+impl PresentationStateBuilder {
+    /// Create an empty builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a shutter to the presentation state.
+    pub fn with_shutter(mut self, shutter: Shutter) -> Self {
+        self.shutter = Some(shutter);
+        self
+    }
+
+    /// Add a graphic object to the presentation state.
+    pub fn with_graphic(mut self, graphic: GraphicObject) -> Self {
+        self.graphics.push(graphic);
+        self
+    }
+
+    /// Add window center and width values.
+    pub fn with_window_level(mut self, center: f64, width: f64) -> Self {
+        self.window_center = Some(center);
+        self.window_width = Some(width);
+        self
+    }
+
+    /// Add a zoom factor (1.0 = no zoom).
+    pub fn with_zoom(mut self, zoom: f64) -> Self {
+        self.zoom = Some(zoom);
+        self
+    }
+
+    /// Add a pan offset.
+    pub fn with_pan(mut self, pan_x: f64, pan_y: f64) -> Self {
+        self.pan_x = Some(pan_x);
+        self.pan_y = Some(pan_y);
+        self
+    }
+
+    /// Add rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
+    pub fn with_rotation(mut self, rotation_quadrants: i32) -> Self {
+        self.rotation_quadrants = Some(rotation_quadrants);
+        self
+    }
+
+    /// Add flip flags.
+    pub fn with_flip(mut self, flip_x: bool, flip_y: bool) -> Self {
+        self.flip_x = Some(flip_x);
+        self.flip_y = Some(flip_y);
+        self
+    }
+
+    /// Build the [`PresentationState`] from the configured attributes.
+    pub fn build(self) -> PresentationState {
+        PresentationState {
+            shutter: self.shutter,
+            graphics: self.graphics,
+            window_center: self.window_center,
+            window_width: self.window_width,
+            zoom: self.zoom,
+            pan_x: self.pan_x,
+            pan_y: self.pan_y,
+            rotation_quadrants: self.rotation_quadrants,
+            flip_x: self.flip_x,
+            flip_y: self.flip_y,
+        }
+    }
+}
+
+/// Encode a [`PresentationState`] into a DICOM [`Dataset`].
+///
+/// Produces a GSPS-conformant dataset containing:
+/// - SOP Class UID set to the GSPS SOP Class
+/// - Shutter tags if a shutter is present
+/// - Graphic Annotation Sequence if graphics are present
+/// - Window Center / Window Width if set
+/// - Spatial transform attributes (zoom, pan, rotation, flip) if set
+pub fn encode_presentation_state(state: &PresentationState) -> Dataset {
+    let mut dataset = Dataset::new();
+
+    // SOP Class UID
+    dataset.insert(Element {
+        tag: TAG_SOP_CLASS_UID,
+        vr: Vr::Ui,
+        value: Value::Uid(SOP_CLASS_GSPS.to_string()),
+    });
+
+    // Shutter
+    if let Some(shutter) = &state.shutter {
+        encode_shutter(&mut dataset, shutter);
+    }
+
+    // Graphics
+    if !state.graphics.is_empty() {
+        encode_graphics_sequence(&mut dataset, &state.graphics);
+    }
+
+    // Window center / width
+    if let (Some(center), Some(width)) = (state.window_center, state.window_width) {
+        if center.is_finite() && width.is_finite() && width > 0.0 {
+            dataset.insert(Element {
+                tag: TAG_WINDOW_CENTER,
+                vr: Vr::Ds,
+                value: Value::Str(format_ds(center)),
+            });
+            dataset.insert(Element {
+                tag: TAG_WINDOW_WIDTH,
+                vr: Vr::Ds,
+                value: Value::Str(format_ds(width)),
+            });
+        }
+    }
+
+    // Spatial transform
+    encode_spatial_transform(&mut dataset, state);
+
+    dataset
+}
+
+/// Viewer viewport state that captures the current visual presentation.
+///
+/// This struct is a convenience type for capturing the full set of viewport
+/// parameters from an image viewer and encoding them as a GSPS presentation
+/// state via [`encode_viewport_as_gsps`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct ViewportState {
+    /// Window center value.
+    pub window_center: f64,
+    /// Window width value.
+    pub window_width: f64,
+    /// Zoom factor (1.0 = no zoom).
+    pub zoom: f64,
+    /// Horizontal pan offset.
+    pub pan_x: f64,
+    /// Vertical pan offset.
+    pub pan_y: f64,
+    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
+    pub rotation_quadrants: i32,
+    /// Whether to flip horizontally.
+    pub flip_x: bool,
+    /// Whether to flip vertically.
+    pub flip_y: bool,
+    /// Referenced SOP Instance UID of the source image.
+    pub referenced_sop_instance_uid: String,
+}
+
+/// Encode a [`ViewportState`] as a GSPS DICOM [`Dataset`].
+///
+/// Convenience function that converts a viewport state into a complete GSPS
+/// dataset, including a reference to the source image SOP Instance UID.
+pub fn encode_viewport_as_gsps(viewport: &ViewportState) -> Dataset {
+    let state = PresentationState {
+        shutter: None,
+        graphics: Vec::new(),
+        window_center: Some(viewport.window_center),
+        window_width: Some(viewport.window_width),
+        zoom: Some(viewport.zoom),
+        pan_x: Some(viewport.pan_x),
+        pan_y: Some(viewport.pan_y),
+        rotation_quadrants: Some(viewport.rotation_quadrants),
+        flip_x: Some(viewport.flip_x),
+        flip_y: Some(viewport.flip_y),
+    };
+
+    let mut dataset = encode_presentation_state(&state);
+
+    // Add referenced image sequence pointing to the source instance.
+    let mut referenced_image = Dataset::new();
+    referenced_image.insert(Element {
+        tag: TAG_REFERENCED_SOP_INSTANCE_UID,
+        vr: Vr::Ui,
+        value: Value::Uid(viewport.referenced_sop_instance_uid.clone()),
+    });
+
+    let mut referenced_series = Dataset::new();
+    referenced_series.insert(Element {
+        tag: TAG_REFERENCED_IMAGE_SEQUENCE,
+        vr: Vr::Sq,
+        value: Value::Sequence(vec![referenced_image]),
+    });
+
+    dataset.insert(Element {
+        tag: TAG_REFERENCED_SERIES_SEQUENCE,
+        vr: Vr::Sq,
+        value: Value::Sequence(vec![referenced_series]),
+    });
+
+    dataset
+}
+
+// ---------------------------------------------------------------------------
+// Writeback helper functions
+// ---------------------------------------------------------------------------
+
+/// Format an f64 as a DICOM DS (Decimal String) value.
+///
+/// Produces a clean decimal string without leading `+` or whitespace,
+/// consistent with the strict parsing rules in [`parse_f64_strict`].
+fn format_ds(value: f64) -> String {
+    debug_assert!(value.is_finite(), "DS value must be finite");
+    // For integer-valued floats within i64 range, emit without decimal point.
+    if value == value.floor() && value.abs() < 1e15 {
+        (value as i64).to_string()
+    } else {
+        value.to_string()
+    }
+}
+
+/// Encode a [`Shutter`] into the dataset as DICOM shutter tags.
+fn encode_shutter(dataset: &mut Dataset, shutter: &Shutter) {
+    match shutter {
+        Shutter::Rect {
+            left,
+            right,
+            upper,
+            lower,
+            value,
+        } => {
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_SHAPE,
+                vr: Vr::Cs,
+                value: Value::Str("RECTANGULAR".to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_LEFT_VERT_EDGE,
+                vr: Vr::Is,
+                value: Value::Str(left.to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_RIGHT_VERT_EDGE,
+                vr: Vr::Is,
+                value: Value::Str(right.to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_UPPER_HORIZ_EDGE,
+                vr: Vr::Is,
+                value: Value::Str(upper.to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_LOWER_HORIZ_EDGE,
+                vr: Vr::Is,
+                value: Value::Str(lower.to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_PRESENTATION_VALUE,
+                vr: Vr::Us,
+                value: Value::Str((*value).to_string()),
+            });
+        }
+        Shutter::Circular {
+            center_x,
+            center_y,
+            radius,
+            value,
+        } => {
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_SHAPE,
+                vr: Vr::Cs,
+                value: Value::Str("CIRCULAR".to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_CENTER,
+                vr: Vr::Is,
+                value: Value::Str(format!("{}\\{}", center_x, center_y)),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_RADIUS,
+                vr: Vr::Is,
+                value: Value::Str(radius.to_string()),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_PRESENTATION_VALUE,
+                vr: Vr::Us,
+                value: Value::Str((*value).to_string()),
+            });
+        }
+        Shutter::Polygon { points, value } => {
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_SHAPE,
+                vr: Vr::Cs,
+                value: Value::Str("POLYGONAL".to_string()),
+            });
+            let vertices: Vec<String> = points
+                .iter()
+                .flat_map(|(x, y)| [x.to_string(), y.to_string()])
+                .collect();
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_VERTICES,
+                vr: Vr::Is,
+                value: Value::Str(vertices.join("\\")),
+            });
+            dataset.insert(Element {
+                tag: TAG_SHUTTER_PRESENTATION_VALUE,
+                vr: Vr::Us,
+                value: Value::Str((*value).to_string()),
+            });
+        }
+    }
+}
+
+/// Encode graphic objects into a Graphic Annotation Sequence in the dataset.
+fn encode_graphics_sequence(dataset: &mut Dataset, graphics: &[GraphicObject]) {
+    let graphic_items: Vec<Dataset> = graphics
+        .iter()
+        .map(|g| {
+            let mut item = Dataset::new();
+            let (graphic_type, graphic_data) = match g {
+                GraphicObject::Point { point } => (
+                    "POINT",
+                    format_ds(point.0) + "\\" + &format_ds(point.1),
+                ),
+                GraphicObject::Polyline { points } => {
+                    let data: Vec<String> = points
+                        .iter()
+                        .flat_map(|(x, y)| [format_ds(*x), format_ds(*y)])
+                        .collect();
+                    ("POLYLINE", data.join("\\"))
+                }
+                GraphicObject::Interpolated { points } => {
+                    let data: Vec<String> = points
+                        .iter()
+                        .flat_map(|(x, y)| [format_ds(*x), format_ds(*y)])
+                        .collect();
+                    ("INTERPOLATED", data.join("\\"))
+                }
+                GraphicObject::Circle { center, edge } => (
+                    "CIRCLE",
+                    format_ds(center.0)
+                        + "\\"
+                        + &format_ds(center.1)
+                        + "\\"
+                        + &format_ds(edge.0)
+                        + "\\"
+                        + &format_ds(edge.1),
+                ),
+                GraphicObject::Ellipse {
+                    major_start,
+                    major_end,
+                    minor_start,
+                    minor_end,
+                } => (
+                    "ELLIPSE",
+                    format_ds(major_start.0)
+                        + "\\"
+                        + &format_ds(major_start.1)
+                        + "\\"
+                        + &format_ds(major_end.0)
+                        + "\\"
+                        + &format_ds(major_end.1)
+                        + "\\"
+                        + &format_ds(minor_start.0)
+                        + "\\"
+                        + &format_ds(minor_start.1)
+                        + "\\"
+                        + &format_ds(minor_end.0)
+                        + "\\"
+                        + &format_ds(minor_end.1),
+                ),
+            };
+            item.insert(Element {
+                tag: TAG_GRAPHIC_TYPE,
+                vr: Vr::Cs,
+                value: Value::Str(graphic_type.to_string()),
+            });
+            item.insert(Element {
+                tag: TAG_GRAPHIC_DATA,
+                vr: Vr::Ds,
+                value: Value::Str(graphic_data),
+            });
+            item
+        })
+        .collect();
+
+    let mut annotation = Dataset::new();
+    annotation.insert(Element {
+        tag: TAG_GRAPHIC_OBJECT_SEQUENCE,
+        vr: Vr::Sq,
+        value: Value::Sequence(graphic_items),
+    });
+
+    dataset.insert(Element {
+        tag: TAG_GRAPHIC_ANNOTATION_SEQUENCE,
+        vr: Vr::Sq,
+        value: Value::Sequence(vec![annotation]),
+    });
+}
+
+/// Encode spatial transform attributes (zoom, pan, rotation, flip).
+///
+/// Rotation and flip are encoded using the standard Spatial Transformation
+/// Module tags. Zoom is stored as Presentation Pixel Magnification Ratio
+/// inside a Displayed Area Selection Sequence. Pan offsets are included
+/// in the same sequence item.
+fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
+    let has_rotation = state.rotation_quadrants.is_some();
+    let has_flip = state.flip_x.is_some() || state.flip_y.is_some();
+    let has_zoom = state.zoom.is_some();
+    let has_pan = state.pan_x.is_some() || state.pan_y.is_some();
+
+    if !has_rotation && !has_flip && !has_zoom && !has_pan {
+        return;
+    }
+
+    // Compute effective DICOM flip and rotation.
+    // DICOM GSPS supports Image Horizontal Flip (0070,0202) and Image
+    // Rotation (0070,0204). Vertical flip is represented as horizontal
+    // flip combined with 180° rotation.
+    let flip_x = state.flip_x.unwrap_or(false);
+    let flip_y = state.flip_y.unwrap_or(false);
+    let rotation_q = state.rotation_quadrants.unwrap_or(0);
+
+    let effective_flip_x = flip_x ^ flip_y;
+    let effective_rotation = (rotation_q + if flip_y { 2 } else { 0 }) % 4;
+
+    // Write Image Horizontal Flip
+    dataset.insert(Element {
+        tag: TAG_IMAGE_HORIZONTAL_FLIP,
+        vr: Vr::Cs,
+        value: Value::Str(if effective_flip_x {
+            "Y".to_string()
+        } else {
+            "N".to_string()
+        }),
+    });
+
+    // Write Image Rotation (in degrees)
+    dataset.insert(Element {
+        tag: TAG_IMAGE_ROTATION,
+        vr: Vr::Is,
+        value: Value::Str((effective_rotation * 90).to_string()),
+    });
+
+    // Write zoom and pan in a Displayed Area Selection Sequence
+    if has_zoom || has_pan {
+        let mut area_item = Dataset::new();
+
+        if let Some(zoom) = state.zoom {
+            if zoom.is_finite() && zoom > 0.0 {
+                area_item.insert(Element {
+                    tag: TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO,
+                    vr: Vr::Ds,
+                    value: Value::Str(format_ds(zoom)),
+                });
+            }
+        }
+
+        if has_pan {
+            let pan_x = state.pan_x.unwrap_or(0.0);
+            let pan_y = state.pan_y.unwrap_or(0.0);
+            if pan_x.is_finite() && pan_y.is_finite() {
+                area_item.insert(Element {
+                    tag: TAG_DISPLAYED_AREA_TOP_LEFT,
+                    vr: Vr::Ds,
+                    value: Value::Str(format!("{}\\{}", format_ds(pan_y), format_ds(pan_x))),
+                });
+            }
+        }
+
+        dataset.insert(Element {
+            tag: TAG_DISPLAYED_AREA_SELECTION_SEQUENCE,
+            vr: Vr::Sq,
+            value: Value::Sequence(vec![area_item]),
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1321,5 +1872,496 @@ mod tests {
         let dataset = build_polygon_dataset("1\\1\\2\\2", 0);
         let err = PresentationState::from_dataset(&dataset).expect_err("expected error");
         assert!(matches!(err.kind, ErrorKind::InvalidTagValue { .. }));
+    }
+
+    // -----------------------------------------------------------------------
+    // Writeback (encoding) tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn builder_creates_empty_state() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new().build();
+        assert!(state.shutter.is_none());
+        assert!(state.graphics.is_empty());
+        assert!(state.window_center.is_none());
+        assert!(state.window_width.is_none());
+        assert!(state.zoom.is_none());
+        assert!(state.pan_x.is_none());
+        assert!(state.pan_y.is_none());
+        assert!(state.rotation_quadrants.is_none());
+        assert!(state.flip_x.is_none());
+        assert!(state.flip_y.is_none());
+    }
+
+    #[test]
+    fn builder_with_window_level() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_window_level(40.0, 400.0)
+            .build();
+        assert_eq!(state.window_center, Some(40.0));
+        assert_eq!(state.window_width, Some(400.0));
+    }
+
+    #[test]
+    fn builder_with_spatial_transform() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_zoom(2.5)
+            .with_pan(10.0, -5.0)
+            .with_rotation(1)
+            .with_flip(true, false)
+            .build();
+        assert_eq!(state.zoom, Some(2.5));
+        assert_eq!(state.pan_x, Some(10.0));
+        assert_eq!(state.pan_y, Some(-5.0));
+        assert_eq!(state.rotation_quadrants, Some(1));
+        assert_eq!(state.flip_x, Some(true));
+        assert_eq!(state.flip_y, Some(false));
+    }
+
+    #[test]
+    fn builder_with_shutter_and_graphics() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_shutter(Shutter::Rect {
+                left: 1,
+                right: 10,
+                upper: 1,
+                lower: 10,
+                value: 0,
+            })
+            .with_graphic(GraphicObject::Point { point: (5.0, 5.0) })
+            .with_graphic(GraphicObject::Polyline {
+                points: vec![(1.0, 1.0), (2.0, 2.0)],
+            })
+            .build();
+        assert!(state.shutter.is_some());
+        assert_eq!(state.graphics.len(), 2);
+    }
+
+    #[test]
+    fn encode_empty_state_has_sop_class_uid() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new().build();
+        let dataset = encode_presentation_state(&state);
+        let sop_class = dataset.get_uid(TAG_SOP_CLASS_UID);
+        assert_eq!(sop_class, Some(SOP_CLASS_GSPS));
+    }
+
+    #[test]
+    fn encode_rect_shutter_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_shutter(Shutter::Rect {
+                left: 5,
+                right: 20,
+                upper: 3,
+                lower: 15,
+                value: 128,
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.shutter, original.shutter);
+        assert!(parsed.graphics.is_empty());
+    }
+
+    #[test]
+    fn encode_circular_shutter_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_shutter(Shutter::Circular {
+                center_x: 100,
+                center_y: 200,
+                radius: 50,
+                value: 64,
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.shutter, original.shutter);
+    }
+
+    #[test]
+    fn encode_polygon_shutter_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_shutter(Shutter::Polygon {
+                points: vec![(1, 1), (100, 1), (100, 100)],
+                value: 0,
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.shutter, original.shutter);
+    }
+
+    #[test]
+    fn encode_polyline_graphic_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_graphic(GraphicObject::Polyline {
+                points: vec![(1.0, 1.0), (2.0, 3.0), (4.0, 5.0)],
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.graphics, original.graphics);
+    }
+
+    #[test]
+    fn encode_point_graphic_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_graphic(GraphicObject::Point { point: (10.5, 20.3) })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.graphics, original.graphics);
+    }
+
+    #[test]
+    fn encode_interpolated_graphic_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_graphic(GraphicObject::Interpolated {
+                points: vec![(1.0, 1.0), (5.0, 5.0), (10.0, 1.0)],
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.graphics, original.graphics);
+    }
+
+    #[test]
+    fn encode_circle_graphic_roundtrip() {
+        // REQ-GSPS-302
+        let original = PresentationStateBuilder::new()
+            .with_graphic(GraphicObject::Circle {
+                center: (50.0, 50.0),
+                edge: (60.0, 50.0),
+            })
+            .build();
+        let dataset = encode_presentation_state(&original);
+        let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
+        assert_eq!(parsed.graphics, original.graphics);
+    }
+
+    #[test]
+    fn encode_window_level() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_window_level(40.0, 400.0)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let center = dataset
+            .get(TAG_WINDOW_CENTER)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let width = dataset
+            .get(TAG_WINDOW_WIDTH)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(center, Some("40"));
+        assert_eq!(width, Some("400"));
+    }
+
+    #[test]
+    fn encode_spatial_transform_no_flip() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_rotation(1)
+            .with_flip(false, false)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let flip = dataset
+            .get(TAG_IMAGE_HORIZONTAL_FLIP)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let rotation = dataset
+            .get(TAG_IMAGE_ROTATION)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(flip, Some("N"));
+        assert_eq!(rotation, Some("90")); // quadrant 1 = 90°
+    }
+
+    #[test]
+    fn encode_spatial_transform_horizontal_flip() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_rotation(0)
+            .with_flip(true, false)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let flip = dataset
+            .get(TAG_IMAGE_HORIZONTAL_FLIP)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let rotation = dataset
+            .get(TAG_IMAGE_ROTATION)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(flip, Some("Y")); // flip_x XOR flip_y = true
+        assert_eq!(rotation, Some("0")); // no rotation + no flip_y
+    }
+
+    #[test]
+    fn encode_spatial_transform_vertical_flip() {
+        // REQ-GSPS-302: vertical flip = horizontal flip + 180° rotation
+        let state = PresentationStateBuilder::new()
+            .with_rotation(0)
+            .with_flip(false, true)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let flip = dataset
+            .get(TAG_IMAGE_HORIZONTAL_FLIP)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let rotation = dataset
+            .get(TAG_IMAGE_ROTATION)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(flip, Some("Y")); // flip_x XOR flip_y = true
+        assert_eq!(rotation, Some("180")); // rotation_q + 2 = 2 quadrants
+    }
+
+    #[test]
+    fn encode_spatial_transform_both_flips() {
+        // REQ-GSPS-302: both flips = 180° rotation, no horizontal flip
+        let state = PresentationStateBuilder::new()
+            .with_rotation(0)
+            .with_flip(true, true)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let flip = dataset
+            .get(TAG_IMAGE_HORIZONTAL_FLIP)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let rotation = dataset
+            .get(TAG_IMAGE_ROTATION)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(flip, Some("N")); // flip_x XOR flip_y = false
+        assert_eq!(rotation, Some("180")); // rotation_q + 2 (from flip_y)
+    }
+
+    #[test]
+    fn encode_zoom_in_displayed_area() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_zoom(2.5)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let seq = dataset
+            .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
+            .and_then(|e| match &e.value {
+                Value::Sequence(items) => Some(items.as_slice()),
+                _ => None,
+            });
+        assert!(seq.is_some());
+        let items = seq.unwrap();
+        assert_eq!(items.len(), 1);
+        let zoom_val = items[0]
+            .get(TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(zoom_val, Some("2.5"));
+    }
+
+    #[test]
+    fn encode_pan_in_displayed_area() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new()
+            .with_pan(10.0, -5.0)
+            .build();
+        let dataset = encode_presentation_state(&state);
+        let seq = dataset
+            .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
+            .and_then(|e| match &e.value {
+                Value::Sequence(items) => Some(items.as_slice()),
+                _ => None,
+            });
+        assert!(seq.is_some());
+        let items = seq.unwrap();
+        assert_eq!(items.len(), 1);
+        let pan_val = items[0]
+            .get(TAG_DISPLAYED_AREA_TOP_LEFT)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        // Format is "pan_y\\pan_x"
+        assert_eq!(pan_val, Some("-5\\10"));
+    }
+
+    #[test]
+    fn viewport_state_struct() {
+        // REQ-GSPS-302
+        let viewport = ViewportState {
+            window_center: 40.0,
+            window_width: 400.0,
+            zoom: 1.5,
+            pan_x: 5.0,
+            pan_y: -3.0,
+            rotation_quadrants: 1,
+            flip_x: false,
+            flip_y: true,
+            referenced_sop_instance_uid: "1.2.3.4.5".to_string(),
+        };
+        assert_eq!(viewport.window_center, 40.0);
+        assert_eq!(viewport.zoom, 1.5);
+        assert_eq!(viewport.flip_y, true);
+        assert_eq!(viewport.referenced_sop_instance_uid, "1.2.3.4.5");
+    }
+
+    #[test]
+    fn encode_viewport_as_gsps_contains_reference() {
+        // REQ-GSPS-302
+        let viewport = ViewportState {
+            window_center: 40.0,
+            window_width: 400.0,
+            zoom: 1.0,
+            pan_x: 0.0,
+            pan_y: 0.0,
+            rotation_quadrants: 0,
+            flip_x: false,
+            flip_y: false,
+            referenced_sop_instance_uid: "1.2.840.10008.5.1.4.1.1.2".to_string(),
+        };
+        let dataset = encode_viewport_as_gsps(&viewport);
+
+        // Should have SOP Class UID
+        let sop_class = dataset.get_uid(TAG_SOP_CLASS_UID);
+        assert_eq!(sop_class, Some(SOP_CLASS_GSPS));
+
+        // Should have window center/width
+        let center = dataset
+            .get(TAG_WINDOW_CENTER)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(center, Some("40"));
+
+        // Should have referenced series sequence with the SOP Instance UID
+        let ref_series = dataset
+            .get(TAG_REFERENCED_SERIES_SEQUENCE)
+            .and_then(|e| match &e.value {
+                Value::Sequence(items) => Some(items.as_slice()),
+                _ => None,
+            });
+        assert!(ref_series.is_some());
+        let series_items = ref_series.unwrap();
+        assert_eq!(series_items.len(), 1);
+        let ref_images = series_items[0]
+            .get(TAG_REFERENCED_IMAGE_SEQUENCE)
+            .and_then(|e| match &e.value {
+                Value::Sequence(items) => Some(items.as_slice()),
+                _ => None,
+            });
+        assert!(ref_images.is_some());
+        let image_items = ref_images.unwrap();
+        assert_eq!(image_items.len(), 1);
+        let uid = image_items[0].get_uid(TAG_REFERENCED_SOP_INSTANCE_UID);
+        assert_eq!(uid, Some("1.2.840.10008.5.1.4.1.1.2"));
+    }
+
+    #[test]
+    fn encode_viewport_with_rotation_and_flip() {
+        // REQ-GSPS-302
+        let viewport = ViewportState {
+            window_center: 500.0,
+            window_width: 2000.0,
+            zoom: 3.0,
+            pan_x: 100.0,
+            pan_y: 50.0,
+            rotation_quadrants: 2,
+            flip_x: true,
+            flip_y: false,
+            referenced_sop_instance_uid: "9.9.9".to_string(),
+        };
+        let dataset = encode_viewport_as_gsps(&viewport);
+
+        // Check flip and rotation are encoded
+        let flip = dataset
+            .get(TAG_IMAGE_HORIZONTAL_FLIP)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        let rotation = dataset
+            .get(TAG_IMAGE_ROTATION)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(flip, Some("Y")); // flip_x=true, flip_y=false -> effective_flip_x=true
+        assert_eq!(rotation, Some("180")); // rotation_q=2, flip_y=false -> 2*90=180
+
+        // Check zoom
+        let seq = dataset
+            .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
+            .and_then(|e| match &e.value {
+                Value::Sequence(items) => Some(items.as_slice()),
+                _ => None,
+            })
+            .expect("displayed area sequence");
+        let zoom_val = seq[0]
+            .get(TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO)
+            .and_then(|e| match &e.value {
+                Value::Str(s) => Some(s.as_str()),
+                _ => None,
+            });
+        assert_eq!(zoom_val, Some("3"));
+    }
+
+    #[test]
+    fn encode_no_spatial_transform_when_none_set() {
+        // REQ-GSPS-302
+        let state = PresentationStateBuilder::new().build();
+        let dataset = encode_presentation_state(&state);
+        assert!(dataset.get(TAG_IMAGE_HORIZONTAL_FLIP).is_none());
+        assert!(dataset.get(TAG_IMAGE_ROTATION).is_none());
+        assert!(dataset.get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE).is_none());
+    }
+
+    #[test]
+    fn format_ds_integer_values() {
+        // REQ-GSPS-302
+        assert_eq!(format_ds(40.0), "40");
+        assert_eq!(format_ds(0.0), "0");
+        assert_eq!(format_ds(-7.0), "-7");
+    }
+
+    #[test]
+    fn format_ds_fractional_values() {
+        // REQ-GSPS-302
+        assert_eq!(format_ds(1.5), "1.5");
+        assert_eq!(format_ds(0.001), "0.001");
     }
 }

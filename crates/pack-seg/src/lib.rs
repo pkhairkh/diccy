@@ -1,8 +1,9 @@
 #![deny(missing_docs)]
 
-//! Segmentation pack: binary segmentation parsing and deterministic overlays.
+//! Segmentation pack: binary and fractional segmentation parsing, encoding,
+//! and deterministic overlays.
 
-use dicom_core::{parse_i32_strict, Dataset, Error, ErrorKind, Result, Tag, Value};
+use dicom_core::{parse_i32_strict, Dataset, Element, Error, ErrorKind, Result, Tag, Value, Vr};
 use dicom_pixel::{DisplayFrame, PixelFormat};
 
 /// Segmentation Storage SOP Class UID.
@@ -48,9 +49,33 @@ impl SegPack {
 pub enum SegmentationType {
     /// Binary segmentation (0/1).
     Binary,
+    /// Fractional segmentation (probability 0.0–1.0).
+    Fractional,
 }
 
-/// Parsed segmentation data (binary, single-frame or multi-frame).
+impl SegmentationType {
+    /// Return the DICOM CS string for this segmentation type.
+    pub fn to_cs_string(self) -> &'static str {
+        match self {
+            SegmentationType::Binary => "BINARY",
+            SegmentationType::Fractional => "FRACTIONAL",
+        }
+    }
+
+    /// Parse a DICOM CS string into a segmentation type.
+    pub fn from_cs_string(s: &str) -> Result<Self> {
+        match s {
+            "BINARY" => Ok(SegmentationType::Binary),
+            "FRACTIONAL" => Ok(SegmentationType::Fractional),
+            _ => Err(invalid_tag_value(
+        TAG_SEGMENTATION_TYPE,
+        "expected BINARY or FRACTIONAL",
+    )),
+        }
+    }
+}
+
+/// Parsed segmentation data (binary or fractional, single-frame or multi-frame).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Segmentation {
     /// Rows.
@@ -66,7 +91,11 @@ pub struct Segmentation {
     /// Referenced SOP Instance UID, if present.
     pub referenced_sop_instance_uid: Option<String>,
     /// Mask bytes (one byte per pixel, 0 or 255), frame-major order.
+    /// Used for binary segmentation.
     pub mask: Vec<u8>,
+    /// Fractional probability values (0.0–1.0 per pixel), frame-major order.
+    /// Used for fractional segmentation.
+    pub fractional_probability: Vec<f32>,
     /// Segmentation type.
     pub seg_type: SegmentationType,
 }
@@ -85,7 +114,7 @@ pub struct SegReference<'a> {
 }
 
 impl Segmentation {
-    /// Parse a binary segmentation from a dataset.
+    /// Parse a segmentation from a dataset.
     pub fn from_dataset(dataset: &Dataset) -> Result<Self> {
         let frames = match read_u16_optional(dataset, TAG_NUMBER_OF_FRAMES)? {
             Some(0) => {
@@ -102,62 +131,109 @@ impl Segmentation {
         let frame_of_reference_uid = read_str(dataset, TAG_FRAME_OF_REFERENCE_UID)?
             .ok_or_else(|| missing_required_tag(TAG_FRAME_OF_REFERENCE_UID))?
             .to_string();
-        let seg_type = read_str(dataset, TAG_SEGMENTATION_TYPE)?
+        let seg_type_str = read_str(dataset, TAG_SEGMENTATION_TYPE)?
             .ok_or_else(|| missing_required_tag(TAG_SEGMENTATION_TYPE))?;
-        if seg_type != "BINARY" {
-            return Err(invalid_tag_value(
-                TAG_SEGMENTATION_TYPE,
-                "only BINARY segmentation supported",
-            ));
-        }
+        let seg_type = SegmentationType::from_cs_string(seg_type_str)?;
         let segment_number = read_u16(dataset, TAG_SEGMENT_NUMBER)?;
         let referenced_sop_instance_uid = read_referenced_sop_instance_uid(dataset)?;
-        let bits_allocated = read_u16(dataset, TAG_BITS_ALLOCATED)?;
-        if bits_allocated != 1 {
-            return Err(invalid_tag_value(
-                TAG_BITS_ALLOCATED,
-                "segmentation BitsAllocated must be 1",
-            ));
-        }
-        let bits_stored = read_u16(dataset, TAG_BITS_STORED)?;
-        if bits_stored != 1 {
-            return Err(invalid_tag_value(
-                TAG_BITS_STORED,
-                "segmentation BitsStored must be 1",
-            ));
-        }
-        let high_bit = read_u16(dataset, TAG_HIGH_BIT)?;
-        if high_bit != 0 {
-            return Err(invalid_tag_value(
-                TAG_HIGH_BIT,
-                "segmentation HighBit must be 0",
-            ));
-        }
-        let pixel_data = read_bytes(dataset, TAG_PIXEL_DATA)?;
+
         let expected_pixels = rows as usize * cols as usize * frames as usize;
-        let expected_bytes = expected_pixels.div_ceil(8);
-        if pixel_data.len() < expected_bytes {
-            return Err(invalid_tag_value(
-                TAG_PIXEL_DATA,
-                "segmentation pixel data too short",
-            ));
+
+        match seg_type {
+            SegmentationType::Binary => {
+                let bits_allocated = read_u16(dataset, TAG_BITS_ALLOCATED)?;
+                if bits_allocated != 1 {
+                    return Err(invalid_tag_value(
+                        TAG_BITS_ALLOCATED,
+                        "binary segmentation BitsAllocated must be 1",
+                    ));
+                }
+                let bits_stored = read_u16(dataset, TAG_BITS_STORED)?;
+                if bits_stored != 1 {
+                    return Err(invalid_tag_value(
+                        TAG_BITS_STORED,
+                        "binary segmentation BitsStored must be 1",
+                    ));
+                }
+                let high_bit = read_u16(dataset, TAG_HIGH_BIT)?;
+                if high_bit != 0 {
+                    return Err(invalid_tag_value(
+                        TAG_HIGH_BIT,
+                        "binary segmentation HighBit must be 0",
+                    ));
+                }
+                let pixel_data = read_bytes(dataset, TAG_PIXEL_DATA)?;
+                let expected_bytes = expected_pixels.div_ceil(8);
+                if pixel_data.len() < expected_bytes {
+                    return Err(invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "segmentation pixel data too short",
+                    ));
+                }
+                let mut mask = vec![0u8; expected_pixels];
+                for i in 0..expected_pixels {
+                    let byte = pixel_data[i / 8];
+                    let bit = (byte >> (i % 8)) & 1;
+                    mask[i] = if bit == 1 { 0xFF } else { 0x00 };
+                }
+                Ok(Self {
+                    rows,
+                    cols,
+                    frames,
+                    frame_of_reference_uid,
+                    segment_number,
+                    referenced_sop_instance_uid,
+                    mask,
+                    fractional_probability: Vec::new(),
+                    seg_type: SegmentationType::Binary,
+                })
+            }
+            SegmentationType::Fractional => {
+                let bits_allocated = read_u16(dataset, TAG_BITS_ALLOCATED)?;
+                if bits_allocated != 8 {
+                    return Err(invalid_tag_value(
+                        TAG_BITS_ALLOCATED,
+                        "fractional segmentation BitsAllocated must be 8",
+                    ));
+                }
+                let bits_stored = read_u16(dataset, TAG_BITS_STORED)?;
+                if bits_stored != 8 {
+                    return Err(invalid_tag_value(
+                        TAG_BITS_STORED,
+                        "fractional segmentation BitsStored must be 8",
+                    ));
+                }
+                let high_bit = read_u16(dataset, TAG_HIGH_BIT)?;
+                if high_bit != 7 {
+                    return Err(invalid_tag_value(
+                        TAG_HIGH_BIT,
+                        "fractional segmentation HighBit must be 7",
+                    ));
+                }
+                let pixel_data = read_bytes(dataset, TAG_PIXEL_DATA)?;
+                if pixel_data.len() < expected_pixels {
+                    return Err(invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "fractional segmentation pixel data too short",
+                    ));
+                }
+                let fractional_probability: Vec<f32> = pixel_data[..expected_pixels]
+                    .iter()
+                    .map(|&b| b as f32 / 255.0)
+                    .collect();
+                Ok(Self {
+                    rows,
+                    cols,
+                    frames,
+                    frame_of_reference_uid,
+                    segment_number,
+                    referenced_sop_instance_uid,
+                    mask: Vec::new(),
+                    fractional_probability,
+                    seg_type: SegmentationType::Fractional,
+                })
+            }
         }
-        let mut mask = vec![0u8; expected_pixels];
-        for i in 0..expected_pixels {
-            let byte = pixel_data[i / 8];
-            let bit = (byte >> (i % 8)) & 1;
-            mask[i] = if bit == 1 { 0xFF } else { 0x00 };
-        }
-        Ok(Self {
-            rows,
-            cols,
-            frames,
-            frame_of_reference_uid,
-            segment_number,
-            referenced_sop_instance_uid,
-            mask,
-            seg_type: SegmentationType::Binary,
-        })
     }
 
     /// Apply this segmentation frame 0 as a deterministic RGBA overlay onto a frame.
@@ -209,19 +285,39 @@ impl Segmentation {
         let frame_pixels = self.rows as usize * self.cols as usize;
         let frame_start = frame_index as usize * frame_pixels;
         let frame_end = frame_start + frame_pixels;
-        let frame_mask = &self.mask[frame_start..frame_end];
         let mut out = vec![0u8; (frame.width * frame.height * 4) as usize];
         let color = segment_color(self.segment_number);
-        for (idx, &mask) in frame_mask.iter().enumerate() {
-            if mask == 0 {
-                continue;
+
+        match self.seg_type {
+            SegmentationType::Binary => {
+                let frame_mask = &self.mask[frame_start..frame_end];
+                for (idx, &mask_val) in frame_mask.iter().enumerate() {
+                    if mask_val == 0 {
+                        continue;
+                    }
+                    let base = idx * 4;
+                    out[base] = color[0];
+                    out[base + 1] = color[1];
+                    out[base + 2] = color[2];
+                    out[base + 3] = color[3];
+                }
             }
-            let base = idx * 4;
-            out[base] = color[0];
-            out[base + 1] = color[1];
-            out[base + 2] = color[2];
-            out[base + 3] = color[3];
+            SegmentationType::Fractional => {
+                let frame_probs = &self.fractional_probability[frame_start..frame_end];
+                for (idx, &prob) in frame_probs.iter().enumerate() {
+                    if prob <= 0.0 {
+                        continue;
+                    }
+                    let base = idx * 4;
+                    let alpha = (prob.clamp(0.0, 1.0) * color[3] as f32) as u8;
+                    out[base] = color[0];
+                    out[base + 1] = color[1];
+                    out[base + 2] = color[2];
+                    out[base + 3] = alpha;
+                }
+            }
         }
+
         Ok(DisplayFrame {
             width: frame.width,
             height: frame.height,
@@ -230,6 +326,273 @@ impl Segmentation {
         })
     }
 }
+
+// ---------------------------------------------------------------------------
+// Encoder
+// ---------------------------------------------------------------------------
+
+/// Builder for encoding segmentation data into a DICOM Dataset.
+///
+/// Construct with [`SegmentationEncoder::new`], then set required fields via
+/// builder methods, and finally call [`SegmentationEncoder::encode_to_dataset`].
+///
+/// # Example
+///
+/// ```ignore
+/// use pack_seg::{SegmentationEncoder, SegmentationType};
+///
+/// let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+///     .rows(256)
+///     .cols(256)
+///     .frames(1)
+///     .frame_of_reference_uid("1.2.3.4.5")
+///     .segment_number(1)
+///     .binary_mask(vec![0u8; 256 * 256])
+///     .encode_to_dataset()
+///     .expect("encode");
+/// ```
+#[derive(Debug, Clone)]
+pub struct SegmentationEncoder {
+    seg_type: SegmentationType,
+    rows: Option<u16>,
+    cols: Option<u16>,
+    frames: Option<u16>,
+    frame_of_reference_uid: Option<String>,
+    segment_number: Option<u16>,
+    binary_mask: Option<Vec<u8>>,
+    fractional_mask: Option<Vec<f32>>,
+    referenced_sop_instance_uid: Option<String>,
+}
+
+impl SegmentationEncoder {
+    /// Create a new encoder for the given segmentation type.
+    pub fn new(seg_type: SegmentationType) -> Self {
+        Self {
+            seg_type,
+            rows: None,
+            cols: None,
+            frames: None,
+            frame_of_reference_uid: None,
+            segment_number: None,
+            binary_mask: None,
+            fractional_mask: None,
+            referenced_sop_instance_uid: None,
+        }
+    }
+
+    /// Set the number of rows.
+    pub fn rows(mut self, rows: u16) -> Self {
+        self.rows = Some(rows);
+        self
+    }
+
+    /// Set the number of columns.
+    pub fn cols(mut self, cols: u16) -> Self {
+        self.cols = Some(cols);
+        self
+    }
+
+    /// Set the number of frames (defaults to 1 if not called).
+    pub fn frames(mut self, frames: u16) -> Self {
+        self.frames = Some(frames);
+        self
+    }
+
+    /// Set the Frame of Reference UID.
+    pub fn frame_of_reference_uid(mut self, uid: impl Into<String>) -> Self {
+        self.frame_of_reference_uid = Some(uid.into());
+        self
+    }
+
+    /// Set the segment number.
+    pub fn segment_number(mut self, num: u16) -> Self {
+        self.segment_number = Some(num);
+        self
+    }
+
+    /// Set the binary mask data (one byte per pixel, 0 or non-zero).
+    pub fn binary_mask(mut self, mask: Vec<u8>) -> Self {
+        self.binary_mask = Some(mask);
+        self
+    }
+
+    /// Set the fractional probability mask data (0.0–1.0 per pixel).
+    pub fn fractional_mask(mut self, mask: Vec<f32>) -> Self {
+        self.fractional_mask = Some(mask);
+        self
+    }
+
+    /// Set the referenced SOP Instance UID.
+    pub fn referenced_sop_instance_uid(mut self, uid: impl Into<String>) -> Self {
+        self.referenced_sop_instance_uid = Some(uid.into());
+        self
+    }
+
+    /// Encode the segmentation data into a DICOM Dataset.
+    ///
+    /// Produces a deterministic dataset with all required DICOM tags for the
+    /// Segmentation IOD, including bit-packed pixel data for binary and raw
+    /// bytes for fractional.
+    pub fn encode_to_dataset(self) -> Result<Dataset> {
+        let rows = self.rows.ok_or_else(|| missing_required_tag(TAG_ROWS))?;
+        let cols = self.cols.ok_or_else(|| missing_required_tag(TAG_COLUMNS))?;
+        let frames = self.frames.unwrap_or(1);
+        if frames == 0 {
+            return Err(invalid_tag_value(
+                TAG_NUMBER_OF_FRAMES,
+                "number of frames must be >= 1",
+            ));
+        }
+        let frame_of_reference_uid = self
+            .frame_of_reference_uid
+            .ok_or_else(|| missing_required_tag(TAG_FRAME_OF_REFERENCE_UID))?;
+        let segment_number = self
+            .segment_number
+            .ok_or_else(|| missing_required_tag(TAG_SEGMENT_NUMBER))?;
+
+        let expected_pixels = rows as usize * cols as usize * frames as usize;
+
+        let pixel_data = match self.seg_type {
+            SegmentationType::Binary => {
+                let mask = self.binary_mask.ok_or_else(|| {
+                    invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "binary mask data required for BINARY segmentation",
+                    )
+                })?;
+                if mask.len() < expected_pixels {
+                    return Err(invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "binary mask data too short for rows*cols*frames",
+                    ));
+                }
+                // Bit-pack: LSB-first within each byte.
+                let byte_count = expected_pixels.div_ceil(8);
+                let mut packed = vec![0u8; byte_count];
+                for i in 0..expected_pixels {
+                    if mask[i] != 0 {
+                        packed[i / 8] |= 1 << (i % 8);
+                    }
+                }
+                packed
+            }
+            SegmentationType::Fractional => {
+                let frac = self.fractional_mask.ok_or_else(|| {
+                    invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "fractional mask data required for FRACTIONAL segmentation",
+                    )
+                })?;
+                if frac.len() < expected_pixels {
+                    return Err(invalid_tag_value(
+                        TAG_PIXEL_DATA,
+                        "fractional mask data too short for rows*cols*frames",
+                    ));
+                }
+                // Convert f32 probability [0.0, 1.0] to u8 [0, 255].
+                frac[..expected_pixels]
+                    .iter()
+                    .map(|&p| (p.clamp(0.0, 1.0) * 255.0).round() as u8)
+                    .collect()
+            }
+        };
+
+        let (bits_allocated, bits_stored, high_bit) = match self.seg_type {
+            SegmentationType::Binary => (1u16, 1u16, 0u16),
+            SegmentationType::Fractional => (8u16, 8u16, 7u16),
+        };
+
+        let mut dataset = Dataset::new();
+
+        // Rows
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str(rows.to_string()),
+        });
+        // Columns
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str(cols.to_string()),
+        });
+        // NumberOfFrames
+        dataset.insert(Element {
+            tag: TAG_NUMBER_OF_FRAMES,
+            vr: Vr::Is,
+            value: Value::Str(frames.to_string()),
+        });
+        // FrameOfReferenceUID
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid(frame_of_reference_uid),
+        });
+        // SegmentationType
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str(self.seg_type.to_cs_string().to_string()),
+        });
+        // SegmentNumber
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str(segment_number.to_string()),
+        });
+        // BitsAllocated
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str(bits_allocated.to_string()),
+        });
+        // BitsStored
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str(bits_stored.to_string()),
+        });
+        // HighBit
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str(high_bit.to_string()),
+        });
+        // PixelData
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(pixel_data),
+        });
+
+        // ReferencedSeriesSequence (optional)
+        if let Some(ref_uid) = self.referenced_sop_instance_uid {
+            let mut ref_instance = Dataset::new();
+            ref_instance.insert(Element {
+                tag: TAG_REFERENCED_SOP_INSTANCE_UID,
+                vr: Vr::Ui,
+                value: Value::Uid(ref_uid),
+            });
+            let mut ref_series = Dataset::new();
+            ref_series.insert(Element {
+                tag: TAG_REFERENCED_INSTANCE_SEQUENCE,
+                vr: Vr::Sq,
+                value: Value::Sequence(vec![ref_instance]),
+            });
+            dataset.insert(Element {
+                tag: TAG_REFERENCED_SERIES_SEQUENCE,
+                vr: Vr::Sq,
+                value: Value::Sequence(vec![ref_series]),
+            });
+        }
+
+        Ok(dataset)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tag constants
+// ---------------------------------------------------------------------------
 
 const TAG_ROWS: Tag = Tag(0x0028, 0x0010);
 const TAG_COLUMNS: Tag = Tag(0x0028, 0x0011);
@@ -353,7 +716,6 @@ fn invalid_tag_value(tag: Tag, detail: impl Into<String>) -> Box<Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dicom_core::{Element, Vr};
 
     const SEG_MANIFEST: &str = include_str!("../manifest.toml");
 
@@ -397,6 +759,10 @@ mod tests {
             assert!(parsed.contains(&uid.to_string()));
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Binary segmentation parser tests (existing)
+    // -----------------------------------------------------------------------
 
     #[test]
     fn binary_seg_overlay_is_deterministic() {
@@ -546,7 +912,7 @@ mod tests {
         dataset.insert(Element {
             tag: TAG_PIXEL_DATA,
             vr: Vr::Ob,
-            value: Value::Bytes(vec![0b0000_0001]),
+            value: Value::Bytes(vec![0b0000_00001]),
         });
         dataset.insert(Element {
             tag: TAG_REFERENCED_SERIES_SEQUENCE,
@@ -934,5 +1300,794 @@ mod tests {
         };
         let err = seg.overlay_on(&base, reference).unwrap_err();
         assert_eq!(err.code, "DVF.GEOM.INVALID");
+    }
+
+    // -----------------------------------------------------------------------
+    // Fractional segmentation parser tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn fractional_seg_parses_correctly() {
+        // REQ-SEG-301
+        let mut ref_instance = Dataset::new();
+        ref_instance.insert(Element {
+            tag: TAG_REFERENCED_SOP_INSTANCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3.4".to_string()),
+        });
+        let mut ref_series = Dataset::new();
+        ref_series.insert(Element {
+            tag: TAG_REFERENCED_INSTANCE_SEQUENCE,
+            vr: Vr::Sq,
+            value: Value::Sequence(vec![ref_instance]),
+        });
+
+        let mut dataset = Dataset::new();
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str("2".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str("2".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str("FRACTIONAL".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str("2".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str("7".to_string()),
+        });
+        // 4 pixels: 0, 128, 255, 0
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(vec![0, 128, 255, 0]),
+        });
+        dataset.insert(Element {
+            tag: TAG_REFERENCED_SERIES_SEQUENCE,
+            vr: Vr::Sq,
+            value: Value::Sequence(vec![ref_series]),
+        });
+
+        let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
+        assert_eq!(seg.seg_type, SegmentationType::Fractional);
+        assert_eq!(seg.rows, 2);
+        assert_eq!(seg.cols, 2);
+        assert_eq!(seg.frames, 1);
+        assert!(seg.mask.is_empty());
+        assert_eq!(seg.fractional_probability.len(), 4);
+        assert!((seg.fractional_probability[0] - 0.0).abs() < f32::EPSILON);
+        assert!((seg.fractional_probability[1] - 128.0 / 255.0).abs() < 0.01);
+        assert!((seg.fractional_probability[2] - 1.0).abs() < 0.01);
+        assert!((seg.fractional_probability[3] - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn fractional_seg_rejects_wrong_bits_allocated() {
+        // REQ-SEG-301
+        let mut dataset = Dataset::new();
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str("FRACTIONAL".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str("7".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(vec![1]),
+        });
+
+        let err = Segmentation::from_dataset(&dataset).unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn fractional_seg_rejects_wrong_bits_stored() {
+        // REQ-SEG-301
+        let mut dataset = Dataset::new();
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str("FRACTIONAL".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str("7".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(vec![1]),
+        });
+
+        let err = Segmentation::from_dataset(&dataset).unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn fractional_seg_rejects_wrong_high_bit() {
+        // REQ-SEG-301
+        let mut dataset = Dataset::new();
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str("FRACTIONAL".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str("1".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str("0".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(vec![1]),
+        });
+
+        let err = Segmentation::from_dataset(&dataset).unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn fractional_seg_overlay_is_deterministic() {
+        // REQ-SEG-301, REQ-SEG-303
+        let mut ref_instance = Dataset::new();
+        ref_instance.insert(Element {
+            tag: TAG_REFERENCED_SOP_INSTANCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3.4".to_string()),
+        });
+        let mut ref_series = Dataset::new();
+        ref_series.insert(Element {
+            tag: TAG_REFERENCED_INSTANCE_SEQUENCE,
+            vr: Vr::Sq,
+            value: Value::Sequence(vec![ref_instance]),
+        });
+
+        let mut dataset = Dataset::new();
+        dataset.insert(Element {
+            tag: TAG_ROWS,
+            vr: Vr::Us,
+            value: Value::Str("2".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_COLUMNS,
+            vr: Vr::Us,
+            value: Value::Str("2".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_FRAME_OF_REFERENCE_UID,
+            vr: Vr::Ui,
+            value: Value::Uid("1.2.3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENTATION_TYPE,
+            vr: Vr::Cs,
+            value: Value::Str("FRACTIONAL".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_SEGMENT_NUMBER,
+            vr: Vr::Us,
+            value: Value::Str("3".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_ALLOCATED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_BITS_STORED,
+            vr: Vr::Us,
+            value: Value::Str("8".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_HIGH_BIT,
+            vr: Vr::Us,
+            value: Value::Str("7".to_string()),
+        });
+        dataset.insert(Element {
+            tag: TAG_PIXEL_DATA,
+            vr: Vr::Ob,
+            value: Value::Bytes(vec![0, 200, 0, 0]),
+        });
+        dataset.insert(Element {
+            tag: TAG_REFERENCED_SERIES_SEQUENCE,
+            vr: Vr::Sq,
+            value: Value::Sequence(vec![ref_series]),
+        });
+
+        let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
+        let base = DisplayFrame {
+            width: 2,
+            height: 2,
+            format: PixelFormat::Luma8,
+            bytes: vec![0; 4],
+        };
+        let reference = SegReference {
+            rows: 2,
+            cols: 2,
+            frame_of_reference_uid: "1.2.3",
+            sop_instance_uid: "1.2.3.4",
+        };
+        let overlay1 = seg.overlay_on(&base, reference).expect("overlay1");
+        let overlay2 = seg.overlay_on(&base, reference).expect("overlay2");
+        assert_eq!(overlay1.bytes, overlay2.bytes);
+        // Pixel 1 has probability 200/255 ≈ 0.78, so alpha > 0
+        assert!(overlay1.bytes[4 * 1 + 3] > 0);
+        // Pixel 0 has probability 0, so alpha = 0
+        assert_eq!(overlay1.bytes[4 * 0 + 3], 0);
+    }
+
+    // -----------------------------------------------------------------------
+    // SegmentationType enum tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn segmentation_type_roundtrip() {
+        // REQ-SEG-301
+        assert_eq!(
+            SegmentationType::from_cs_string(SegmentationType::Binary.to_cs_string()).unwrap(),
+            SegmentationType::Binary
+        );
+        assert_eq!(
+            SegmentationType::from_cs_string(SegmentationType::Fractional.to_cs_string()).unwrap(),
+            SegmentationType::Fractional
+        );
+        assert!(SegmentationType::from_cs_string("UNKNOWN").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // Encoder tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn encoder_binary_produces_valid_dataset() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0, 1, 0, 1]; // 2x2 binary mask
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3.4.5")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .expect("encode");
+
+        assert_eq!(read_u16(&dataset, TAG_ROWS).unwrap(), 2);
+        assert_eq!(read_u16(&dataset, TAG_COLUMNS).unwrap(), 2);
+        assert_eq!(read_u16(&dataset, TAG_NUMBER_OF_FRAMES).unwrap(), 1);
+        assert_eq!(
+            dataset.get_uid(TAG_FRAME_OF_REFERENCE_UID).unwrap(),
+            "1.2.3.4.5"
+        );
+        assert_eq!(
+            read_str(&dataset, TAG_SEGMENTATION_TYPE).unwrap().unwrap(),
+            "BINARY"
+        );
+        assert_eq!(read_u16(&dataset, TAG_SEGMENT_NUMBER).unwrap(), 1);
+        assert_eq!(read_u16(&dataset, TAG_BITS_ALLOCATED).unwrap(), 1);
+        assert_eq!(read_u16(&dataset, TAG_BITS_STORED).unwrap(), 1);
+        assert_eq!(read_u16(&dataset, TAG_HIGH_BIT).unwrap(), 0);
+
+        // Pixel data should be bit-packed: pixels 0,1,0,1 => byte 0b0000_1010
+        let pixel_data = read_bytes(&dataset, TAG_PIXEL_DATA).unwrap();
+        assert_eq!(pixel_data.len(), 1);
+        assert_eq!(pixel_data[0], 0b0000_1010);
+    }
+
+    #[test]
+    fn encoder_fractional_produces_valid_dataset() {
+        // REQ-SEG-301
+        let frac: Vec<f32> = vec![0.0, 0.5, 1.0, 0.25]; // 2x2 fractional
+        let dataset = SegmentationEncoder::new(SegmentationType::Fractional)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3.4.5")
+            .segment_number(2)
+            .fractional_mask(frac)
+            .encode_to_dataset()
+            .expect("encode");
+
+        assert_eq!(read_u16(&dataset, TAG_ROWS).unwrap(), 2);
+        assert_eq!(read_u16(&dataset, TAG_COLUMNS).unwrap(), 2);
+        assert_eq!(
+            read_str(&dataset, TAG_SEGMENTATION_TYPE).unwrap().unwrap(),
+            "FRACTIONAL"
+        );
+        assert_eq!(read_u16(&dataset, TAG_SEGMENT_NUMBER).unwrap(), 2);
+        assert_eq!(read_u16(&dataset, TAG_BITS_ALLOCATED).unwrap(), 8);
+        assert_eq!(read_u16(&dataset, TAG_BITS_STORED).unwrap(), 8);
+        assert_eq!(read_u16(&dataset, TAG_HIGH_BIT).unwrap(), 7);
+
+        let pixel_data = read_bytes(&dataset, TAG_PIXEL_DATA).unwrap();
+        assert_eq!(pixel_data.len(), 4);
+        assert_eq!(pixel_data[0], 0);
+        assert_eq!(pixel_data[1], 128); // 0.5 * 255 ≈ 128
+        assert_eq!(pixel_data[2], 255); // 1.0 * 255 = 255
+        assert_eq!(pixel_data[3], 64); // 0.25 * 255 ≈ 64
+    }
+
+    #[test]
+    fn encoder_includes_referenced_sop_instance_uid() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![1];
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(1)
+            .cols(1)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .referenced_sop_instance_uid("1.2.3.4.5")
+            .encode_to_dataset()
+            .expect("encode");
+
+        let parsed = Segmentation::from_dataset(&dataset).expect("roundtrip parse");
+        assert_eq!(
+            parsed.referenced_sop_instance_uid,
+            Some("1.2.3.4.5".to_string())
+        );
+    }
+
+    #[test]
+    fn encoder_omits_referenced_series_when_no_ref_uid() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![1];
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(1)
+            .cols(1)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .expect("encode");
+
+        // No ReferencedSeriesSequence should be present
+        assert!(dataset.get(TAG_REFERENCED_SERIES_SEQUENCE).is_none());
+    }
+
+    #[test]
+    fn encoder_binary_roundtrip_matches_original() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0, 0xFF, 0, 0xFF, 0xFF, 0, 0, 0, 0xFF]; // 3x3
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(3)
+            .cols(3)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3.4")
+            .segment_number(1)
+            .binary_mask(mask.clone())
+            .referenced_sop_instance_uid("1.2.3.4.5")
+            .encode_to_dataset()
+            .expect("encode");
+
+        let parsed = Segmentation::from_dataset(&dataset).expect("parse roundtrip");
+        assert_eq!(parsed.seg_type, SegmentationType::Binary);
+        assert_eq!(parsed.rows, 3);
+        assert_eq!(parsed.cols, 3);
+        assert_eq!(parsed.frames, 1);
+        assert_eq!(parsed.frame_of_reference_uid, "1.2.3.4");
+        assert_eq!(parsed.segment_number, 1);
+        assert_eq!(
+            parsed.referenced_sop_instance_uid,
+            Some("1.2.3.4.5".to_string())
+        );
+        // Compare mask (0xFF -> 0xFF, 0 -> 0x00)
+        let expected_mask: Vec<u8> = mask.iter().map(|&b| if b != 0 { 0xFF } else { 0x00 }).collect();
+        assert_eq!(parsed.mask, expected_mask);
+        assert!(parsed.fractional_probability.is_empty());
+    }
+
+    #[test]
+    fn encoder_fractional_roundtrip_matches_original() {
+        // REQ-SEG-301
+        let frac: Vec<f32> = vec![0.0, 0.5, 1.0, 0.25]; // 2x2
+        let dataset = SegmentationEncoder::new(SegmentationType::Fractional)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3.4")
+            .segment_number(2)
+            .fractional_mask(frac.clone())
+            .referenced_sop_instance_uid("1.2.3.4.5")
+            .encode_to_dataset()
+            .expect("encode");
+
+        let parsed = Segmentation::from_dataset(&dataset).expect("parse roundtrip");
+        assert_eq!(parsed.seg_type, SegmentationType::Fractional);
+        assert_eq!(parsed.rows, 2);
+        assert_eq!(parsed.cols, 2);
+        assert_eq!(parsed.frames, 1);
+        assert!(parsed.mask.is_empty());
+        assert_eq!(parsed.fractional_probability.len(), 4);
+        // Allow 1/255 rounding tolerance
+        for (orig, parsed_val) in frac.iter().zip(parsed.fractional_probability.iter()) {
+            assert!(
+                (orig - parsed_val).abs() < 1.0 / 255.0 + f32::EPSILON,
+                "fractional roundtrip: orig={orig}, parsed={parsed_val}"
+            );
+        }
+    }
+
+    #[test]
+    fn encoder_defaults_frames_to_one() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .expect("encode");
+
+        assert_eq!(read_u16(&dataset, TAG_NUMBER_OF_FRAMES).unwrap(), 1);
+    }
+
+    #[test]
+    fn encoder_rejects_zero_frames() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frames(0)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_rows() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .cols(2)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_cols() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_frame_of_reference_uid() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_segment_number() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 4];
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frame_of_reference_uid("1.2.3")
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.MISSING_TAG");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_binary_mask() {
+        // REQ-SEG-301
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn encoder_rejects_missing_fractional_mask() {
+        // REQ-SEG-301
+        let err = SegmentationEncoder::new(SegmentationType::Fractional)
+            .rows(2)
+            .cols(2)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn encoder_rejects_binary_mask_too_short() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![0; 2]; // only 2 pixels but 2x2=4 expected
+        let err = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn encoder_rejects_fractional_mask_too_short() {
+        // REQ-SEG-301
+        let frac: Vec<f32> = vec![0.5]; // only 1 pixel but 2x2=4 expected
+        let err = SegmentationEncoder::new(SegmentationType::Fractional)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .fractional_mask(frac)
+            .encode_to_dataset()
+            .unwrap_err();
+        assert_eq!(err.code, "DVF.DICOM.INVALID_TAG_VALUE");
+    }
+
+    #[test]
+    fn encoder_multiframe_binary_roundtrip() {
+        // REQ-SEG-301, REQ-SEG-303
+        // 2 frames, 2x2 each = 8 pixels total
+        let mask: Vec<u8> = vec![
+            0, 1, 0, 1, // frame 0
+            1, 0, 1, 0, // frame 1
+        ];
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(2)
+            .cols(2)
+            .frames(2)
+            .frame_of_reference_uid("1.2.3.4")
+            .segment_number(1)
+            .binary_mask(mask)
+            .referenced_sop_instance_uid("1.2.3.4.5")
+            .encode_to_dataset()
+            .expect("encode");
+
+        let parsed = Segmentation::from_dataset(&dataset).expect("parse roundtrip");
+        assert_eq!(parsed.frames, 2);
+        // Frame 0: pixels 0,1,0,1
+        assert_eq!(parsed.mask[0], 0x00);
+        assert_eq!(parsed.mask[1], 0xFF);
+        assert_eq!(parsed.mask[2], 0x00);
+        assert_eq!(parsed.mask[3], 0xFF);
+        // Frame 1: pixels 1,0,1,0
+        assert_eq!(parsed.mask[4], 0xFF);
+        assert_eq!(parsed.mask[5], 0x00);
+        assert_eq!(parsed.mask[6], 0xFF);
+        assert_eq!(parsed.mask[7], 0x00);
+    }
+
+    #[test]
+    fn encoder_dataset_is_deterministic() {
+        // REQ-SEG-301
+        let mask: Vec<u8> = vec![1, 0, 1, 0];
+        let build = || {
+            SegmentationEncoder::new(SegmentationType::Binary)
+                .rows(2)
+                .cols(2)
+                .frames(1)
+                .frame_of_reference_uid("1.2.3.4")
+                .segment_number(1)
+                .binary_mask(mask.clone())
+                .encode_to_dataset()
+                .expect("encode")
+        };
+        let d1 = build();
+        let d2 = build();
+        assert_eq!(d1, d2);
+    }
+
+    #[test]
+    fn encoder_fractional_clamps_out_of_range() {
+        // REQ-SEG-301: values outside [0.0, 1.0] are clamped
+        let frac: Vec<f32> = vec![-0.5, 0.5, 1.5, 0.0];
+        let dataset = SegmentationEncoder::new(SegmentationType::Fractional)
+            .rows(2)
+            .cols(2)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .fractional_mask(frac)
+            .encode_to_dataset()
+            .expect("encode");
+
+        let pixel_data = read_bytes(&dataset, TAG_PIXEL_DATA).unwrap();
+        assert_eq!(pixel_data[0], 0); // -0.5 clamped to 0
+        assert_eq!(pixel_data[2], 255); // 1.5 clamped to 1.0 -> 255
+    }
+
+    #[test]
+    fn encoder_binary_bit_packing_lsb_first() {
+        // REQ-SEG-301: verify bit-packing order is LSB-first
+        // 8 pixels: alternating 0,1 -> bit i = mask[i], so byte = 0b1010_1010 = 0xAA
+        let mask: Vec<u8> = vec![0, 1, 0, 1, 0, 1, 0, 1];
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(8)
+            .cols(1)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .expect("encode");
+
+        let pixel_data = read_bytes(&dataset, TAG_PIXEL_DATA).unwrap();
+        assert_eq!(pixel_data.len(), 1);
+        assert_eq!(pixel_data[0], 0b1010_1010);
+    }
+
+    #[test]
+    fn encoder_binary_non_byte_aligned_pixels() {
+        // REQ-SEG-301: 5 pixels, not a full byte
+        let mask: Vec<u8> = vec![1, 1, 1, 1, 1]; // 5 bits set
+        let dataset = SegmentationEncoder::new(SegmentationType::Binary)
+            .rows(5)
+            .cols(1)
+            .frames(1)
+            .frame_of_reference_uid("1.2.3")
+            .segment_number(1)
+            .binary_mask(mask)
+            .encode_to_dataset()
+            .expect("encode");
+
+        let pixel_data = read_bytes(&dataset, TAG_PIXEL_DATA).unwrap();
+        assert_eq!(pixel_data.len(), 1); // ceil(5/8) = 1 byte
+        assert_eq!(pixel_data[0], 0b0001_1111);
     }
 }
