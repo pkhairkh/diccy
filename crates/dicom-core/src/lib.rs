@@ -6,6 +6,15 @@
 //! Note: `dicom-core` currently relies on `std` for error traits and owned
 //! collections, so `no_std` support is not yet available (REQ-API-203).
 
+// Named constants for DICOM spec magic numbers (S13-T3).
+pub mod constants;
+
+// Re-export key constants from the constants module for ergonomic access.
+pub use constants::{
+    DICOM_PREAMBLE_LENGTH, EXPLICIT_VR_LE, IMPLICIT_VR_LE, MAX_AE_TITLE_LENGTH, MAX_PDU_LENGTH,
+    MAX_UID_LENGTH,
+};
+
 // Re-export shared value types from the dicom-types crate so that downstream
 // consumers can continue to import them from dicom-core.
 pub use dicom_types::{PatientPosition, WindowLevel};
@@ -1404,6 +1413,12 @@ impl Error {
     /// Create a new error, validating code/kind consistency.
     ///
     /// In debug builds, panics if `code` does not match `kind.code()`.
+    ///
+    /// # Convention (S13-T4)
+    ///
+    /// Prefer `Error::from_kind(kind, message)` which auto-derives the code.
+    /// Use `Error::new(code, kind, message)` only when overriding the code.
+    /// Chain with `.with_context()` and `.with_source()` for rich errors.
     pub fn new(code: &'static str, kind: ErrorKind, message: impl Into<String>) -> Self {
         debug_assert_eq!(
             code, kind.code(),
@@ -1420,17 +1435,40 @@ impl Error {
     }
 
     /// Create a new error using the canonical code for the kind.
+    ///
+    /// # Convention (S13-T4)
+    ///
+    /// This is the **primary** error factory. All error construction should use
+    /// `Error::from_kind(kind, message)`, optionally chaining
+    /// `.with_context(key, val)` and `.with_source(err)`.
     pub fn from_kind(kind: ErrorKind, message: impl Into<String>) -> Self {
         let code = kind.code();
         Self::new(code, kind, message)
     }
 
     /// Attach a context item to the error.
+    ///
+    /// # Convention (S13-T4)
+    ///
+    /// Use the builder pattern: `Error::from_kind(kind, msg).with_context(key, val)`.
+    /// Context items carry structured, non-PII diagnostic metadata.
     pub fn with_context(mut self, key: &'static str, value: impl Into<String>) -> Self {
         self.context.push(ContextItem {
             key,
             value: value.into(),
         });
+        self
+    }
+
+    /// Attach a source (causal) error.
+    ///
+    /// # Convention (S13-T4)
+    ///
+    /// Use the builder pattern: `Error::from_kind(kind, msg).with_source(source_err)`.
+    /// The source error is the underlying cause and is surfaced via
+    /// `std::error::Error::source()`.
+    pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
+        self.source = Some(Box::new(source));
         self
     }
 

@@ -347,7 +347,8 @@ pub struct Hl7Subscription {
     /// Adapter source name.
     pub source: String,
     /// Event filters (e.g., `adt`, `orm`, `oru`, `task`, `mpps`, or `sr`).
-    pub event_filter: Vec<String>,
+    /// (S13-T6) Uses `BTreeSet<String>` for O(log n) membership testing.
+    pub event_filter: BTreeSet<String>,
     /// Selected sink.
     pub sink: Hl7Sink,
     /// Total events delivered to this subscription endpoint.
@@ -553,15 +554,18 @@ pub struct TenantState {
 }
 
 /// Inner tenant data with pub fields for handler access after locking.
+///
+/// (S13-T6) Tenant index fields use `BTreeSet<String>` for O(log n) membership
+/// testing instead of `Vec<String>` which required O(n) linear scans.
 pub struct TenantStateData {
     /// Per-tenant worklist index.
-    pub tenant_worklist: BTreeMap<String, Vec<String>>,
+    pub tenant_worklist: BTreeMap<String, BTreeSet<String>>,
     /// Per-tenant MPPS index.
-    pub tenant_mpps: BTreeMap<String, Vec<String>>,
+    pub tenant_mpps: BTreeMap<String, BTreeSet<String>>,
     /// Per-tenant SR index.
-    pub tenant_sr: BTreeMap<String, Vec<String>>,
+    pub tenant_sr: BTreeMap<String, BTreeSet<String>>,
     /// Per-tenant task index.
-    pub tenant_tasks: BTreeMap<String, Vec<String>>,
+    pub tenant_tasks: BTreeMap<String, BTreeSet<String>>,
     /// Per-tenant operation metrics.
     pub metrics: BTreeMap<String, TenantOperationMetrics>,
 }
@@ -697,6 +701,20 @@ pub struct Hl7TransportConfig {
     pub file_drop_done_dir: Option<PathBuf>,
     pub file_drop_error_dir: Option<PathBuf>,
     pub file_drop_poll_interval_ms: u64,
+}
+
+impl Default for Hl7TransportConfig {
+    /// Default HL7 transport: MLLP disabled, file-drop disabled (S13-T5).
+    fn default() -> Self {
+        Self {
+            mllp_enabled: false,
+            mllp_bind: None,
+            file_drop_dir: None,
+            file_drop_done_dir: None,
+            file_drop_error_dir: None,
+            file_drop_poll_interval_ms: DEFAULT_HL7_FILE_DROP_POLL_INTERVAL_MS,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1003,39 +1021,41 @@ pub fn workflow_role_is_writer(role: &str) -> bool {
     matches!(role, "writer" | "admin" | "operator")
 }
 
+/// Insert an id into a per-tenant index set (S13-T6: BTreeSet for O(log n)).
 pub fn route_id_to_tenant_index(
-    tenant_indexes: &mut BTreeMap<String, Vec<String>>,
+    tenant_indexes: &mut BTreeMap<String, BTreeSet<String>>,
     tenant: &str,
     id: &str,
 ) {
     let bucket = tenant_indexes.entry(tenant.to_string()).or_default();
-    if !bucket.iter().any(|existing| existing == id) {
-        bucket.push(id.to_string());
-    }
+    bucket.insert(id.to_string());
 }
 
+/// Check whether a per-tenant index set contains an id (S13-T6: O(log n)).
 pub fn tenant_indexes_contains(
-    tenant_indexes: &BTreeMap<String, Vec<String>>,
+    tenant_indexes: &BTreeMap<String, BTreeSet<String>>,
     tenant: &str,
     id: &str,
 ) -> bool {
     tenant_indexes
         .get(tenant)
-        .is_some_and(|entries| entries.iter().any(|entry| entry == id))
+        .is_some_and(|entries| entries.contains(id))
 }
 
-pub fn tenant_of_id(tenant_indexes: &BTreeMap<String, Vec<String>>, id: &str) -> Option<String> {
+/// Find which tenant owns a given id (S13-T6: O(log n) per tenant bucket).
+pub fn tenant_of_id(tenant_indexes: &BTreeMap<String, BTreeSet<String>>, id: &str) -> Option<String> {
     for (tenant, entries) in tenant_indexes {
-        if entries.iter().any(|entry| entry == id) {
+        if entries.contains(id) {
             return Some(tenant.clone());
         }
     }
     None
 }
 
+/// Check whether an actor's tenant owns a given resource (S13-T6: O(log n)).
 pub fn actor_has_resource_access(
     actor: &WorkflowActorContext,
-    indexes: &BTreeMap<String, Vec<String>>,
+    indexes: &BTreeMap<String, BTreeSet<String>>,
     resource_id: &str,
 ) -> bool {
     tenant_indexes_contains(indexes, &actor.tenant, resource_id)

@@ -36,6 +36,13 @@ impl DimseOperationSizeConfig {
     }
 }
 
+impl Default for DimseOperationSizeConfig {
+    /// Default operation size limits per S13-T5, matching `Limits::default().max_input_bytes`.
+    fn default() -> Self {
+        Self::with_default_bound(512 * 1024 * 1024)
+    }
+}
+
 /// Per-operation resource caps for runtime governance.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DimseOperationResourceLimits {

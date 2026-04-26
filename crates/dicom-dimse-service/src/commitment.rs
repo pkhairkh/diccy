@@ -40,6 +40,12 @@ pub struct StorageCommitmentLifecycleEvent {
 }
 
 /// Callback sink for Storage Commitment lifecycle transitions.
+///
+/// # S13-T7 — Read-Only Trait Object
+///
+/// `Fn(StorageCommitmentLifecycleEvent) -> Result<()>` takes `&self`,
+/// so `Arc<StorageCommitmentLifecycleSink>` is safe for concurrent
+/// read-only invocation.
 pub type StorageCommitmentLifecycleSink =
     Arc<dyn Fn(StorageCommitmentLifecycleEvent) -> Result<()> + Send + Sync>;
 

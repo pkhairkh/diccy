@@ -19,7 +19,8 @@ pub mod session;
 
 // Re-export all session types.
 pub use session::{
-    SessionPolicy, SessionStatus, force_reauthentication_for_suspicious_session,
+    SessionPolicy, SessionStatus, force_reauth_suspicious,
+    force_reauthentication_for_suspicious_session,
     session_requires_reauthentication, UserRole, SessionOpenRequest, SessionRecord,
     SessionSummary, IdentityBanner, RoleChangeEvent, SessionDirectory, PermissionDeniedView,
     permission_denied_view, SecretCommitReceipt, commit_secret_entry,
@@ -325,6 +326,13 @@ pub enum SessionState {
 }
 
 /// Authorization policy interface.
+///
+/// # S13-T7 — Read-Only Trait
+///
+/// The `authorize` method takes `&self`, so `Arc<dyn Authorizer + Send + Sync>`
+/// is safe to share across threads without additional synchronization.
+/// Implementations must not require interior mutability for authorization
+/// decisions; if policy mutation is needed, swap the entire `Arc`.
 pub trait Authorizer {
     /// Return the authorization decision for a request.
     fn authorize(&self, request: &AuthRequest<'_>) -> Result<AuthDecision>;

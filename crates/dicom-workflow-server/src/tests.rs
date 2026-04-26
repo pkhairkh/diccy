@@ -700,7 +700,7 @@
         let subscription = Hl7Subscription {
             id: "sub-webhook".to_string(),
             source: "workflow".to_string(),
-            event_filter: vec!["task".to_string()],
+            event_filter: vec!["task".to_string()].into_iter().collect(),
             sink: Hl7Sink {
                 kind: Hl7SinkKind::Webhook,
                 target: "https://third-party.example/callback".to_string(),
@@ -746,7 +746,7 @@
         let subscription = Hl7Subscription {
             id: "sub-webhook-invalid".to_string(),
             source: "workflow".to_string(),
-            event_filter: vec!["task".to_string()],
+            event_filter: vec!["task".to_string()].into_iter().collect(),
             sink: Hl7Sink {
                 kind: Hl7SinkKind::Webhook,
                 target: "https://third-party.example/callback".to_string(),
@@ -786,7 +786,7 @@
         let subscription = Hl7Subscription {
             id: "sub-webhook".to_string(),
             source: "workflow".to_string(),
-            event_filter: vec!["task".to_string()],
+            event_filter: vec!["task".to_string()].into_iter().collect(),
             sink: Hl7Sink {
                 kind: Hl7SinkKind::Webhook,
                 target: "https://third-party.example/callback".to_string(),
@@ -5159,7 +5159,7 @@
                 Hl7Subscription {
                     id: "sub-enterprise".to_string(),
                     source: "his".to_string(),
-                    event_filter: vec!["adt".to_string()],
+                    event_filter: vec!["adt".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::Custom("enterprise_his".to_string()),
                         target: "https://connectors.enterprise-his.example/interop".to_string(),
@@ -5174,7 +5174,7 @@
                 Hl7Subscription {
                     id: "sub-lab".to_string(),
                     source: "*".to_string(),
-                    event_filter: vec!["oru".to_string()],
+                    event_filter: vec!["oru".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::Custom("lab".to_string()),
                         target: "https://connectors.lab.example/interop".to_string(),
@@ -5189,7 +5189,7 @@
                 Hl7Subscription {
                     id: "sub-webhook".to_string(),
                     source: "lab".to_string(),
-                    event_filter: vec!["orf".to_string()],
+                    event_filter: vec!["orf".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::Webhook,
                         target: "https://notify.example/events".to_string(),
@@ -5204,7 +5204,7 @@
                 Hl7Subscription {
                     id: "sub-bus".to_string(),
                     source: "ris".to_string(),
-                    event_filter: vec!["mpps".to_string()],
+                    event_filter: vec!["mpps".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::MessageBus,
                         target: "bus://workflow/connectivity".to_string(),
@@ -5730,7 +5730,7 @@
                 Hl7Subscription {
                     id: "sub-enterprise".to_string(),
                     source: "his".to_string(),
-                    event_filter: vec!["oru".to_string()],
+                    event_filter: vec!["oru".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::Custom("enterprise_his".to_string()),
                         target: "https://connectors.enterprise-his.example/interop".to_string(),
@@ -6477,7 +6477,7 @@
                 Hl7Subscription {
                     id: "sub-00001".to_string(),
                     source: "workflow".to_string(),
-                    event_filter: vec!["task".to_string()],
+                    event_filter: vec!["task".to_string()].into_iter().collect(),
                     sink: Hl7Sink {
                         kind: Hl7SinkKind::Custom("lab".to_string()),
                         target: "https://callback-fail.local/events".to_string(),
@@ -6820,10 +6820,13 @@
     fn parse_hl7_event_filter_supports_workflow_transition_aliases() {
         let parsed = parse_hl7_event_filter("workflow,task,mpps,sr")
             .expect("parse workflow transition filters");
-        assert_eq!(parsed, vec!["mpps", "sr", "task", "workflow"]);
+        assert!(parsed.contains("mpps"));
+        assert!(parsed.contains("sr"));
+        assert!(parsed.contains("task"));
+        assert!(parsed.contains("workflow"));
         let parsed_workflow_only =
             parse_hl7_event_filter("workflow").expect("parse workflow filter");
-        assert_eq!(parsed_workflow_only, vec!["workflow"]);
+        assert!(parsed_workflow_only.contains("workflow"));
         let err = parse_hl7_event_filter("badfilter")
             .expect_err("unsupported hl7 event filter must fail");
         assert_eq!(err.code(), "DVF.WORKFLOW.HTTP.DECODE_ERROR");

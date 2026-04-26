@@ -115,10 +115,21 @@ impl WebPolicy {
     }
 }
 
-/// Audit callback for authorization decisions.
+/// Audit callback for DICOMweb operations.
+///
+/// # S13-T7 — Read-Only Trait Object
+///
+/// `Fn(AuditEvent) -> Result<()>` takes `&self`, so `Arc<AuditCallback>`
+/// is safe for concurrent read-only invocation.
 pub type AuditCallback = Arc<dyn Fn(AuditEvent) -> Result<()> + Send + Sync>;
 
 /// Authorization and audit configuration for DICOMweb.
+///
+/// # S13-T7 — Read-Only `Arc<dyn Authorizer>`
+///
+/// The `Authorizer` trait's `authorize` method takes `&self`, so
+/// `Arc<dyn Authorizer + Send + Sync>` is safe to share without
+/// additional synchronization.
 #[derive(Clone)]
 pub struct WebAuthConfig {
     /// Authorization policy.
@@ -142,6 +153,13 @@ impl WebAuthConfig {
             authorizer: Arc::new(DenyAll::new(AuthDenyReason::Policy)),
             audit: None,
         }
+    }
+}
+
+impl Default for WebAuthConfig {
+    /// Default is deny-all (fail closed) per S13-T5.
+    fn default() -> Self {
+        Self::deny_all()
     }
 }
 

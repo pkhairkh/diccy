@@ -792,14 +792,22 @@ impl TriageRule {
 /// Notification callback trait for critical findings.
 pub trait NotificationCallback: fmt::Debug + Send + Sync {
     /// Called when a critical or urgent finding is detected.
+    ///
+    /// # S13-T7 — Interior Mutability Contract
+    ///
+    /// This method takes `&self`, so implementations that need to record
+    /// notifications must use interior mutability (e.g., `Mutex<Vec<...>>`).
     fn notify(&self, flag: TriageFlag, message: &str, study_uid: &str);
 }
 
 /// A simple notification callback that collects notifications in memory.
-#[derive(Debug, Clone)]
+///
+/// Uses `Mutex<Vec<...>>` for interior mutability since the trait method
+/// `notify` takes `&self` (S13-T7).
+#[derive(Debug)]
 pub struct InMemoryNotificationCallback {
-    /// Collected notifications.
-    notifications: Vec<(TriageFlag, String, String)>,
+    /// Collected notifications (interior mutability for `&self` trait method).
+    notifications: std::sync::Mutex<Vec<(TriageFlag, String, String)>>,
 }
 
 impl Default for InMemoryNotificationCallback {
@@ -812,21 +820,20 @@ impl InMemoryNotificationCallback {
     /// Create a new in-memory notification callback.
     pub fn new() -> Self {
         Self {
-            notifications: Vec::new(),
+            notifications: std::sync::Mutex::new(Vec::new()),
         }
     }
 
     /// Return the collected notifications.
-    pub fn notifications(&self) -> &[(TriageFlag, String, String)] {
-        &self.notifications
+    pub fn notifications(&self) -> Vec<(TriageFlag, String, String)> {
+        self.notifications.lock().unwrap().clone()
     }
 }
 
 impl NotificationCallback for InMemoryNotificationCallback {
     fn notify(&self, flag: TriageFlag, message: &str, study_uid: &str) {
-        // Since we can't mutate self through the trait method, we use interior mutability
-        // For simplicity in the stub, we just log
-        let _ = (flag, message, study_uid);
+        let mut guard = self.notifications.lock().unwrap();
+        guard.push((flag, message.to_string(), study_uid.to_string()));
     }
 }
 

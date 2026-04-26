@@ -20,7 +20,7 @@ use dicom_workflow_server::{
 };
 use dicom_worklist::{validate_worklist_item, WorklistQuery, WorklistStore};
 use pack_sr::{Code, SrAuthoringContentItem};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Write};

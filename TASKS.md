@@ -1087,7 +1087,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
 
 **Tasks:**
 
-- [ ] **S13-T1** Create `Pack` trait and implement for all 8 marker types
+- [x] **S13-T1** Create `Pack` trait and implement for all 8 marker types
   - Define `trait Pack: Sized` with `const FEATURE`, `const SOP_CLASS_UIDS`, `fn enabled()`, `fn ensure_supported()`
   - Implement for `EnhancedPack`, `GspsPack`, `SegPack`, `RtPack`, `SrPack`, `UsPack`, `NmPack`, `XaPack`
   - Remove 8× duplicated boilerplate methods
@@ -1096,7 +1096,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** All 8 pack types implement `Pack`; 8× boilerplate reduced to trait implementation
   - **Estimated effort:** 1 day
 
-- [ ] **S13-T2** Create `FromDataset` and `OverlayRenderable` traits
+- [x] **S13-T2** Create `FromDataset` and `OverlayRenderable` traits
   - Define `trait FromDataset: Sized { fn from_dataset(dataset: &Dataset, limits: &Limits) -> Result<Self>; }`
   - Define `trait OverlayRenderable { fn overlay_on(&self, frame: &mut DisplayFrame); }`
   - Implement `FromDataset` for: `RtDoseGrid`, `RtStructureSet`, `RtPlanSummary`, `Segmentation`, `PresentationState`
@@ -1106,7 +1106,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** Generic code can operate over any `FromDataset + OverlayRenderable` type
   - **Estimated effort:** 2 days
 
-- [ ] **S13-T3** Extract magic numbers into named constants
+- [x] **S13-T3** Extract magic numbers into named constants
   - Create `dicom-core/src/constants.rs` with:
     - `const MAX_UID_LENGTH: usize = 64;` (DICOM PS3.5 9.1)
     - `const MAX_AE_TITLE_LENGTH: usize = 16;` (DICOM PS3.8)
@@ -1120,7 +1120,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** `rg '"1\.2\.840\.10008' crates/ | wc -l` shows significant reduction; hardcoded numeric literals replaced with named constants
   - **Estimated effort:** 3 days
 
-- [ ] **S13-T4** Unify naming inconsistencies across the codebase
+- [x] **S13-T4** Unify naming inconsistencies across the codebase
   - Standardize builder pattern: all types that need validated construction use `::builder()` returning `FooBuilder` with `::build() -> Result<Foo>`
   - Standardize error factory methods: all `Error` types use `::new()` + `::with_context()` + `::with_source()`
   - Standardize config types: all `*Config` types use `::from_env()` + `::from_file()` + `::default()`
@@ -1134,7 +1134,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** `CONVENTIONS.md` exists; naming follows consistent patterns; `cargo test --workspace` passes
   - **Estimated effort:** 5 days
 
-- [ ] **S13-T5** Standardize cross-crate patterns
+- [x] **S13-T5** Standardize cross-crate patterns
   - Builder pattern: all config types use `::builder()` → `FooBuilder` → `::build()`
   - Constructor pattern: all domain types use `::new()` with validation, `::new_unchecked()` for perf-critical paths
   - Factory pattern: all `from_dataset()` implementations follow `FromDataset` trait
@@ -1144,7 +1144,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** All config types have builders; all domain types have validated constructors; error construction is uniform
   - **Estimated effort:** 5 days
 
-- [ ] **S13-T6** Replace `Vec<String>` tenant indexes with `BTreeSet`/`HashSet`
+- [x] **S13-T6** Replace `Vec<String>` tenant indexes with `BTreeSet`/`HashSet`
   - Replace `tenant_index: Vec<String>` in `dicom-workflow-server` with `tenant_index: BTreeSet<String>` or `HashSet<String>`
   - Replace `active_studies: Vec<String>` with `BTreeSet<String>`
   - Replace `subscribers: Vec<String>` with `HashSet<String>` where order doesn't matter
@@ -1153,7 +1153,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** Tenant lookups are O(log n) or O(1) instead of O(n); `cargo test -p dicom-workflow-server` passes
   - **Estimated effort:** 2 days
 
-- [ ] **S13-T7** Fix `Arc<dyn Trait>` impostor pattern
+- [x] **S13-T7** Fix `Arc<dyn Trait>` impostor pattern
   - Identify all `Arc<dyn SomeTrait>` instances that lack interior mutability
   - Replace with proper patterns:
     - If mutation needed: `Arc<Mutex<dyn SomeTrait>>` or `Arc<RwLock<dyn SomeTrait>>`
@@ -1181,7 +1181,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** No hardcoded `34` constant; route capability lookup is type-safe via `Route` enum
   - **Estimated effort:** 1 day
 
-- [ ] **S13-T10** Eliminate unnecessary heap allocations in hot paths
+- [x] **S13-T10** Eliminate unnecessary heap allocations in hot paths
   - Replace `Box<Error>` with stack-allocated error types where possible (use `thiserror` enum)
   - Replace `String` clones with `&str` borrows in parsing paths where lifetime permits
   - Replace `Vec<u8>` allocations in `dicom-io` with borrowed byte slices where possible

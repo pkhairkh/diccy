@@ -1,6 +1,6 @@
 use dicom_auth::{
     activate_break_glass_access, activate_secure_default_override, commit_secret_entry,
-    evaluate_clipboard_policy, force_reauthentication_for_suspicious_session,
+    evaluate_clipboard_policy, force_reauth_suspicious,
     permission_denied_view, validate_interface_change_control_record, validate_release_text_input,
     validate_removable_media_export, validate_requirement_revision_record,
     validate_screenshot_export_policy, validate_startup_fail_closed_controls,
@@ -315,7 +315,7 @@ fn privacy_copy_export_and_suspicious_session_controls_are_enforced() {
 
     let _policy = SessionPolicy::new(300, 60, 3).unwrap();
     let mut session = SessionStatus::new(1_700_006_000);
-    let state = force_reauthentication_for_suspicious_session(&mut session);
+    let state = force_reauth_suspicious(&mut session);
     assert_eq!(state, SessionState::Locked);
 }
 

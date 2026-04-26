@@ -1,10 +1,98 @@
 #![deny(missing_docs)]
 
-//! Shared parsing helpers for modality packs.
+//! Shared parsing helpers and trait definitions for modality packs.
 
 use dicom_core::{
     enforce_limit, parse_f64_strict, Dataset, Error, ErrorKind, Limits, Result, Tag, Value,
 };
+
+// ---------------------------------------------------------------------------
+// S13-T1: Pack trait
+// ---------------------------------------------------------------------------
+
+/// A trait for pack marker types that encapsulates feature gating and
+/// SOP class validation.
+///
+/// Each pack crate defines a zero-sized marker type (e.g. `EnhancedPack`,
+/// `GspsPack`) that implements this trait to declare which SOP Class UIDs it
+/// supports and which Cargo feature enables it.
+pub trait Pack: Sized {
+    /// Human-readable feature name (e.g. `"pack-enhanced"`, `"gsps"`).
+    const FEATURE: &'static str;
+
+    /// The list of SOP Class UIDs this pack supports.
+    const SOP_CLASS_UIDS: &'static [&'static str];
+
+    /// Return `true` when the pack's Cargo feature is enabled for the
+    /// current build.
+    fn enabled() -> bool;
+
+    /// Verify that the given `sop_class_uid` is supported by this pack and
+    /// that the pack feature is enabled.
+    ///
+    /// Returns `Err(UnsupportedSopClass)` if the pack is disabled or the
+    /// SOP class is not in [`Pack::SOP_CLASS_UIDS`].
+    fn ensure_supported(sop_class_uid: &str) -> Result<()> {
+        if !Self::enabled() {
+            return Err(Box::new(Error::from_kind(
+                ErrorKind::UnsupportedSopClass {
+                    sop_class_uid: sop_class_uid.to_string(),
+                },
+                format!("{} requires {} feature", sop_class_uid, Self::FEATURE),
+            )));
+        }
+        if !Self::SOP_CLASS_UIDS.contains(&sop_class_uid) {
+            return Err(Box::new(Error::from_kind(
+                ErrorKind::UnsupportedSopClass {
+                    sop_class_uid: sop_class_uid.to_string(),
+                },
+                format!("unsupported SOP class for {}", Self::FEATURE),
+            )));
+        }
+        Ok(())
+    }
+}
+
+/// Generic helper that delegates to [`Pack::ensure_supported`] for any pack
+/// marker type `P`.
+///
+/// Useful when the pack type is known at compile time and callers want the
+/// ergonomic `<P as Pack>::ensure_supported(uid)` shorthand.
+pub fn ensure_pack_supported<P: Pack>(uid: &str) -> Result<()> {
+    P::ensure_supported(uid)
+}
+
+// ---------------------------------------------------------------------------
+// S13-T2: FromDataset trait
+// ---------------------------------------------------------------------------
+
+/// Trait for types that can be parsed from a DICOM [`Dataset`] within
+/// configurable resource [`Limits`].
+///
+/// This is the shared interface behind the various `from_dataset` methods
+/// that already exist on pack-domain types such as `RtDoseGrid`,
+/// `RtStructureSet`, `RtPlanSummary`, `Segmentation`, and
+/// `PresentationState`.
+pub trait FromDataset: Sized {
+    /// Parse `Self` from the given `dataset`, enforcing `limits`.
+    fn from_dataset(dataset: &Dataset, limits: &Limits) -> Result<Self>;
+}
+
+// ---------------------------------------------------------------------------
+// S13-T2: OverlayRenderable trait
+// ---------------------------------------------------------------------------
+
+/// Trait for types that can render an overlay onto a pixel buffer.
+///
+/// This provides a uniform interface for the overlay-on-frame operations
+/// that exist in `pack-gsps`, `pack-seg`, and `pack-rt`. Implementations
+/// are feature-gated behind the `"rendering"` feature which brings in
+/// `dicom-pixel::DisplayFrame`.
+#[cfg(feature = "rendering")]
+pub trait OverlayRenderable {
+    /// Render `self` as an overlay on top of `frame`.
+    fn overlay_on(&self, frame: &mut dicom_pixel::DisplayFrame);
+}
 
 /// Read a `u16` (US VR) value from a DICOM dataset element.
 ///

@@ -98,6 +98,13 @@ pub struct StreamingConfig {
     pub lossless_upgrade: bool,
 }
 
+impl Default for StreamingConfig {
+    /// Default streaming configuration for medium bandwidth (S13-T5).
+    fn default() -> Self {
+        Self::from_bandwidth(BandwidthLevel::Medium)
+    }
+}
+
 impl StreamingConfig {
     /// Create a streaming configuration from a bandwidth level.
     pub fn from_bandwidth(level: BandwidthLevel) -> Self {

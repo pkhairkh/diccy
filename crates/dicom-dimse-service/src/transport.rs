@@ -89,9 +89,20 @@ pub struct DimseTlsMaterialConfig {
 }
 
 /// Audit callback for authorization decisions.
+///
+/// # S13-T7 — Read-Only Trait Object
+///
+/// `Fn(AuditEvent) -> Result<()>` takes `&self`, so `Arc<AuditCallback>`
+/// is safe for concurrent read-only invocation.
 pub type AuditCallback = Arc<dyn Fn(AuditEvent) -> Result<()> + Send + Sync>;
 
 /// Authorization and audit configuration for DIMSE services.
+///
+/// # S13-T7 — Read-Only `Arc<dyn Authorizer>`
+///
+/// The `Authorizer` trait's `authorize` method takes `&self`, so
+/// `Arc<dyn Authorizer + Send + Sync>` is safe to share without
+/// additional synchronization.
 #[derive(Clone)]
 pub struct DimseAuthConfig {
     /// Authorization policy.
@@ -115,6 +126,13 @@ impl DimseAuthConfig {
             authorizer: Arc::new(DenyAll::new(AuthDenyReason::Policy)),
             audit: None,
         }
+    }
+}
+
+impl Default for DimseAuthConfig {
+    /// Default is deny-all (fail closed) per S13-T5.
+    fn default() -> Self {
+        Self::deny_all()
     }
 }
 

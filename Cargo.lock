@@ -1278,6 +1278,7 @@ name = "pack-shared"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "dicom-pixel",
 ]
 
 [[package]]

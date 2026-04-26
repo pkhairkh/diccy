@@ -172,9 +172,17 @@ impl SessionStatus {
 }
 
 /// Force session re-authentication for suspicious session activity.
-pub fn force_reauthentication_for_suspicious_session(session: &mut SessionStatus) -> SessionState {
+///
+/// Renamed from `force_reauthentication_for_suspicious_session` per S13-T4 naming convention.
+pub fn force_reauth_suspicious(session: &mut SessionStatus) -> SessionState {
     session.locked = true;
     SessionState::Locked
+}
+
+/// Backward-compatible alias for [`force_reauth_suspicious`].
+#[deprecated(since = "0.3.0", note = "Use force_reauth_suspicious instead (S13-T4)")]
+pub fn force_reauthentication_for_suspicious_session(session: &mut SessionStatus) -> SessionState {
+    force_reauth_suspicious(session)
 }
 
 /// Determine whether a session state requires operator re-authentication.

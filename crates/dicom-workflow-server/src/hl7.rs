@@ -1244,7 +1244,7 @@ pub fn handle_hl7_subscriptions_list(
             "\"id\":\"{}\",\"source\":\"{}\",\"event_filter\":{},\"sink_kind\":\"{}\",\"sink_target\":\"{}\",\"created_at_ms\":{},\"delivered_events\":{},\"last_event_ms\":{}",
             escape_json(&subscription.id),
             escape_json(&subscription.source),
-            render_string_array(&subscription.event_filter),
+            render_string_set(&subscription.event_filter),
             escape_json(subscription.sink.kind.as_label()),
             escape_json(&subscription.sink.target),
             subscription.created_at_ms,
@@ -1368,7 +1368,7 @@ pub fn handle_hl7_subscriptions_create(
             "{{\"id\":\"{}\",\"source\":\"{}\",\"event_filter\":{},\"sink_kind\":\"{}\",\"sink_target\":\"{}\",\"created_at_ms\":{}}}",
             escape_json(&id),
             escape_json(&subscription.source),
-            render_string_array(&subscription.event_filter),
+            render_string_set(&subscription.event_filter),
             escape_json(subscription.sink.kind.as_label()),
             escape_json(&subscription.sink.target),
             created_at_ms
@@ -1960,8 +1960,9 @@ pub fn publish_hl7_event(
     }
 }
 
-pub fn parse_hl7_event_filter(raw: &str) -> Result<Vec<String>, Box<Error>> {
-    let mut out = Vec::new();
+/// Parse HL7 event filter string into a `BTreeSet<String>` (S13-T6).
+pub fn parse_hl7_event_filter(raw: &str) -> Result<BTreeSet<String>, Box<Error>> {
+    let mut out = BTreeSet::new();
     for candidate in raw.split(',') {
         let token = normalize_identifier(candidate);
         if token.is_empty() {
@@ -1970,16 +1971,14 @@ pub fn parse_hl7_event_filter(raw: &str) -> Result<Vec<String>, Box<Error>> {
         let token = token.to_ascii_lowercase();
         match token.as_str() {
             "adt" | "orm" | "oru" | "siu" | "task" | "mpps" | "sr" | "workflow" | "all" | "*" => {
-                out.push(token)
+                let _ = out.insert(token);
             }
             _ => return Err(decode_error("unsupported hl7 event filter")),
         }
     }
     if out.is_empty() {
-        out.push("all".to_string());
+        let _ = out.insert("all".to_string());
     }
-    out.sort();
-    out.dedup();
     Ok(out)
 }
 

@@ -16,6 +16,21 @@ pub fn render_string_array(values: &[String]) -> String {
     out
 }
 
+/// Render a `BTreeSet<String>` as a JSON array (S13-T6).
+pub fn render_string_set(values: &BTreeSet<String>) -> String {
+    let mut out = String::from("[");
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            out.push(',');
+        }
+        out.push('"');
+        out.push_str(&escape_json(value));
+        out.push('"');
+    }
+    out.push(']');
+    out
+}
+
 pub fn normalize_hl7_status(raw: &str) -> Option<TaskStatus> {
     match raw.trim().replace('_', " ").to_ascii_uppercase().as_str() {
         "SCHEDULED" | "PENDING" | "ADMIT" | "REGISTER" | "CREATE" => Some(TaskStatus::Scheduled),
