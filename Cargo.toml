@@ -38,4 +38,6 @@ members = [
   "crates/pack-us",
   "crates/pack-nm",
   "crates/pack-xa",
+  "crates/dicom-fhir",
+  "crates/dicom-hl7",
 ]

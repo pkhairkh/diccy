@@ -6,7 +6,10 @@ use std::fmt;
 
 pub mod cache;
 pub mod clinical;
+pub mod gsdf;
+pub mod hanging_protocol;
 pub mod mpr;
+pub mod prefetch;
 pub mod volume;
 
 pub use cache::{CacheMetrics, DeterministicCache};
@@ -19,6 +22,20 @@ pub use clinical::{
     SegmentationStyle, ThresholdConfig, VolumeWorkflowCapabilities, VolumeWorkflowState,
     VolumeWorkflowStatus, compute_roi_statistics, interpolate_slices_linear,
     interpolate_slices_morphological, region_grow, threshold_segment_volume,
+};
+pub use gsdf::{
+    DisplayCalibrationConfig, GsdfError, GsdfLut, GSDF_P_VALUE_COUNT,
+    apply_calibration, compute_conformance, generate_calibration_table, generate_gsdf_lut,
+    jnd_to_luminance, luminance_to_jnd,
+};
+pub use hanging_protocol::{
+    DisplaySetAssignment, HangingProtocol, HangingProtocolEngine, HangingProtocolError,
+    HangingProtocolMatch, ImageSetDefinition, MatchCriterion, StudyMatchContext,
+    TimePerspective, ct_chest_abdomen_protocol, default_fallback_protocol, mammography_protocol,
+};
+pub use prefetch::{
+    PrefetchEngine, PrefetchPriority, PrefetchRequest, PrefetchRule, PrefetchStats,
+    PrefetchStatus, WorklistTrigger, default_prefetch_rules,
 };
 pub use mpr::{
     patient_request_to_voxel_request, quantize_plane_parameter, reslice_volume,

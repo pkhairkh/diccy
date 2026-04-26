@@ -201,7 +201,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
 
 **Tasks:**
 
-- [ ] **S3-T1** Implement Hanging Protocol matching engine
+- [x] **S3-T1** Implement Hanging Protocol matching engine
   - Parse DICOM Supplement 60 Hanging Protocol IOD
   - Match rules: modality, body part, laterality, study description
   - Image set definition and display set assignment
@@ -210,7 +210,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
   - **Acceptance:** Mammography (CC/MLO, current/prior) auto-arranged
   - **Estimated effort:** 6 days
 
-- [ ] **S3-T2** Implement study prefetching engine
+- [x] **S3-T2** Implement study prefetching engine
   - Rule-based prefetch on worklist entry (fetch priors by modality/body part)
   - Priority queue with STAT escalation
   - DICweb WADO-RS prefetch with progressive loading
@@ -218,7 +218,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
   - **Acceptance:** Priors loaded before radiologist opens study
   - **Estimated effort:** 5 days
 
-- [ ] **S3-T3** Implement FHIR R4 adapter crate (`dicom-fhir`)
+- [x] **S3-T3** Implement FHIR R4 adapter crate (`dicom-fhir`)
   - New crate `crates/dicom-fhir`
   - Map DICOM Patient/Study/Series to FHIR Patient/ImagingStudy
   - Map DICOM SR to FHIR Observation (per HL7 DICOM-SR on FHIR IG)
@@ -226,7 +226,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
   - **Acceptance:** DICOM SR measurement report retrievable as FHIR Observation
   - **Estimated effort:** 6 days
 
-- [ ] **S3-T4** Implement HL7 v2 adapter crate (`dicom-hl7`)
+- [x] **S3-T4** Implement HL7 v2 adapter crate (`dicom-hl7`)
   - New crate `crates/dicom-hl7`
   - ADT message parsing (A01/A02/A03/A08) for patient sync
   - ORM message parsing for order entry
@@ -235,7 +235,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
   - **Acceptance:** Patient demographics synced from ADT feed, orders received via ORM
   - **Estimated effort:** 6 days
 
-- [ ] **S3-T5** Implement display calibration (GSDF)
+- [x] **S3-T5** Implement display calibration (GSDF)
   - New module `viewer-core::gsdf` or crate `dicom-display`
   - DICOM Grayscale Standard Display Function (GSDF) implementation
   - Monitor luminance measurement input (min/max LL)
@@ -245,7 +245,7 @@ writeback, ROI statistics — closing gaps G4, G5, G6. ✅ **COMPLETE**
   - **Estimated effort:** 3 days
 
 **Sprint 3 Deliverable:** Workflow automation (hanging protocols, prefetching),
-interoperability (FHIR/HL7), display calibration — closing gaps G7, G8, G9, G12.
+interoperability (FHIR/HL7), display calibration — closing gaps G7, G8, G9, G12. ✅ **COMPLETE**
 
 ---
 

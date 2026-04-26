@@ -369,6 +369,26 @@ name = "dicom-env-contract"
 version = "0.1.0"
 
 [[package]]
+name = "dicom-fhir"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "dicom-hl7"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dicom-index"
 version = "0.1.0"
 dependencies = [
