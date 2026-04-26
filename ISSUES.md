@@ -4,6 +4,8 @@
 > Domain-Driven Design (DDD) principles, encapsulation, cohesion,
 > coupling, and structural health. Based on a full source-code audit
 > of all 48 workspace crates (102,346 lines of Rust).
+>
+> **37 issues identified** across Critical (3), High (14), Medium (16), and Low (4) severity levels.
 
 ---
 
@@ -617,27 +619,659 @@ The codebase uses a `tick: u64` field for deterministic ordering across `Measure
 
 ---
 
+## 18. Pack Crate Code Duplication — 6× Duplicated `read_str`, `missing_required_tag`, Sequence Helpers
+
+**Severity: HIGH**
+
+### Problem
+
+The `pack-*` crates (pack-enhanced, pack-gsps, pack-seg, pack-rt, pack-sr) each re-implement the same DICOM parsing helpers with subtle behavioral differences, creating a fragile web of near-identical code.
+
+### Duplication Map
+
+| Helper | Duplicated In | Key Difference |
+|---|---|---|
+| `read_str()` | pack-shared, pack-enhanced, pack-gsps, pack-seg, pack-rt, pack-sr | pack-shared handles `Value::Bytes`; pack-sr returns `&str` not `Option<&str>` |
+| `missing_required_tag()` | pack-enhanced, pack-gsps, pack-seg, pack-rt, pack-sr, modality-pet | modality-pet adds `.with_context` |
+| `invalid_tag_value()` | pack-enhanced, pack-gsps, pack-seg, pack-rt, pack-sr | Identical |
+| `sequence_items()` / `first_sequence_item()` / `read_sequence()` | pack-enhanced, pack-seg, pack-rt, pack-sr | 4–5× duplication |
+| `read_u16()` / `read_bytes()` | pack-seg, pack-rt | Near-identical |
+| `parse_manifest_uids()` test helper | pack-enhanced, pack-seg, pack-rt, pack-sr, pack-us, pack-nm, pack-xa, modality-mg | **8× duplicated** — fragile TOML-parsing hack |
+
+### Critical Footgun
+
+`pack-sr::read_str()` returns `Result<&str>` (errors on missing tag) while every other pack's `read_str()` returns `Result<Option<&str>>` (graceful on missing tag). This API inconsistency will cause unexpected panics when migrating code between packs.
+
+### Recommendation
+
+1. Expand `pack-shared` into a comprehensive parsing helper crate with all these functions.
+2. Fix `pack-sr::read_str` to return `Result<Option<&str>>` for consistency.
+3. Replace all local copies with imports from `pack-shared`.
+4. Create a shared test utility crate with `parse_manifest_uids()`.
+
+---
+
+## 19. Identical Types Duplicated Across `pack-us`, `pack-nm`, `pack-xa`
+
+**Severity: HIGH**
+
+### Problem
+
+Three crates define character-for-character identical types that cannot be used interchangeably, forcing consumers to convert between them.
+
+| Type | pack-us | pack-nm | pack-xa |
+|---|---|---|---|
+| `CalibrationSource` | 3 variants | 3 variants (identical) | 3 variants (identical) |
+| `MeasurementWarning` | 7 variants | 9 variants (superset) | 9 variants (identical to NM) |
+| `extract_measurement_context()` | 86–133 lines | 88–146 lines (NM adds frame time) | 90–148 lines (identical to NM) |
+| `FRAME_TIME_EPS = 1e-6` | Not present | Defined | Defined (duplicated) |
+
+These are **different Rust types** — `pack_us::CalibrationSource` ≠ `pack_nm::CalibrationSource` — despite being semantically identical. This forces any consumer that works with multiple modalities to write conversion code.
+
+### Recommendation
+
+1. Create a `pack-calibration-shared` crate with `CalibrationSource`, `MeasurementWarning` (NM/XA superset), and `extract_measurement_context()`.
+2. Re-export from `pack-us`, `pack-nm`, `pack-xa` for backward compatibility.
+
+---
+
+## 20. Missing `Pack` Trait — 8 Identical Marker Type Boilerplates
+
+**Severity: MEDIUM**
+
+### Problem
+
+Eight structurally identical marker types all implement `enabled()` + `ensure_supported()` with identical boilerplate:
+
+- `EnhancedPack`, `GspsPack`, `SegPack`, `RtPack`, `SrPack`, `UsPack`, `NmPack`, `XaPack`
+
+Each has:
+```rust
+pub struct XPack;
+impl XPack {
+    pub fn enabled() -> bool { cfg!(feature = "x") }
+    pub fn ensure_supported(uid: &str) -> Result<()> { ... }
+}
+```
+
+### Recommendation
+
+Define a shared trait:
+```rust
+trait Pack: Sized {
+    const FEATURE: &'static str;
+    const SOP_CLASS_UIDS: &[&str];
+    fn enabled() -> bool;
+    fn ensure_supported(uid: &str) -> Result<()>;
+}
+```
+
+---
+
+## 21. Missing `FromDataset` and `OverlayRenderable` Traits
+
+**Severity: MEDIUM**
+
+### Problem
+
+Multiple domain types implement the same patterns but share no interface:
+
+| Pattern | Implementors |
+|---|---|
+| `from_dataset(dataset: &Dataset, limits: &Limits) -> Result<Self>` | `RtDoseGrid`, `RtStructureSet`, `RtPlanSummary`, `Segmentation`, `PresentationState` |
+| `overlay_on(frame: &mut DisplayFrame)` | `Segmentation`, `RtDoseGrid`, `RtStructureSet`, `PresentationState` |
+
+Without shared traits, generic code cannot be written over these types.
+
+### Recommendation
+
+1. Define `trait FromDataset: Sized { fn from_dataset(dataset: &Dataset, limits: &Limits) -> Result<Self>; }`
+2. Define `trait OverlayRenderable { fn overlay_on(&self, frame: &mut DisplayFrame); }`
+
+---
+
+## 22. Rendering Code Leaked Into Domain/Parsing Crates
+
+**Severity: HIGH**
+
+### Problem
+
+Domain crates (pack-gsps, pack-seg, pack-rt) depend on `dicom_pixel::DisplayFrame` — a rendering surface type — for overlay rendering. This makes the domain layer depend on the rendering layer, inverting the dependency direction.
+
+| Crate | Rendering Dependency | Should Be |
+|---|---|---|
+| `pack-gsps` | `dicom_pixel::{DisplayFrame, DisplayTransform, PixelFormat}` | Return domain types; let the rendering layer handle pixel operations |
+| `pack-seg` | `dicom_pixel::{DisplayFrame, PixelFormat}` | Same |
+| `pack-rt` | `dicom_pixel::{DisplayFrame, PixelFormat}` | Same |
+| `modality-pet` | `viewer_core::VolumeGrid` | Domain crate depends on UI/runtime crate |
+
+### Additional Evidence
+
+- Bresenham line/circle algorithms are implemented directly in `pack-gsps` and `pack-rt` (2× duplicated), mixed with DICOM parsing logic.
+- `dicom-mesh` contains no rendering dependency — it returns pure domain types (`TriangleMesh`). This is the correct pattern.
+
+### Recommendation
+
+1. Move `DisplayFrame`-dependent code from pack-gsps/pack-seg/pack-rt into a separate rendering layer.
+2. Return domain types (contour points, overlay descriptors) from pack crates.
+3. Move Bresenham algorithms to a rendering/painting utility crate.
+4. Remove `viewer_core` dependency from `modality-pet` — use a trait abstraction instead.
+
+---
+
+## 23. Boolean Trap — Raw `bool` Fields Instead of Enums
+
+**Severity: MEDIUM**
+
+### Problem
+
+Multiple types use raw `bool` fields or `Option<bool>` where semantically meaningful enums would prevent invalid combinations and improve readability.
+
+| Crate | Type | Field | Should Be |
+|---|---|---|---|
+| `pack-gsps` | `PresentationState` | `flip_x: Option<bool>`, `flip_y: Option<bool>` | `enum Flip { None, Horizontal, Vertical, Both }` |
+| `pack-gsps` | `ViewportState` | `rotation_quadrants: Option<i32>` | `enum Rotation { Q0, Q90, Q180, Q270 }` |
+| `modality-ct` | `SliceSpacing` | `unknown: bool` + `non_uniform: bool` | `enum Spacing { Unknown, Uniform(f64), NonUniform(f64) }` |
+| `modality-ct` | `Measurement` | `calibrated: bool` | Part of `MeasurementUnit` variant |
+| `modality-mg` | `TomoNavigation` | `cine_active: bool` + `cine_direction: i32` | `enum CineState { Stopped, Playing(Forward), Playing(Backward) }` |
+| `modality-mg` | `MqsaDisplayControls` | `gsdf_calibrated: bool` | Part of calibration state enum |
+| `modality-mg` | `DualMonitorHangingProtocol` | `show_priors: bool` | `enum PriorDisplay { Hidden, Visible }` |
+| `pack-rt` | `RtContour` | `closed: bool` | `enum ContourType { ClosedPlanar, OpenPlanar }` |
+| `dicom-mesh` | `TriangleMesh` normals field | `normals: Option<Vec<[f64; 3]>>` | Could be `enum Normals { Computed(Vec<...>), NotComputed }` |
+| `viewer-core` | `RtssOverlayState` | `clipping_enabled: bool` | `enum ClippingMode { Enabled, Disabled }` |
+
+### Impact
+
+- `SliceSpacing { unknown: false, non_uniform: false, spacing_mm: -1.0 }` — negative spacing with contradictory flags is constructable.
+- `PresentationState { flip_x: Some(true), flip_y: Some(true) }` — two separate bools where `Flip::Both` is clearer.
+- `MqsaDisplayControls { mqsa_compliant: true, gsdf_calibrated: false }` — claiming compliance without calibration is a regulatory risk.
+
+### Recommendation
+
+Replace each `bool` pair or `Option<bool>` with a proper enum that encodes the valid states.
+
+---
+
+## 24. Magic Numbers Without Named Constants
+
+**Severity: MEDIUM**
+
+### Problem
+
+Critical clinical and rendering values are hardcoded as magic numbers without documentation or named constants.
+
+| Crate | Value | Context | Risk |
+|---|---|---|---|
+| `pack-gsps` | `0xFF` | GRAPHIC_LUMA — should be `const` in shared theme | Hard to change globally |
+| `pack-gsps` / `pack-rt` | `[0xFF, 0x00, 0x00]` | DEFAULT_CONTOUR_COLOR — duplicated | Color inconsistency between GSPS and RT |
+| `pack-gsps` | `180` | ELLIPSE_SEGMENTS — undocumented | Why 180? |
+| `pack-rt` | `200` | STRUCTURE_ALPHA — undocumented | Clinical significance unknown |
+| `pack-seg` | `73, 151, 199, 200, 30` | `segment_color` hash — trivial hash with poor distribution | Colors may collide for different segment indices |
+| `modality-pet` | `8.0` | SUV normalization denominator | Critical clinical value — must be documented and configurable |
+| `modality-pet` | `512*512*2048`, `512*1024*1024` | Default limits | Should be named constants |
+| `pack-nm` / `pack-xa` / `pack-rt` | `1e-6` | FRAME_TIME_EPS / GEOM_EPS — same value, different names | Confusing |
+| `pack-gsps` | `1e-6`, `1e-3`, `1e-3` | Three different epsilons | Should be in shared geometry config |
+| `dicom-workflow-server` | `14_695_981_039_346_656_037` | FNV offset basis for `hash_text()` | Should use a proper hash crate |
+
+### Recommendation
+
+1. Create a `dicom-const` module or crate with all named constants.
+2. Extract shared epsilon values into a geometry configuration type.
+3. Replace the hand-rolled FNV hash with `fnv` or `ahash` crate.
+
+---
+
+## 25. Integer Overflow and Bounds-Checking Gaps
+
+**Severity: HIGH**
+
+### Problem
+
+Several locations compute buffer sizes from untrusted DICOM data without overflow checks, creating potential panics or memory corruption on maliciously crafted files.
+
+| Crate | Location | Risk |
+|---|---|---|
+| `pack-rt` | `rows*cols*frames` for dose grid | Could overflow `usize` for large dimensions |
+| `pack-seg` | `expected_pixels = rows*cols*frames` | Same overflow risk |
+| `pack-gsps` | `(y * width + x)` pixel index | Could overflow `u32` for very large frames |
+| `modality-pet` | `Vec::with_capacity(dims[0]*dims[1]*dims[2])` | Could panic on OOM or overflow |
+| `pack-sr` | `authored_epoch_ms.min(i32::MAX as u64) as i32` | **Silent data loss** — u64 truncated to i32 |
+| `pack-sr` | `version.min(i32::MAX as u64) as i32` | **Silent data loss** — same truncation |
+| `modality-pet` | `pet_voxel[0].round() as usize` | No bounds checking — could panic |
+
+### Impact
+
+- A crafted DICOM file with `rows=65535, cols=65535, frames=65535` would cause `rows*cols*frames` to overflow on 32-bit targets or OOM on 64-bit.
+- The `pack-sr` u64→i32 truncation silently loses the upper 32 bits of timestamps and version numbers — data corruption that won't be detected until much later.
+
+### Recommendation
+
+1. Use `checked_mul()` / `saturating_mul()` for all dimension calculations.
+2. Replace `as i32` casts with `try_into()` or explicit range checks.
+3. Add bounds validation before all array indexing with computed indices.
+
+---
+
+## 26. Missing Validation on Construction
+
+**Severity: HIGH**
+
+### Problem
+
+Many types that have natural invariants provide no validation at construction, relying on callers to remember to call `validate()` separately — or having no `validate()` at all.
+
+| Crate | Type | Missing Validation |
+|---|---|---|
+| `pack-enhanced` | `EnhancedRescale` | `slope: f64::NAN` is accepted |
+| `pack-enhanced` | `EnhancedFrameGeometry` | No IOP orthonormality check |
+| `pack-gsps` | `ViewportState.with_rotation()` | No check that `rotation_quadrants` is 0–3 |
+| `pack-gsps` | `ViewportState.with_zoom()` | No check that zoom > 0 |
+| `pack-gsps` | `encode_viewport_as_gsps()` | Returns `Dataset` not `Result<Dataset>` — silently encodes invalid data |
+| `modality-mg` | `TomoNavigation::new()` | No validation that `slice_thickness_mm > 0` |
+| `modality-mg` | `MqsaDisplayControls::new()` | No check `max_luminance > min_luminance` |
+| `modality-pet` | `SuvScaleInput` | `scale_factor: 0.0` passes through `apply_suv()` |
+| `pack-rt` | `RtDoseGrid` | `dose_grid_scaling` can be any f64 externally |
+| `dicom-mesh` | `TriangleMesh` | No check that triangle indices are within vertex bounds |
+| `dicom-xr` | `HeadPose` | `validate()` exists but is not called in constructor |
+
+### Recommendation
+
+1. Add validated constructors (`::new()` with checks) for all types with invariants.
+2. Make `encode_viewport_as_gsps()` return `Result<Dataset>`.
+3. Call `validate()` inside `HeadPose::new()` — don't make it opt-in.
+
+---
+
+## 27. Naming Inconsistencies Across the Codebase
+
+**Severity: MEDIUM**
+
+### Problem
+
+The same concepts are named differently across crates, violating the DDD principle of Ubiquitous Language.
+
+| Concept | Crate A | Crate B | Inconsistency |
+|---|---|---|---|
+| SOP class check | `Pack::ensure_supported(uid)` | `modality-ct::ensure_ct_supported()` | Pack crates take UID param; modality crates don't |
+| Pixel spacing | `(f64, f64)` tuple | `PixelSpacing` not defined | No shared type for a ubiquitous concept |
+| Image orientation | `[f64; 6]` raw array | No named type | Used in pack-enhanced, pack-rt, modality-ct |
+| Measurement unit | `MeasurementUnit::Millimeter` | `MeasurementMode::PhysicalMillimeters` | Two names for same concept in modality-ct |
+| UID representation | `SegReference.frame_of_reference_uid: &'a str` | `RtReferenceGeometry.frame_of_reference_uid: String` | Inconsistent `&str` vs `String` |
+| SOP class constant | `SOP_CLASS_ENHANCED_CT` in `pack-enhanced` | `SOP_CLASS_ENHANCED_CT` in `modality-ct` | **Duplicated constant** with same value |
+| `read_str` return type | `Result<Option<&str>>` (5 crates) | `Result<&str>` (pack-sr) | Different error semantics |
+| Pack marker naming | `RtPack`, `CrPack`, `MgPack`, `PetPack` | Some 2-letter, some 3-letter abbreviations | Inconsistent abbreviation style |
+
+### Recommendation
+
+1. Define `PixelSpacing`, `ImageOrientationPatient`, `ImagePositionPatient` shared types.
+2. Unify `read_str` return types to `Result<Option<&str>>` everywhere.
+3. Remove duplicated SOP class constants — define once in `dicom-core` or `pack-shared`.
+4. Standardize pack/modality marker naming.
+
+---
+
+## 28. Cross-Crate Pattern Inconsistencies
+
+**Severity: MEDIUM**
+
+### Problem
+
+Structurally similar crates follow different patterns, making the codebase unpredictable.
+
+| Inconsistency | Crates Affected |
+|---|---|
+| `pack-us`/`pack-nm` use `pack-shared`; `pack-enhanced`/`pack-gsps`/`pack-seg`/`pack-rt`/`pack-sr` don't | Inconsistent use of shared crate |
+| `pack-enhanced` defines TAG constants as `pub`; other packs use `const` (private) | API surface inconsistency |
+| `pack-gsps` has encoding (writeback) support; `pack-seg` has encoder; other packs don't | Inconsistent feature coverage |
+| `modality-mg` derives `Serialize, Deserialize`; no other modality crate does | Serialization inconsistency |
+| `modality-pet` has `bin/fusion_benchmark.rs`; no other modality crate has benchmarks | Infrastructure inconsistency |
+| `modality-pet` uses `viewer_core::VolumeGrid`; other modality crates are pure DICOM | **Architecture inconsistency** — a parsing crate depending on UI crate |
+| `modality-ct` works with already-parsed geometry inputs (no `Dataset` parsing); other crates parse from `Dataset` | Pattern inconsistency |
+| `dicom-web` uses `Arc<dyn Authorizer>`; `dicom-dimse-service` uses concrete `AllowAll`/`DenyAll` | DI inconsistency |
+
+### Recommendation
+
+1. All `pack-*` crates should depend on and use `pack-shared`.
+2. All modality crates should follow the same dependency pattern (no `viewer_core` dependency).
+3. Standardize on trait-based dependency injection for cross-cutting concerns.
+
+---
+
+## 29. Collaboration Crate Uses `DecodeError` for Non-Decode Failures
+
+**Severity: MEDIUM**
+
+### Problem
+
+`dicom-collab` uses `ErrorKind::DecodeError { stage: "dicom-collab", detail }` for collaboration errors like "user already in session" or "operation from unknown user." These are not decode failures — they are domain validation errors.
+
+Similarly, `dicom-workflow-server` uses `ErrorKind::DecodeError { stage: "dicom-workflow-server-auth" }` for authorization denials, and `dicom-telerad` uses it for bandwidth adaptation decisions.
+
+### Affected Crates
+
+| Crate | Error Code | Actual Meaning |
+|---|---|---|
+| `dicom-collab` | `ErrorKind::DecodeError` | Session validation, user management |
+| `dicom-telerad` | `ErrorKind::DecodeError` | Network adaptation, streaming errors |
+| `dicom-workflow-server` | `ErrorKind::DecodeError` | Authorization denial, route validation |
+| `dicom-ups` | `ErrorKind::DecodeError` | UPS state transition validation |
+| `dicom-web` | `ErrorKind::DecodeError` via `stage == "dicom-auth"` check | Authorization denial detected by string matching on stage |
+
+### Critical Hack in `dicom-web`
+
+```rust
+// dicom-web/src/lib.rs line ~829
+ErrorKind::DecodeError { stage, detail: _ } if stage == "dicom-auth" => (403, "Forbidden"),
+```
+
+The code **string-matches on the `stage` field** of `DecodeError` to determine if an error is an authorization failure. This is a fragile workaround for the missing `AuthorizationDenied` error kind.
+
+### Recommendation
+
+1. Add `ErrorKind::AuthorizationDenied`, `ErrorKind::SessionError`, `ErrorKind::ConcurrencyConflict`, and `ErrorKind::NetworkAdaptation` variants to `dicom-core`.
+2. Remove the `stage == "dicom-auth"` string-match hack in `dicom-web`.
+3. Update all affected crates to use semantically correct error kinds.
+
+---
+
+## 30. `dicom-workflow-server` Runtime State Is a 25-Field God Struct
+
+**Severity: HIGH**
+
+### Problem
+
+The `RuntimeState` struct in `dicom-workflow-server/main.rs` contains 25 fields spanning at least 6 different domains:
+
+```rust
+struct RuntimeState {
+    worklist: WorklistStore,
+    mpps: MppsService,
+    sr: SrWorkflowStore,
+    mpps_idempotency: BTreeMap<String, CachedMppsRequest>,
+    tasks: BTreeMap<String, ProcedureTask>,
+    task_id_sequence: u64,
+    task_idempotency: BTreeMap<String, CachedMppsRequest>,
+    hl7: Hl7RuntimeState,              // 18 more fields inside
+    audit_path: String,
+    audit_rate_window_ms: u64,
+    query_rate_limit: u64,
+    mutation_rate_limit: u64,
+    upload_cap_bytes: u64,
+    audit_max_bytes: u64,
+    audit_max_rotated_files: usize,
+    rate_windows: BTreeMap<String, RequestWindow>,
+    anomaly_alert_threshold: u64,
+    audit_export_limit: usize,
+    denylist_routes: Vec<String>,
+    tenant_worklist: BTreeMap<String, Vec<String>>,
+    tenant_mpps: BTreeMap<String, Vec<String>>,
+    tenant_sr: BTreeMap<String, Vec<String>>,
+    tenant_tasks: BTreeMap<String, Vec<String>>,
+    metrics: BTreeMap<String, TenantOperationMetrics>,
+}
+```
+
+And `Hl7RuntimeState` itself has 18 more fields. Every handler function takes `&mut RuntimeState`, meaning every function has access to every piece of state — no separation of concerns, no capability-based access.
+
+### Impact
+
+- Any handler can accidentally mutate any state field.
+- No compile-time enforcement of access control.
+- Impossible to reason about which fields a function modifies.
+- Thread safety is impossible — the entire struct is passed as `&mut`.
+
+### Recommendation
+
+1. Decompose `RuntimeState` into domain-specific sub-states: `WorklistState`, `MppsState`, `TaskState`, `Hl7State`, `TenantState`, `AuditState`, `RateLimitState`.
+2. Pass only the required sub-state to each handler.
+3. Consider using interior mutability (`RefCell`, `Mutex`) for concurrent access.
+
+---
+
+## 31. Tenant Indexing Uses `Vec<String>` Linear Scans Instead of Sets
+
+**Severity: MEDIUM**
+
+### Problem
+
+The `dicom-workflow-server` tenant indexing uses `BTreeMap<String, Vec<String>>` where the `Vec<String>` is searched with `.iter().any()` — an O(n) linear scan per lookup.
+
+```rust
+fn tenant_indexes_contains(
+    tenant_indexes: &BTreeMap<String, Vec<String>>,
+    tenant: &str,
+    id: &str,
+) -> bool {
+    tenant_indexes
+        .get(tenant)
+        .is_some_and(|entries| entries.iter().any(|entry| entry == id))
+}
+
+fn tenant_of_id(tenant_indexes: &BTreeMap<String, Vec<String>>, id: &str) -> Option<String> {
+    for (tenant, entries) in tenant_indexes {
+        if entries.iter().any(|entry| entry == id) {
+            return Some(tenant.clone());
+        }
+    }
+    None
+}
+```
+
+`tenant_of_id()` is O(n*m) — iterates all tenants and all entries per tenant. For a system with 100 tenants and 10,000 tasks, this is 1,000,000 comparisons per lookup.
+
+### Recommendation
+
+1. Replace `Vec<String>` with `BTreeSet<String>` or `HashSet<String>`.
+2. Add a reverse index: `BTreeMap<String, String>` mapping ID → tenant for O(log n) reverse lookups.
+
+---
+
+## 32. `Arc<dyn Trait>` Without Interior Mutability — Impostor Pattern
+
+**Severity: MEDIUM**
+
+### Problem
+
+Several crates use `Arc<dyn SomeTrait + Send + Sync>` for dependency injection, but the traits only have `&self` methods (no `&mut self`). This means:
+
+1. The trait cannot mutate internal state.
+2. If the implementation needs mutation, it must use `Mutex` or `RefCell` internally, adding hidden synchronization overhead.
+3. The `Arc` is often unnecessary — `&dyn SomeTrait` or a generic parameter would suffice.
+
+### Evidence
+
+| Crate | Trait | Used As |
+|---|---|---|
+| `dicom-web` | `Arc<dyn Authorizer + Send + Sync>` | `WebAuthConfig.authorizer` |
+| `dicom-web` | `Arc<dyn Fn(AuditEvent) -> Result<()> + Send + Sync>` | `WebAuthConfig.audit` |
+| `dicom-collab` | `Arc<dyn Fn(AuditEvent) -> Result<()> + Send + Sync>` | `CollabSession.audit` |
+| `dicom-inference` | `Arc<dyn InferenceRuntime>` in some tests | `InferenceRuntime` has `&mut self` methods |
+
+The `Authorizer` trait has `fn authorize(&self, ...)` — no mutation needed, so `Arc` is reasonable. But `InferenceRuntime` has `fn load_model(&mut self, ...)` — `Arc<dyn InferenceRuntime>` cannot call this because `Arc` only gives `&self`.
+
+### Recommendation
+
+1. For read-only traits like `Authorizer`, consider a generic parameter `<A: Authorizer>` instead of `Arc<dyn Authorizer>`.
+2. For traits with `&mut self` methods, use `Arc<Mutex<dyn InferenceRuntime>>` or pass ownership.
+
+---
+
+## 33. Test Data Inline in Production Source Files
+
+**Severity: MEDIUM**
+
+### Problem
+
+Several crates include massive test modules at the bottom of their `lib.rs` files, inflating compilation times even when not running tests.
+
+| Crate | Test Lines (approx) | Percentage of File |
+|---|---|---|
+| `dicom-workflow-server/main.rs` | ~10,000 | 60% |
+| `dicom-dimse-service/lib.rs` | ~1,200 | 27% |
+| `pack-gsps/lib.rs` | ~600 | 25% |
+| `pack-seg/lib.rs` | ~500 | 24% |
+| `pack-rt/lib.rs` | ~500 | 25% |
+| `pack-enhanced/lib.rs` | ~400 | 20% |
+
+While `#[cfg(test)]` prevents test code from being compiled in release builds, it still slows down `cargo check` and IDE analysis because the compiler must parse and type-check the entire file.
+
+### Recommendation
+
+1. Move test modules into `tests/` directories as integration tests.
+2. Keep only unit tests (testing private functions) in `lib.rs`.
+3. Share test infrastructure via a `dicom-test-fixtures` dev-dependency.
+
+---
+
+## 34. `dicom-web` 34-Element Route Capability Array Is Brittle
+
+**Severity: LOW**
+
+### Problem
+
+`dicomweb_route_capability_matrix()` returns a `[DicomWebRouteCapability; 34]` — a fixed-size array of exactly 34 elements. Adding a new DICOMweb route requires:
+1. Finding the function.
+2. Changing the array size `34` → `35`.
+3. Adding the new element in the correct position.
+4. Updating all callers that destructure the array.
+
+This is error-prone and the fixed size serves no performance benefit.
+
+### Recommendation
+
+Return `Vec<DicomWebRouteCapability>` or use a `const` slice `&'static [DicomWebRouteCapability]`.
+
+---
+
+## 35. `viewer-core` Duplicates Types That Exist in `dicom-core`
+
+**Severity: MEDIUM**
+
+### Problem
+
+`viewer-core` is intentionally independent of `dicom-core` (for GPU-agnostic, WASM-compatible design). However, this means several concepts are duplicated:
+
+| Concept | `viewer-core` | `dicom-core` |
+|---|---|---|
+| UIDs | `StudySeriesContext.study_uid: String` | `Tag(0x0020, 0x000D)` + `Value::Uid` |
+| Pixel spacing | `MeasurementCalibration.pixel_spacing: (f64, f64)` | `Tag(0x0028, 0x0030)` parsing |
+| Measurement identifiers | `Measurement.id: String` | `MeasurementRecord.id: String` |
+| Error handling | `ClinicalError`, `MprError`, `VolumeError`, `GsdfError`, `HangingProtocolError` | `Error` with `ErrorKind` |
+
+The bridge crates (`modality-pet`, `viewer-wgpu`, `rdvf`) that depend on both must manually translate between these parallel type universes.
+
+### Impact
+
+- Changes to one representation must be mirrored in the other.
+- Bridge code is tedious and error-prone.
+- Tests must validate both representations.
+
+### Recommendation
+
+1. Define a `dicom-types` crate with shared value objects (UID, PixelSpacing, Point3D, etc.) that both `dicom-core` and `viewer-core` can depend on.
+2. Keep domain-specific logic separate, but share the primitive vocabulary.
+3. Alternatively, make `viewer-core` depend on a minimal `dicom-values` subset.
+
+---
+
+## 36. Unnecessary Heap Allocations in Hot Paths
+
+**Severity: MEDIUM**
+
+### Problem
+
+Several frequently-called functions perform unnecessary heap allocations that could be avoided.
+
+| Crate | Location | Issue |
+|---|---|---|
+| `pack-enhanced` / `pack-gsps` | `raw.split('\\').collect::<Vec<_>>()` | Allocates Vec just to check length — use `split('\\').count()` or iterator |
+| `pack-sr` | `document.items.clone()` then re-sort | Items already sorted by `build()` — unnecessary clone + sort |
+| `pack-sr` | `coded_concepts::*()` functions | Each allocates 3 `String`s per call — should return `const` values or `LazyLock` |
+| `pack-gsps` / `pack-rt` | `apply_rect()` / `apply_circle()` | Iterates all pixels including those inside the rect — could skip |
+| `modality-mg` | `MammographyCadeHook::visible_findings()` | Allocates new `Vec` + collects on every call — should cache or return iterator |
+| `viewer-core` | `MeasurementStore::active_measurements()` | Sorts and allocates Vec on every call — should maintain sorted order |
+| `dicom-collab` | `CollabSession::merge_from()` | `entry.operation.clone()` for every merged operation — could borrow |
+
+### Recommendation
+
+1. Replace `.collect::<Vec<_>>()` + length check with `.count()`.
+2. Cache sorted measurement lists instead of re-sorting on every access.
+3. Use `Cow<'static, str>` for coded concept values.
+4. Return iterators instead of allocating Vecs where possible.
+
+---
+
+## 37. `dicom-workflow-server` Hand-Rolled FNV Hash for Audit Integrity
+
+**Severity: MEDIUM**
+
+### Problem
+
+The workflow server implements its own FNV-1a hash function for audit chain integrity:
+
+```rust
+fn hash_text(value: &str) -> String {
+    let mut hash: u64 = 14_695_981_039_346_656_037;
+    const FNV_PRIME: u64 = 1_099_511_628_211;
+    for byte in value.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{hash:016x}")
+}
+```
+
+FNV-1a is not cryptographically secure. If audit integrity is a regulatory requirement (which it likely is for a medical device), a non-cryptographic hash is insufficient — an attacker could forge audit entries that produce the same hash.
+
+### Recommendation
+
+1. Use SHA-256 (already a dependency via `sha2` in other crates) for audit chain hashing.
+2. Remove the hand-rolled FNV implementation.
+3. Add the `sha2` crate as a dependency.
+
+---
+
 ## Summary — Priority-Ordered Remediation Plan
 
 | Priority | Issue | Effort | Impact |
 |---|---|---|---|
 | **P0** | Issue 5: Split bounded contexts (storage, auth, dimse-service, workflow-server, web) | 2–3 weeks | Enables independent evolution and deployment |
 | **P0** | Issue 1: Make fields private + validated constructors | 2–3 weeks | Restores invariant safety |
+| **P0** | Issue 25: Fix integer overflow and bounds-checking gaps | 1 week | Prevents panics and memory corruption on malformed input |
+| **P0** | Issue 22: Decouple rendering from domain crates (pack-gsps/se/rt) | 1–2 weeks | Restores proper dependency direction |
 | **P1** | Issue 4: Add domain newtypes (Uid, AeTitle, SopClassUid, etc.) | 1–2 weeks | Catches bugs at compile time |
 | **P1** | Issue 3: Extract shared utilities into `dicom-util` | 1 week | Eliminates 60+ duplicated functions |
 | **P1** | Issue 7: Add dependency injection (Transport, BlobStore traits) | 1–2 weeks | Enables testing and deployment flexibility |
 | **P1** | Issue 16: Fix credential handling (SecretString, redacted Debug) | 3–5 days | Prevents credential leaks |
+| **P1** | Issue 18: Consolidate pack crate parsing helpers into `pack-shared` | 1 week | Eliminates 6× duplicated helpers |
+| **P1** | Issue 19: Create `pack-calibration-shared` for US/NM/XA duplicates | 3–5 days | Eliminates identical types across 3 crates |
+| **P1** | Issue 26: Add validated constructors for types with invariants | 1–2 weeks | Prevents invalid state construction |
+| **P1** | Issue 30: Decompose RuntimeState god struct | 1 week | Enables safe concurrent access |
+| **P1** | Issue 29: Add proper ErrorKind variants (AuthorizationDenied, SessionError, etc.) | 3–5 days | Eliminates DecodeError misuse and string-match hacks |
 | **P2** | Issue 6: Split oversized files | 1 week | Improves maintainability and compilation |
 | **P2** | Issue 2: Enrich domain types with behavior | 2–3 weeks | Reduces scattered business logic |
-| **P2** | Issue 9: Add `ErrorKind::AuthorizationDenied` | 1 day | Fixes semantic error misuse |
+| **P2** | Issue 9 / 29: Add `ErrorKind::AuthorizationDenied` + other variants | 3–5 days | Fixes semantic error misuse across 5+ crates |
 | **P2** | Issue 12: Unify error types | 1–2 weeks | Simplifies cross-crate composition |
 | **P2** | Issue 13: Replace Vec with BTreeMap in Dataset | 3–5 days | Improves performance |
+| **P2** | Issue 23: Replace boolean traps with enums | 1 week | Prevents invalid state combinations |
+| **P2** | Issue 35: Create `dicom-types` shared value objects | 1 week | Eliminates viewer-core/dicom-core duplication |
+| **P2** | Issue 37: Replace FNV hash with SHA-256 for audit integrity | 2–3 days | Prevents audit chain forgery |
 | **P3** | Issue 8: Add `[workspace.dependencies]` | 1 day | Prevents version skew |
 | **P3** | Issue 10: Mark stubs and add runtime assertions | 2–3 days | Prevents accidental production use |
 | **P3** | Issue 14: Create shared test infrastructure | 1 week | Reduces test boilerplate |
 | **P3** | Issue 15: Rationalize feature flags | 3–5 days | Reduces untested combinations |
 | **P3** | Issue 11: Replace type aliases with newtypes | 1 day | Improves type safety |
 | **P3** | Issue 17: Enforce monotonic tick at type level | 2–3 days | Prevents non-monotonic ordering bugs |
+| **P3** | Issue 20: Create `Pack` trait for marker types | 1 day | Reduces 8× boilerplate |
+| **P3** | Issue 21: Create `FromDataset` and `OverlayRenderable` traits | 1–2 days | Enables generic code |
+| **P3** | Issue 24: Extract magic numbers into named constants | 2–3 days | Improves readability and maintainability |
+| **P3** | Issue 27: Unify naming inconsistencies | 3–5 days | Establishes ubiquitous language |
+| **P3** | Issue 28: Standardize cross-crate patterns | 1 week | Makes codebase predictable |
+| **P3** | Issue 31: Replace Vec<String> tenant indexes with Sets | 1–2 days | Improves O(n) → O(log n) lookups |
+| **P3** | Issue 32: Fix `Arc<dyn Trait>` misuse | 2–3 days | Removes hidden synchronization overhead |
+| **P3** | Issue 33: Move inline tests to `tests/` directories | 3–5 days | Reduces compilation time |
+| **P3** | Issue 34: Replace fixed-size route capability array | 1 day | Eliminates brittle constant |
+| **P3** | Issue 36: Eliminate unnecessary heap allocations | 1 week | Improves hot-path performance |
 
 ---
 
@@ -650,8 +1284,11 @@ This audit was performed by:
 4. Analyzing each type for DDD alignment, encapsulation, and design quality.
 5. Cross-referencing with the TASKS.md sprint roadmap for completeness claims.
 6. Identifying patterns that repeat across crates (DRY violations, structural patterns).
+7. Deep-diving into pack-*, modality-*, viewer-*, and server crates for additional findings.
+8. Evaluating dependency direction, rendering coupling, and cross-crate consistency.
 
-**Audit date**: 2026-04-26
+**Audit date**: 2026-04-26 (updated with extended findings)
 **Codebase version**: Commit `3ff7177` (Sprint 5 complete)
 **Total crates**: 48
 **Total lines**: 102,346
+**Total issues identified**: 37
