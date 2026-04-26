@@ -1,0 +1,120 @@
+# S6-T1: Helm values for diccy PACS deployment
+
+replicaCount: 2
+
+image:
+  repository: diccy/dicom-web-server
+  pullPolicy: IfNotPresent
+  tag: "0.1.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 5252
+  targetPort: 5252
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: diccy.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Storage configuration
+storage:
+  backend: filesystem
+  filesystem:
+    path: /data/dicom
+  s3:
+    endpoint: ""
+    bucket: ""
+    region: ""
+    accessKey: ""
+    secretKey: ""
+    pathStyle: false
+
+# Authentication configuration
+auth:
+  enabled: true
+  jwtSecret: ""
+  tokenExpiry: 3600
+
+# TLS configuration
+tls:
+  enabled: false
+  cert: ""
+  key: ""
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5252
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 5252
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Persistence
+persistence:
+  enabled: true
+  storageClassName: ""
+  accessMode: ReadWriteOnce
+  size: 100Gi

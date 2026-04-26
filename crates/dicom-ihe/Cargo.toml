@@ -1,18 +1,20 @@
 [package]
-name = "dicom-storage"
+name = "dicom-ihe"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
 dicom-core = { path = "../dicom-core" }
-dicom-io = { path = "../dicom-io" }
-dicom-index = { path = "../dicom-index" }
 dicom-audit = { path = "../dicom-audit" }
-sha2 = "0.10"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [features]
 default = []
-s3-backend = []
-vna = []
+ihe = []
+swf = []
+xds = []
+pir = []
+ari = []
+air = []

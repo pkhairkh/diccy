@@ -338,6 +338,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-cardio"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "dicom-collab"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dicom-core"
 version = "0.1.0"
 
@@ -365,6 +385,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dicom-encapsulate"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dicom-env-contract"
 version = "0.1.0"
 
@@ -380,6 +410,16 @@ dependencies = [
 
 [[package]]
 name = "dicom-hl7"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "dicom-ihe"
 version = "0.1.0"
 dependencies = [
  "dicom-audit",
@@ -470,10 +510,22 @@ dependencies = [
 name = "dicom-storage"
 version = "0.1.0"
 dependencies = [
+ "dicom-audit",
  "dicom-core",
  "dicom-index",
  "dicom-io",
+ "serde",
  "sha2",
+]
+
+[[package]]
+name = "dicom-telerad"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -535,6 +587,16 @@ version = "0.1.0"
 dependencies = [
  "dicom-audit",
  "dicom-core",
+]
+
+[[package]]
+name = "dicom-wsi"
+version = "0.1.0"
+dependencies = [
+ "dicom-audit",
+ "dicom-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1006,6 +1068,7 @@ name = "modality-mg"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "serde",
 ]
 
 [[package]]

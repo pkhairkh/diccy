@@ -42,4 +42,10 @@ members = [
   "crates/dicom-hl7",
   "crates/dicom-registration",
   "crates/dicom-inference",
+  "crates/dicom-collab",
+  "crates/dicom-telerad",
+  "crates/dicom-cardio",
+  "crates/dicom-wsi",
+  "crates/dicom-encapsulate",
+  "crates/dicom-ihe",
 ]

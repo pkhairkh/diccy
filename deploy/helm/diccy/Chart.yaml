@@ -1,0 +1,16 @@
+apiVersion: v2
+name: diccy
+description: DICOM PACS workstation with GPU rendering, AI inference, and cloud-native deployment
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - dicom
+  - pacs
+  - radiology
+  - medical-imaging
+home: https://github.com/pkhairkh/diccy
+sources:
+  - https://github.com/pkhairkh/diccy
+maintainers:
+  - name: diccy-team
