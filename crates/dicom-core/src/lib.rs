@@ -6,6 +6,11 @@
 //! Note: `dicom-core` currently relies on `std` for error traits and owned
 //! collections, so `no_std` support is not yet available (REQ-API-203).
 
+// Re-export shared value types from the dicom-types crate so that downstream
+// consumers can continue to import them from dicom-core.
+pub use dicom_types::{PatientPosition, WindowLevel};
+
+use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
@@ -277,6 +282,38 @@ impl Element {
         self.value
     }
 
+    /// Return the UID string if the value is a Uid variant.
+    ///
+    /// Returns `None` for non-UID values.
+    pub fn as_uid(&self) -> Option<&str> {
+        match &self.value {
+            Value::Uid(uid) => Some(uid.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Return the value as `f64` if the value is an I32 or F64 variant.
+    ///
+    /// I32 values are converted to f64 losslessly. Returns `None` for
+    /// non-numeric values.
+    pub fn as_f64(&self) -> Option<f64> {
+        match &self.value {
+            Value::I32(v) => Some(f64::from(*v)),
+            Value::F64(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    /// Return the value as `i64` if the value is an I32 variant.
+    ///
+    /// Returns `None` for non-integer values.
+    pub fn as_i64(&self) -> Option<i64> {
+        match &self.value {
+            Value::I32(v) => Some(i64::from(*v)),
+            _ => None,
+        }
+    }
+
     /// Validate that the VR and value are consistent.
     fn validate_vr_value(vr: Vr, value: &Value) -> Result<()> {
         match (vr, value) {
@@ -312,25 +349,27 @@ impl Element {
 /// A DICOM dataset.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Dataset {
-    elements: Vec<Element>,
+    elements: BTreeMap<Tag, Element>,
 }
 
 impl Dataset {
     /// Create an empty dataset.
     pub fn new() -> Self {
         Self {
-            elements: Vec::new(),
+            elements: BTreeMap::new(),
         }
     }
 
     /// Insert an element into the dataset.
+    ///
+    /// If an element with the same tag already exists, it is replaced.
     pub fn insert(&mut self, element: Element) {
-        self.elements.push(element);
+        self.elements.insert(element.tag, element);
     }
 
     /// Get a reference to an element by tag.
     pub fn get(&self, tag: Tag) -> Option<&Element> {
-        self.elements.iter().find(|el| el.tag == tag)
+        self.elements.get(&tag)
     }
 
     /// Get a string value by tag.
@@ -387,9 +426,32 @@ impl Dataset {
         self.elements.is_empty()
     }
 
-    /// Return a read-only view of the dataset elements.
-    pub fn elements(&self) -> &[Element] {
-        &self.elements
+    /// Return an iterator over the dataset elements in tag order.
+    pub fn iter(&self) -> std::collections::btree_map::Values<'_, Tag, Element> {
+        self.elements.values()
+    }
+
+    /// Require an element by tag, returning a reference or a `MissingRequiredTag` error.
+    ///
+    /// Unlike [`Dataset::get`], this method returns an error instead of `None`
+    /// when the tag is absent, which is useful for mandatory DICOM attributes.
+    pub fn require(&self, tag: Tag) -> Result<&Element> {
+        self.get(tag).ok_or_else(|| {
+            Box::new(Error::from_kind(
+                ErrorKind::MissingRequiredTag { tag },
+                "required DICOM tag is missing",
+            ))
+        })
+    }
+
+    /// Insert an element after validating VR/value consistency.
+    ///
+    /// This is a safer alternative to [`Dataset::insert`] that rejects elements
+    /// with inconsistent VR/value pairs (e.g. `Vr::Sq` paired with a string value).
+    pub fn insert_validated(&mut self, element: Element) -> Result<()> {
+        Element::validate_vr_value(element.vr, element.value())?;
+        self.elements.insert(element.tag, element);
+        Ok(())
     }
 
     /// Insert an element enforcing dataset and value limits.
@@ -429,7 +491,7 @@ impl Dataset {
             _ => {}
         }
 
-        self.elements.push(element);
+        self.elements.insert(element.tag, element);
         Ok(())
     }
 
@@ -665,6 +727,44 @@ impl Limits {
     /// Set the max total cached CPU bytes limit.
     pub fn set_max_cache_bytes(&mut self, value: u64) {
         self.max_cache_bytes = value;
+    }
+
+    /// Validate that all limits have sensible (non-zero) values.
+    ///
+    /// Returns an error if any limit is zero, which would indicate a
+    /// misconfiguration that could reject all valid inputs.
+    pub fn validate(&self) -> Result<()> {
+        if self.max_input_bytes == 0 {
+            return Err(limit_exceeded("max_input_bytes", 0, 1));
+        }
+        if self.max_dataset_elements == 0 {
+            return Err(limit_exceeded("max_dataset_elements", 0, 1));
+        }
+        if self.max_sequence_depth == 0 {
+            return Err(limit_exceeded("max_sequence_depth", 0, 1));
+        }
+        if self.max_string_bytes == 0 {
+            return Err(limit_exceeded("max_string_bytes", 0, 1));
+        }
+        if self.max_element_vl_bytes == 0 {
+            return Err(limit_exceeded("max_element_vl_bytes", 0, 1));
+        }
+        if self.max_frames_per_instance == 0 {
+            return Err(limit_exceeded("max_frames_per_instance", 0, 1));
+        }
+        if self.max_pixels_per_frame == 0 {
+            return Err(limit_exceeded("max_pixels_per_frame", 0, 1));
+        }
+        if self.max_decompressed_bytes == 0 {
+            return Err(limit_exceeded("max_decompressed_bytes", 0, 1));
+        }
+        if self.max_gpu_texture_bytes == 0 {
+            return Err(limit_exceeded("max_gpu_texture_bytes", 0, 1));
+        }
+        if self.max_cache_bytes == 0 {
+            return Err(limit_exceeded("max_cache_bytes", 0, 1));
+        }
+        Ok(())
     }
 }
 
@@ -1385,7 +1485,7 @@ fn validate_dataset_inner(
 ) -> Result<()> {
     enforce_limit("max_sequence_depth", depth, limits.max_sequence_depth)?;
 
-    for element in &dataset.elements {
+    for element in dataset.elements.values() {
         *count += 1;
         enforce_limit("max_dataset_elements", *count, limits.max_dataset_elements)?;
 

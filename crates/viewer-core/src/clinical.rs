@@ -807,6 +807,26 @@ impl RtDoseOverlayState {
     }
 }
 
+/// Clipping mode for RTSS contour overlay.
+///
+/// Replaces the boolean trap of `clipping_enabled: bool` in
+/// [`RtssOverlayState`] with a semantically meaningful enum.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+pub enum ClippingMode {
+    /// Clipping is enabled (contours clipped to current plane).
+    #[default]
+    Enabled,
+    /// Clipping is disabled (all contours visible regardless of plane).
+    Disabled,
+}
+
+impl ClippingMode {
+    /// Return true when clipping is enabled.
+    pub fn is_enabled(&self) -> bool {
+        matches!(self, ClippingMode::Enabled)
+    }
+}
+
 /// RTSS contour overlay state.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct RtssOverlayState {
@@ -814,8 +834,8 @@ pub struct RtssOverlayState {
     pub visible: bool,
     /// Plane index used for contour intersection.
     pub plane_index: u32,
-    /// Clipping mode toggle.
-    pub clipping_enabled: bool,
+    /// Clipping mode.
+    pub clipping: ClippingMode,
 }
 
 impl Default for RtssOverlayState {
@@ -823,7 +843,7 @@ impl Default for RtssOverlayState {
         Self {
             visible: false,
             plane_index: 0,
-            clipping_enabled: true,
+            clipping: ClippingMode::default(),
         }
     }
 }

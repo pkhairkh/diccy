@@ -328,6 +328,7 @@ name = "dicom-audit"
 version = "0.1.0"
 dependencies = [
  "dicom-core",
+ "sha2",
 ]
 
 [[package]]
@@ -361,6 +362,9 @@ dependencies = [
 [[package]]
 name = "dicom-core"
 version = "0.1.0"
+dependencies = [
+ "dicom-types",
+]
 
 [[package]]
 name = "dicom-dimse"
@@ -551,6 +555,10 @@ version = "0.1.0"
 dependencies = [
  "dicom-core",
 ]
+
+[[package]]
+name = "dicom-types"
+version = "0.1.0"
 
 [[package]]
 name = "dicom-ups"
@@ -1756,6 +1764,8 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "viewer-core"
 version = "0.1.0"
 dependencies = [
+ "dicom-core",
+ "dicom-types",
  "serde",
  "serde_json",
 ]

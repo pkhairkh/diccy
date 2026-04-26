@@ -29,6 +29,43 @@ pub const MG_SOP_CLASS_UIDS: &[&str] = &[
 // S7-T4: Tomosynthesis (3D Mammography) Slice Navigation
 // ===========================================================================
 
+/// Cine playback state.
+///
+/// Replaces the boolean trap of `cine_active: bool` + `cine_direction: i32`
+/// with a single enum that makes all valid states explicit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CineState {
+    /// Cine playback is stopped.
+    Stopped,
+    /// Cine is playing forward.
+    PlayingForward,
+    /// Cine is playing backward.
+    PlayingBackward,
+}
+
+impl Default for CineState {
+    fn default() -> Self {
+        CineState::Stopped
+    }
+}
+
+impl CineState {
+    /// Return true when cine is active (playing forward or backward).
+    pub fn is_active(&self) -> bool {
+        !matches!(self, CineState::Stopped)
+    }
+
+    /// Return true when playing forward.
+    pub fn is_forward(&self) -> bool {
+        matches!(self, CineState::PlayingForward)
+    }
+
+    /// Return true when playing backward.
+    pub fn is_backward(&self) -> bool {
+        matches!(self, CineState::PlayingBackward)
+    }
+}
+
 /// Tomosynthesis slice navigation state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TomoNavigation {
@@ -42,10 +79,8 @@ pub struct TomoNavigation {
     pub slice_spacing_mm: f64,
     /// Playback frame rate for cine mode (frames per second).
     pub cine_fps: f64,
-    /// Whether cine mode is currently active.
-    pub cine_active: bool,
-    /// Playback direction (positive = forward, negative = backward).
-    pub cine_direction: i32,
+    /// Cine playback state.
+    pub cine: CineState,
 }
 
 impl Default for TomoNavigation {
@@ -56,8 +91,7 @@ impl Default for TomoNavigation {
             slice_thickness_mm: 1.0,
             slice_spacing_mm: 1.0,
             cine_fps: 15.0,
-            cine_active: false,
-            cine_direction: 1,
+            cine: CineState::default(),
         }
     }
 }
@@ -95,28 +129,28 @@ impl TomoNavigation {
         self.current_slice
     }
 
-    /// Start cine playback.
+    /// Start cine playback forward.
     pub fn start_cine(&mut self) {
-        self.cine_active = true;
+        self.cine = CineState::PlayingForward;
     }
 
     /// Stop cine playback.
     pub fn stop_cine(&mut self) {
-        self.cine_active = false;
+        self.cine = CineState::Stopped;
     }
 
     /// Advance one cine frame. Returns the new slice index.
     pub fn advance_cine_frame(&mut self) -> u32 {
-        if !self.cine_active {
+        if !self.cine.is_active() {
             return self.current_slice;
         }
 
-        if self.cine_direction > 0 {
+        if self.cine.is_forward() {
             if self.current_slice + 1 < self.total_slices {
                 self.current_slice += 1;
             } else {
                 // Bounce back
-                self.cine_direction = -1;
+                self.cine = CineState::PlayingBackward;
                 if self.current_slice > 0 {
                     self.current_slice -= 1;
                 }
@@ -126,7 +160,7 @@ impl TomoNavigation {
                 self.current_slice -= 1;
             } else {
                 // Bounce forward
-                self.cine_direction = 1;
+                self.cine = CineState::PlayingForward;
                 if self.current_slice + 1 < self.total_slices {
                     self.current_slice += 1;
                 }
@@ -290,6 +324,31 @@ impl MammographyCadeHook {
 // S7-T4: Dual-Monitor Hanging Protocol (CC/MLO Arrangement)
 // ===========================================================================
 
+/// Prior study display mode.
+///
+/// Replaces the boolean trap of `show_priors: bool` with a semantically
+/// meaningful enum that can be extended to cover additional display modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PriorDisplay {
+    /// Prior studies are hidden.
+    Hidden,
+    /// Prior studies are visible alongside current.
+    Visible,
+}
+
+impl Default for PriorDisplay {
+    fn default() -> Self {
+        PriorDisplay::Hidden
+    }
+}
+
+impl PriorDisplay {
+    /// Return true when priors are visible.
+    pub fn is_visible(&self) -> bool {
+        matches!(self, PriorDisplay::Visible)
+    }
+}
+
 /// Display slot in a dual-monitor hanging protocol.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DisplaySlot {
@@ -310,8 +369,8 @@ pub struct DualMonitorHangingProtocol {
     pub current_slots: Vec<DisplaySlot>,
     /// Display slots for the prior study (if available).
     pub prior_slots: Vec<DisplaySlot>,
-    /// Whether to show priors.
-    pub show_priors: bool,
+    /// Prior display mode.
+    pub prior_display: PriorDisplay,
 }
 
 impl Default for DualMonitorHangingProtocol {
@@ -351,14 +410,14 @@ impl DualMonitorHangingProtocol {
                 },
             ],
             prior_slots: Vec::new(),
-            show_priors: false,
+            prior_display: PriorDisplay::default(),
         }
     }
 
     /// Create a hanging protocol with prior studies.
     pub fn with_priors() -> Self {
         let mut protocol = Self::new();
-        protocol.show_priors = true;
+        protocol.prior_display = PriorDisplay::Visible;
         protocol.prior_slots = vec![
             DisplaySlot {
                 monitor: 0,
@@ -392,7 +451,7 @@ impl DualMonitorHangingProtocol {
     pub fn slots_for_monitor(&self, monitor: usize) -> Vec<&DisplaySlot> {
         let current = self.current_slots.iter().filter(|s| s.monitor == monitor);
         let prior = self.prior_slots.iter().filter(|s| s.monitor == monitor);
-        if self.show_priors {
+        if self.prior_display.is_visible() {
             current.chain(prior).collect()
         } else {
             current.collect()
@@ -401,13 +460,42 @@ impl DualMonitorHangingProtocol {
 
     /// Toggle prior display.
     pub fn toggle_priors(&mut self) {
-        self.show_priors = !self.show_priors;
+        self.prior_display = match self.prior_display {
+            PriorDisplay::Hidden => PriorDisplay::Visible,
+            PriorDisplay::Visible => PriorDisplay::Hidden,
+        };
     }
 }
 
 // ===========================================================================
 // S7-T4: MQSA Compliance Display Controls
 // ===========================================================================
+
+/// Display calibration state.
+///
+/// Replaces the boolean trap of `gsdf_calibrated: bool` with a semantically
+/// meaningful enum that can distinguish between uncalibrated, calibrated, and
+/// expired calibration states.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CalibrationState {
+    /// Display has not been calibrated.
+    Uncalibrated,
+    /// Display has been calibrated per DICOM GSDF.
+    Calibrated,
+}
+
+impl Default for CalibrationState {
+    fn default() -> Self {
+        CalibrationState::Uncalibrated
+    }
+}
+
+impl CalibrationState {
+    /// Return true when calibrated.
+    pub fn is_calibrated(&self) -> bool {
+        matches!(self, CalibrationState::Calibrated)
+    }
+}
 
 /// MQSA display calibration settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -418,8 +506,8 @@ pub struct MqsaDisplayControls {
     pub min_luminance: f64,
     /// Display bit depth (8, 10, or 12).
     pub bit_depth: u32,
-    /// Whether DICOM GSDF calibration is active.
-    pub gsdf_calibrated: bool,
+    /// Display calibration state.
+    pub calibration: CalibrationState,
     /// Ambient light level in lux.
     pub ambient_light_lux: f64,
     /// Whether the display meets MQSA requirements.
@@ -434,7 +522,7 @@ impl Default for MqsaDisplayControls {
             max_luminance: 450.0,
             min_luminance: 1.0,
             bit_depth: 10,
-            gsdf_calibrated: false,
+            calibration: CalibrationState::default(),
             ambient_light_lux: 20.0,
             mqsa_compliant: false,
             last_calibration_date: String::new(),
@@ -465,13 +553,13 @@ impl MqsaDisplayControls {
         self.mqsa_compliant = self.max_luminance >= 450.0
             && self.min_luminance <= 1.5
             && self.bit_depth >= 8
-            && self.gsdf_calibrated;
+            && self.calibration.is_calibrated();
         self.mqsa_compliant
     }
 
     /// Apply GSDF calibration.
     pub fn apply_gsdf_calibration(&mut self) {
-        self.gsdf_calibrated = true;
+        self.calibration = CalibrationState::Calibrated;
         self.check_mqsa_compliance();
     }
 
@@ -653,7 +741,7 @@ mod tests {
 
         nav.advance_cine_frame(); // Should bounce back
         assert_eq!(nav.current_slice, 3);
-        assert_eq!(nav.cine_direction, -1);
+        assert_eq!(nav.cine, CineState::PlayingBackward);
     }
 
     #[test]
@@ -720,13 +808,13 @@ mod tests {
     fn dual_monitor_protocol_default() {
         let protocol = DualMonitorHangingProtocol::new();
         assert_eq!(protocol.current_slots.len(), 4); // LCC, LMLO, RCC, RMLO
-        assert!(!protocol.show_priors);
+        assert!(!protocol.prior_display.is_visible());
     }
 
     #[test]
     fn dual_monitor_protocol_with_priors() {
         let protocol = DualMonitorHangingProtocol::with_priors();
-        assert!(protocol.show_priors);
+        assert!(protocol.prior_display.is_visible());
         assert_eq!(protocol.prior_slots.len(), 4);
     }
 

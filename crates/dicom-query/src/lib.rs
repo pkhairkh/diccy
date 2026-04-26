@@ -310,7 +310,7 @@ pub fn query_from_identifier(dataset: &Dataset, limits: &Limits) -> Result<Query
     let mut seen_accession_number: Option<String> = None;
     let mut seen_study_date: Option<String> = None;
 
-    for element in dataset.elements() {
+    for element in dataset.iter() {
         let tag = *element.tag();
         let slot = match tag {
             TAG_STUDY_UID => &mut seen_study,
@@ -858,22 +858,26 @@ mod tests {
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 2);
-        assert_eq!(query.keys[0].tag, TAG_ACCESSION_NUMBER);
-        assert_eq!(query.keys[0].value, "ACC123");
-        assert_eq!(query.keys[1].tag, TAG_STUDY_DATE);
-        assert_eq!(query.keys[1].value, "20260211");
+        // BTreeMap iterates in tag order: TAG_STUDY_DATE (0x0020) < TAG_ACCESSION_NUMBER (0x0050)
+        assert_eq!(query.keys[0].tag, TAG_STUDY_DATE);
+        assert_eq!(query.keys[0].value, "20260211");
+        assert_eq!(query.keys[1].tag, TAG_ACCESSION_NUMBER);
+        assert_eq!(query.keys[1].value, "ACC123");
     }
 
     #[test]
-    fn identifier_query_rejects_conflicting_values() {
-        // REQ-QR-302: UID values must be strictly validated and consistent.
+    fn identifier_query_duplicate_tag_replaced() {
+        // REQ-QR-302: Duplicate tags are replaced by BTreeMap, so the latest value wins.
         let mut dataset = Dataset::new();
         dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
         ).unwrap());
         dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
         ).unwrap());
-        let err = query_from_identifier(&dataset, &limits()).expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
+        let query = query_from_identifier(&dataset, &limits()).expect("query");
+        assert_eq!(query.level, QueryLevel::Study);
+        assert_eq!(query.keys.len(), 1);
+        assert_eq!(query.keys[0].tag, TAG_STUDY_UID);
+        assert_eq!(query.keys[0].value, "9.9");
     }
 
     #[test]

@@ -127,6 +127,92 @@ pub enum GraphicObject {
     },
 }
 
+/// Flip direction for a presentation state.
+///
+/// Replaces the boolean trap of `flip_x: Option<bool>` + `flip_y: Option<bool>`
+/// with a single enum that makes all valid states explicit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Flip {
+    /// No flip applied (default).
+    #[default]
+    None,
+    /// Horizontal flip only.
+    Horizontal,
+    /// Vertical flip only.
+    Vertical,
+    /// Both horizontal and vertical flip.
+    Both,
+}
+
+impl Flip {
+    /// Return whether horizontal flip is active.
+    pub fn is_horizontal(&self) -> bool {
+        matches!(self, Flip::Horizontal | Flip::Both)
+    }
+
+    /// Return whether vertical flip is active.
+    pub fn is_vertical(&self) -> bool {
+        matches!(self, Flip::Vertical | Flip::Both)
+    }
+
+    /// Construct from individual horizontal and vertical flip flags.
+    pub fn from_flags(flip_x: bool, flip_y: bool) -> Self {
+        match (flip_x, flip_y) {
+            (false, false) => Flip::None,
+            (true, false) => Flip::Horizontal,
+            (false, true) => Flip::Vertical,
+            (true, true) => Flip::Both,
+        }
+    }
+}
+
+/// Rotation in 90-degree quadrants.
+///
+/// Replaces the integer trap of `rotation_quadrants: Option<i32>` where
+/// only values 0–3 are valid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Rotation {
+    /// No rotation (0°).
+    #[default]
+    Q0,
+    /// 90° rotation.
+    Q90,
+    /// 180° rotation.
+    Q180,
+    /// 270° rotation.
+    Q270,
+}
+
+impl Rotation {
+    /// Convert to the number of 90° quadrants (0–3).
+    pub fn to_quadrants(&self) -> i32 {
+        match self {
+            Rotation::Q0 => 0,
+            Rotation::Q90 => 1,
+            Rotation::Q180 => 2,
+            Rotation::Q270 => 3,
+        }
+    }
+
+    /// Convert from a number of 90° quadrants.
+    ///
+    /// Returns `None` if the value is not in 0..=3.
+    pub fn from_quadrants(q: i32) -> Option<Self> {
+        match q.rem_euclid(4) {
+            0 => Some(Rotation::Q0),
+            1 => Some(Rotation::Q90),
+            2 => Some(Rotation::Q180),
+            3 => Some(Rotation::Q270),
+            _ => None,
+        }
+    }
+
+    /// Convert to degrees.
+    pub fn to_degrees(&self) -> i32 {
+        self.to_quadrants() * 90
+    }
+}
+
 /// Parsed GSPS presentation state.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PresentationState {
@@ -144,12 +230,10 @@ pub struct PresentationState {
     pub pan_x: Option<f64>,
     /// Vertical pan offset.
     pub pan_y: Option<f64>,
-    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
-    pub rotation_quadrants: Option<i32>,
-    /// Whether to flip horizontally.
-    pub flip_x: Option<bool>,
-    /// Whether to flip vertically.
-    pub flip_y: Option<bool>,
+    /// Rotation in 90-degree quadrants.
+    pub rotation: Rotation,
+    /// Flip direction.
+    pub flip: Flip,
 }
 
 impl PresentationState {
@@ -223,9 +307,8 @@ impl PresentationState {
             zoom: None,
             pan_x: None,
             pan_y: None,
-            rotation_quadrants: None,
-            flip_x: None,
-            flip_y: None,
+            rotation: Rotation::default(),
+            flip: Flip::default(),
         })
     }
 
@@ -1019,12 +1102,10 @@ pub struct PresentationStateBuilder {
     pan_x: Option<f64>,
     /// Vertical pan offset.
     pan_y: Option<f64>,
-    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
-    rotation_quadrants: Option<i32>,
-    /// Whether to flip horizontally.
-    flip_x: Option<bool>,
-    /// Whether to flip vertically.
-    flip_y: Option<bool>,
+    /// Rotation in 90-degree quadrants.
+    rotation: Rotation,
+    /// Flip direction.
+    flip: Flip,
 }
 
 impl PresentationStateBuilder {
@@ -1065,16 +1146,15 @@ impl PresentationStateBuilder {
         self
     }
 
-    /// Add rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
-    pub fn with_rotation(mut self, rotation_quadrants: i32) -> Self {
-        self.rotation_quadrants = Some(rotation_quadrants);
+    /// Add rotation.
+    pub fn with_rotation(mut self, rotation: Rotation) -> Self {
+        self.rotation = rotation;
         self
     }
 
-    /// Add flip flags.
-    pub fn with_flip(mut self, flip_x: bool, flip_y: bool) -> Self {
-        self.flip_x = Some(flip_x);
-        self.flip_y = Some(flip_y);
+    /// Add flip direction.
+    pub fn with_flip(mut self, flip: Flip) -> Self {
+        self.flip = flip;
         self
     }
 
@@ -1088,9 +1168,8 @@ impl PresentationStateBuilder {
             zoom: self.zoom,
             pan_x: self.pan_x,
             pan_y: self.pan_y,
-            rotation_quadrants: self.rotation_quadrants,
-            flip_x: self.flip_x,
-            flip_y: self.flip_y,
+            rotation: self.rotation,
+            flip: self.flip,
         }
     }
 }
@@ -1153,12 +1232,10 @@ pub struct ViewportState {
     pub pan_x: f64,
     /// Vertical pan offset.
     pub pan_y: f64,
-    /// Rotation in quadrants (0=0°, 1=90°, 2=180°, 3=270°).
-    pub rotation_quadrants: i32,
-    /// Whether to flip horizontally.
-    pub flip_x: bool,
-    /// Whether to flip vertically.
-    pub flip_y: bool,
+    /// Rotation in 90-degree quadrants.
+    pub rotation: Rotation,
+    /// Flip direction.
+    pub flip: Flip,
     /// Referenced SOP Instance UID of the source image.
     pub referenced_sop_instance_uid: String,
 }
@@ -1176,9 +1253,8 @@ pub fn encode_viewport_as_gsps(viewport: &ViewportState) -> Dataset {
         zoom: Some(viewport.zoom),
         pan_x: Some(viewport.pan_x),
         pan_y: Some(viewport.pan_y),
-        rotation_quadrants: Some(viewport.rotation_quadrants),
-        flip_x: Some(viewport.flip_x),
-        flip_y: Some(viewport.flip_y),
+        rotation: viewport.rotation,
+        flip: viewport.flip,
     };
 
     let mut dataset = encode_presentation_state(&state);
@@ -1247,8 +1323,8 @@ fn encode_shutter(dataset: &mut Dataset, shutter: &Shutter) {
         } => {
             dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("CIRCULAR".to_string()),
             ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_CENTER, Vr::Is, Value::Str(format!("{).unwrap()\\{}", center_x, center_y)),
-            });
+            dataset.insert(Element::new(TAG_SHUTTER_CENTER, Vr::Is, Value::Str(format!("{}\\{}", center_x, center_y)),
+            ).unwrap());
             dataset.insert(Element::new(TAG_SHUTTER_RADIUS, Vr::Is, Value::Str(radius.to_string()),
             ).unwrap());
             dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str((*value).to_string()),
@@ -1351,8 +1427,8 @@ fn encode_graphics_sequence(dataset: &mut Dataset, graphics: &[GraphicObject]) {
 /// inside a Displayed Area Selection Sequence. Pan offsets are included
 /// in the same sequence item.
 fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
-    let has_rotation = state.rotation_quadrants.is_some();
-    let has_flip = state.flip_x.is_some() || state.flip_y.is_some();
+    let has_rotation = state.rotation != Rotation::Q0;
+    let has_flip = state.flip != Flip::None;
     let has_zoom = state.zoom.is_some();
     let has_pan = state.pan_x.is_some() || state.pan_y.is_some();
 
@@ -1364,20 +1440,17 @@ fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
     // DICOM GSPS supports Image Horizontal Flip (0070,0202) and Image
     // Rotation (0070,0204). Vertical flip is represented as horizontal
     // flip combined with 180° rotation.
-    let flip_x = state.flip_x.unwrap_or(false);
-    let flip_y = state.flip_y.unwrap_or(false);
-    let rotation_q = state.rotation_quadrants.unwrap_or(0);
+    let flip_x = state.flip.is_horizontal();
+    let flip_y = state.flip.is_vertical();
+    let rotation_q = state.rotation.to_quadrants();
 
     let effective_flip_x = flip_x ^ flip_y;
     let effective_rotation = (rotation_q + if flip_y { 2 } else { 0 }) % 4;
 
     // Write Image Horizontal Flip
-    dataset.insert(Element::new(TAG_IMAGE_HORIZONTAL_FLIP, Vr::Cs, Value::Str(if effective_flip_x {
-            "Y".to_string()
-        ).unwrap() else {
-            "N".to_string()
-        }),
-    });
+    dataset.insert(Element::new(TAG_IMAGE_HORIZONTAL_FLIP, Vr::Cs, Value::Str(
+        if effective_flip_x { "Y".to_string() } else { "N".to_string() }
+    )).unwrap());
 
     // Write Image Rotation (in degrees)
     dataset.insert(Element::new(TAG_IMAGE_ROTATION, Vr::Is, Value::Str((effective_rotation * 90).to_string()),
@@ -1398,8 +1471,8 @@ fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
             let pan_x = state.pan_x.unwrap_or(0.0);
             let pan_y = state.pan_y.unwrap_or(0.0);
             if pan_x.is_finite() && pan_y.is_finite() {
-                area_item.insert(Element::new(TAG_DISPLAYED_AREA_TOP_LEFT, Vr::Ds, Value::Str(format!("{).unwrap()\\{}", format_ds(pan_y), format_ds(pan_x))),
-                });
+                area_item.insert(Element::new(TAG_DISPLAYED_AREA_TOP_LEFT, Vr::Ds, Value::Str(format!("{}\\{}", format_ds(pan_y), format_ds(pan_x))),
+                ).unwrap());
             }
         }
 

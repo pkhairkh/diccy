@@ -104,6 +104,26 @@ pub struct RtStructureSet {
     pub contours: Vec<RtContour>,
 }
 
+/// Contour type classification.
+///
+/// Replaces the boolean trap of `closed: bool` in [`RtContour`] with a
+/// semantically meaningful enum that mirrors DICOM Contour Geometric Type
+/// values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContourType {
+    /// Closed planar contour (CLOSED_PLANAR or CLOSEDPLANAR_XOR).
+    ClosedPlanar,
+    /// Open planar contour (OPEN_PLANAR).
+    OpenPlanar,
+}
+
+impl ContourType {
+    /// Return true when the contour is closed.
+    pub fn is_closed(&self) -> bool {
+        matches!(self, ContourType::ClosedPlanar)
+    }
+}
+
 /// Parsed RT contour geometry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RtContour {
@@ -111,8 +131,8 @@ pub struct RtContour {
     pub points: Vec<[f64; 3]>,
     /// RGB display color.
     pub color: [u8; 3],
-    /// Whether the contour is closed.
-    pub closed: bool,
+    /// Contour type (closed or open planar).
+    pub contour_type: ContourType,
 }
 
 /// Parsed RT Plan summary with structure references.
@@ -309,10 +329,10 @@ impl RtStructureSet {
             for contour in contour_sequence {
                 let geom_type = read_str(contour, TAG_CONTOUR_GEOMETRIC_TYPE)?
                     .ok_or_else(|| missing_required_tag(TAG_CONTOUR_GEOMETRIC_TYPE))?;
-                let closed = match geom_type {
-                    "CLOSED_PLANAR" => true,
-                    "CLOSEDPLANAR_XOR" => true,
-                    "OPEN_PLANAR" => false,
+                let contour_type = match geom_type {
+                    "CLOSED_PLANAR" => ContourType::ClosedPlanar,
+                    "CLOSEDPLANAR_XOR" => ContourType::ClosedPlanar,
+                    "OPEN_PLANAR" => ContourType::OpenPlanar,
                     _ => {
                         return Err(invalid_tag_value(
                             TAG_CONTOUR_GEOMETRIC_TYPE,
@@ -342,7 +362,7 @@ impl RtStructureSet {
                 contours.push(RtContour {
                     points,
                     color,
-                    closed,
+                    contour_type,
                 });
             }
         }
@@ -377,7 +397,7 @@ impl RtStructureSet {
                 reference.rows as i32,
                 &projected,
                 contour.color,
-                contour.closed,
+                contour.contour_type.is_closed(),
             );
         }
         Ok(DisplayFrame {

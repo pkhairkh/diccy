@@ -348,7 +348,7 @@ fn render_metadata_json(datasets: &[dicom_core::Dataset]) -> String {
             out.push(',');
         }
         out.push('{');
-        let mut elements = dataset.elements().iter().collect::<Vec<_>>();
+        let mut elements = dataset.iter().collect::<Vec<_>>();
         elements.sort_by_key(|element| element.tag().as_u32());
         for (element_index, element) in elements.iter().enumerate() {
             if element_index > 0 {

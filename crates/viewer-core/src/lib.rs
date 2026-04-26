@@ -2,6 +2,10 @@
 
 //! GPU-agnostic viewer core types.
 
+// Re-export shared value types from the dicom-types crate so that downstream
+// consumers can import them directly from viewer-core.
+pub use dicom_types::{PatientPosition, WindowLevel};
+
 use std::fmt;
 
 pub mod cache;
@@ -17,7 +21,7 @@ pub use clinical::{
     Annotation3d, Annotation3dStore, BrushConfig, BrushMode, BrushStroke, ClinicalAuditEvent,
     ClinicalError, ExportBundle, FusionOverlayState, FusionRegistrationState,
     InterpolationMethod, LabelMap3D, MeasurementRecord, MeasurementStore, MipProjectionMode,
-    RegionGrowSeed, RoiShape, RoiStatistics, RtDoseOverlayState, RtssOverlayState,
+    ClippingMode, RegionGrowSeed, RoiShape, RoiStatistics, RtDoseOverlayState, RtssOverlayState,
     SegmentationDiff, SegmentationRecord, SegmentationSource, SegmentationStore,
     SegmentationStyle, ThresholdConfig, VolumeWorkflowCapabilities, VolumeWorkflowState,
     VolumeWorkflowStatus, compute_roi_statistics, interpolate_slices_linear,
@@ -94,6 +98,135 @@ impl fmt::Display for ViewportError {
 }
 
 impl std::error::Error for ViewportError {}
+
+/// Unified error type for the viewer-core crate.
+///
+/// Aggregates all sub-domain error types into a single enum so callers can
+/// handle viewer errors uniformly while still matching on the specific domain
+/// when needed. Integrates with [`dicom_core::Error`] via
+/// `From<ViewerError> for Box<dicom_core::Error>` for backward compatibility
+/// with the top-level error model.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ViewerError {
+    /// Clinical workflow error (measurements, segmentation, fusion, RT overlays).
+    Clinical(ClinicalError),
+    /// Multi-planar reconstruction error.
+    Mpr(MprError),
+    /// Volume assembly error.
+    Volume(VolumeError),
+    /// Grayscale Standard Display Function error.
+    Gsdf(GsdfError),
+    /// Hanging protocol matching error.
+    HangingProtocol(HangingProtocolError),
+    /// Viewport transform error.
+    Viewport(ViewportError),
+}
+
+impl fmt::Display for ViewerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ViewerError::Clinical(err) => write!(f, "clinical error: {err}"),
+            ViewerError::Mpr(err) => write!(f, "mpr error: {err}"),
+            ViewerError::Volume(err) => write!(f, "volume error: {err}"),
+            ViewerError::Gsdf(err) => write!(f, "gsdf error: {err}"),
+            ViewerError::HangingProtocol(err) => write!(f, "hanging protocol error: {err}"),
+            ViewerError::Viewport(err) => write!(f, "viewport error: {err}"),
+        }
+    }
+}
+
+impl std::error::Error for ViewerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ViewerError::Clinical(err) => Some(err),
+            ViewerError::Mpr(err) => Some(err),
+            ViewerError::Volume(err) => Some(err),
+            ViewerError::Gsdf(err) => Some(err),
+            ViewerError::HangingProtocol(err) => Some(err),
+            ViewerError::Viewport(err) => Some(err),
+        }
+    }
+}
+
+impl From<ClinicalError> for ViewerError {
+    fn from(err: ClinicalError) -> Self {
+        ViewerError::Clinical(err)
+    }
+}
+
+impl From<MprError> for ViewerError {
+    fn from(err: MprError) -> Self {
+        ViewerError::Mpr(err)
+    }
+}
+
+impl From<VolumeError> for ViewerError {
+    fn from(err: VolumeError) -> Self {
+        ViewerError::Volume(err)
+    }
+}
+
+impl From<GsdfError> for ViewerError {
+    fn from(err: GsdfError) -> Self {
+        ViewerError::Gsdf(err)
+    }
+}
+
+impl From<HangingProtocolError> for ViewerError {
+    fn from(err: HangingProtocolError) -> Self {
+        ViewerError::HangingProtocol(err)
+    }
+}
+
+impl From<ViewportError> for ViewerError {
+    fn from(err: ViewportError) -> Self {
+        ViewerError::Viewport(err)
+    }
+}
+
+impl From<ViewerError> for Box<dicom_core::Error> {
+    fn from(err: ViewerError) -> Self {
+        let (kind, message) = match &err {
+            ViewerError::Clinical(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("clinical: {e}"),
+                },
+                format!("viewer clinical error: {e}"),
+            ),
+            ViewerError::Mpr(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("mpr: {e}"),
+                },
+                format!("viewer mpr error: {e}"),
+            ),
+            ViewerError::Volume(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("volume: {e}"),
+                },
+                format!("viewer volume error: {e}"),
+            ),
+            ViewerError::Gsdf(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("gsdf: {e}"),
+                },
+                format!("viewer gsdf error: {e}"),
+            ),
+            ViewerError::HangingProtocol(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("hanging-protocol: {e}"),
+                },
+                format!("viewer hanging protocol error: {e}"),
+            ),
+            ViewerError::Viewport(e) => (
+                dicom_core::ErrorKind::InternalError {
+                    detail: format!("viewport: {e}"),
+                },
+                format!("viewer viewport error: {e}"),
+            ),
+        };
+        Box::new(dicom_core::Error::from_kind(kind, message))
+    }
+}
 
 /// Window/level selection for display.
 #[derive(Debug, Copy, Clone, PartialEq)]

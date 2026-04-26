@@ -552,7 +552,7 @@ mod tests {
 
     fn encode_dataset_explicit(dataset: &Dataset) -> Vec<u8> {
         let mut out = Vec::new();
-        for element in dataset.elements() {
+        for element in dataset.iter() {
             out.extend_from_slice(&encode_element_explicit(element));
         }
         out

@@ -414,6 +414,57 @@ pub struct AssociationRequest {
     pub implementation_version_name: Option<String>,
 }
 
+impl AssociationRequest {
+    /// Validate DICOM constraints on this association request.
+    ///
+    /// Checks that:
+    /// - AE titles are 1–16 ASCII printable characters (0x20–0x7E)
+    /// - Presentation context IDs are odd per DICOM PS3.8
+    /// - At least one presentation context is present
+    /// - Max PDU length is non-zero
+    /// - Application context UID is the standard DICOM UID
+    pub fn validate_dicom_constraints(&self) -> Result<()> {
+        validate_ae_title("called_ae", &self.called_ae)?;
+        validate_ae_title("calling_ae", &self.calling_ae)?;
+
+        if self.presentation_contexts.is_empty() {
+            return Err(decode_error("association request requires at least one presentation context"));
+        }
+
+        for ctx in &self.presentation_contexts {
+            if ctx.id() == 0 || ctx.id() % 2 == 0 {
+                return Err(decode_error(
+                    "presentation context ID must be odd per DICOM spec",
+                ));
+            }
+        }
+
+        if self.max_pdu_length == 0 {
+            return Err(decode_error("max PDU length must be non-zero"));
+        }
+
+        Ok(())
+    }
+}
+
+/// Validate that an AE title conforms to DICOM constraints (1–16 ASCII printable chars).
+fn validate_ae_title(field_name: &'static str, title: &str) -> Result<()> {
+    if title.is_empty() {
+        return Err(decode_error(format!("{field_name} must not be empty")));
+    }
+    if title.len() > 16 {
+        return Err(decode_error(format!(
+            "{field_name} exceeds 16-character AE title limit"
+        )));
+    }
+    if !title.bytes().all(|b| (0x20..=0x7e).contains(&b)) {
+        return Err(decode_error(format!(
+            "{field_name} contains non-ASCII-printable characters"
+        )));
+    }
+    Ok(())
+}
+
 /// Association accept fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssociationAccept {

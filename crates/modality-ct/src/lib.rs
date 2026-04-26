@@ -341,15 +341,63 @@ pub fn validate_volume_geometry(
     Ok(())
 }
 
+/// Slice spacing classification.
+///
+/// Replaces the boolean trap of `unknown: bool` + `non_uniform: bool` in
+/// [`SliceSpacing`] with a single enum that makes all valid states explicit
+/// and carries the spacing value only when it is meaningful.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Spacing {
+    /// Spacing is unknown (fewer than 2 slices).
+    Unknown,
+    /// Uniform inter-slice spacing in mm.
+    Uniform(f64),
+    /// Non-uniform inter-slice spacing in mm (median value reported).
+    NonUniform(f64),
+}
+
+impl Spacing {
+    /// Return the spacing value in mm, defaulting to 1.0 when unknown.
+    pub fn spacing_mm(&self) -> f64 {
+        match self {
+            Spacing::Unknown => 1.0,
+            Spacing::Uniform(mm) | Spacing::NonUniform(mm) => *mm,
+        }
+    }
+
+    /// Return true when spacing is unknown.
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, Spacing::Unknown)
+    }
+
+    /// Return true when spacing is non-uniform.
+    pub fn is_non_uniform(&self) -> bool {
+        matches!(self, Spacing::NonUniform(_))
+    }
+}
+
 /// Slice spacing computation result.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SliceSpacing {
-    /// Computed slice spacing in mm.
-    pub spacing_mm: f64,
-    /// True when spacing is unknown (nz < 2).
-    pub unknown: bool,
-    /// True when spacing deltas were non-uniform and allowed.
-    pub non_uniform: bool,
+    /// Computed slice spacing classification.
+    pub spacing: Spacing,
+}
+
+impl SliceSpacing {
+    /// Return the spacing value in mm.
+    pub fn spacing_mm(&self) -> f64 {
+        self.spacing.spacing_mm()
+    }
+
+    /// Return true when spacing is unknown.
+    pub fn is_unknown(&self) -> bool {
+        self.spacing.is_unknown()
+    }
+
+    /// Return true when spacing is non-uniform.
+    pub fn is_non_uniform(&self) -> bool {
+        self.spacing.is_non_uniform()
+    }
 }
 
 /// Compute slice spacing per REQ-VOL-906/907/908.
@@ -362,9 +410,7 @@ pub fn compute_slice_spacing(
 
     if sorted_slices.len() < 2 {
         return Ok(SliceSpacing {
-            spacing_mm: 1.0,
-            unknown: true,
-            non_uniform: false,
+            spacing: Spacing::Unknown,
         });
     }
 
@@ -398,9 +444,7 @@ pub fn compute_slice_spacing(
         if (*delta - spacing).abs() > tolerances.slice_spacing_epsilon {
             if allow_non_uniform {
                 return Ok(SliceSpacing {
-                    spacing_mm: spacing,
-                    unknown: false,
-                    non_uniform: true,
+                    spacing: Spacing::NonUniform(spacing),
                 });
             }
             return Err(Box::new(Error::from_kind(
@@ -413,9 +457,7 @@ pub fn compute_slice_spacing(
     }
 
     Ok(SliceSpacing {
-        spacing_mm: spacing,
-        unknown: false,
-        non_uniform: false,
+        spacing: Spacing::Uniform(spacing),
     })
 }
 
@@ -769,8 +811,8 @@ mod tests {
             slice_spacing_epsilon: 1e-4,
         };
         let spacing = compute_slice_spacing(&slices, tol, false).expect("spacing");
-        assert_eq!(spacing.spacing_mm, 1.0);
-        assert!(spacing.unknown);
+        assert!(spacing.is_unknown());
+        assert_eq!(spacing.spacing_mm(), 1.0);
     }
 
     #[test]

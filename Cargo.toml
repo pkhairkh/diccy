@@ -22,6 +22,7 @@ members = [
   "crates/dicom-audit",
   "crates/dicom-series",
   "crates/dicom-pixel",
+  "crates/dicom-types",
   "crates/viewer-core",
   "crates/viewer-wgpu",
   "crates/viewer-wasm",

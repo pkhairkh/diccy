@@ -16,6 +16,40 @@ use serde::{Deserialize, Serialize};
 // S5-T1: Mesh Generation from Segmentation
 // ===========================================================================
 
+/// Per-vertex normals state for a triangle mesh.
+///
+/// Replaces the boolean trap of `normals: Option<Vec<[f64; 3]>>` with a
+/// semantically meaningful enum that distinguishes between normals that
+/// have been computed and normals that have not been computed.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Normals {
+    /// Normals have been computed and are available.
+    Computed(Vec<[f64; 3]>),
+    /// Normals have not been computed yet.
+    NotComputed,
+}
+
+impl Normals {
+    /// Return the normals as a slice, if computed.
+    pub fn as_slice(&self) -> Option<&[[f64; 3]]> {
+        match self {
+            Normals::Computed(v) => Some(v.as_slice()),
+            Normals::NotComputed => None,
+        }
+    }
+
+    /// Return true when normals have been computed.
+    pub fn is_computed(&self) -> bool {
+        matches!(self, Normals::Computed(_))
+    }
+}
+
+impl Default for Normals {
+    fn default() -> Self {
+        Normals::NotComputed
+    }
+}
+
 /// A 3D triangle mesh produced from segmentation isosurface extraction.
 ///
 /// Vertices are in patient-space millimeters when `voxel_spacing` is provided
@@ -27,8 +61,8 @@ pub struct TriangleMesh {
     vertices: Vec<[f64; 3]>,
     /// Triangle indices referencing the vertex array (3 indices per triangle).
     triangles: Vec<[u32; 3]>,
-    /// Per-vertex normals (optional, computed on demand).
-    normals: Option<Vec<[f64; 3]>>,
+    /// Per-vertex normals.
+    normals: Normals,
     /// Patient-space origin offset `(x_offset, y_offset, z_offset)` in mm.
     pub origin_mm: [f64; 3],
     /// Descriptive label for this mesh (e.g. "bone", "liver").
@@ -54,7 +88,7 @@ impl TriangleMesh {
         Ok(Self {
             vertices,
             triangles,
-            normals: None,
+            normals: Normals::NotComputed,
             origin_mm: [0.0, 0.0, 0.0],
             label: label.to_string(),
         })
@@ -65,7 +99,7 @@ impl TriangleMesh {
         Self {
             vertices: Vec::new(),
             triangles: Vec::new(),
-            normals: None,
+            normals: Normals::NotComputed,
             origin_mm: [0.0, 0.0, 0.0],
             label: label.to_string(),
         }
@@ -83,7 +117,7 @@ impl TriangleMesh {
 
     /// Return the normals.
     pub fn normals(&self) -> Option<&[[f64; 3]]> {
-        self.normals.as_deref()
+        self.normals.as_slice()
     }
 
     /// Return the number of triangles in this mesh.
@@ -103,7 +137,7 @@ impl TriangleMesh {
     /// face normals, then normalized to unit length.
     pub fn compute_normals(&mut self) {
         if self.vertices.is_empty() || self.triangles.is_empty() {
-            self.normals = Some(Vec::new());
+            self.normals = Normals::Computed(Vec::new());
             return;
         }
 
@@ -144,7 +178,7 @@ impl TriangleMesh {
             }
         }
 
-        self.normals = Some(vertex_normals);
+        self.normals = Normals::Computed(vertex_normals);
     }
 
     /// Compute the surface area of the mesh in mm^2.
@@ -413,7 +447,7 @@ pub fn marching_cubes(
     Ok(TriangleMesh {
         vertices,
         triangles,
-        normals: None,
+        normals: Normals::NotComputed,
         origin_mm: [ox, oy, oz],
         label: format!("label_{}", config.target_label),
     })
@@ -563,7 +597,7 @@ pub fn decimate_mesh(mesh: &TriangleMesh, config: &DecimationConfig) -> Result<T
     Ok(TriangleMesh {
         vertices: new_vertices,
         triangles: new_triangles,
-        normals: None,
+        normals: Normals::NotComputed,
         origin_mm: mesh.origin_mm,
         label: mesh.label.clone(),
     })
@@ -727,7 +761,7 @@ pub fn smooth_mesh(mesh: &TriangleMesh, config: &SmoothingConfig) -> Result<Tria
     Ok(TriangleMesh {
         vertices,
         triangles: mesh.triangles.clone(),
-        normals: None,
+        normals: Normals::NotComputed,
         origin_mm: mesh.origin_mm,
         label: mesh.label.clone(),
     })
@@ -940,12 +974,12 @@ pub fn export_obj(mesh: &TriangleMesh, material: &ObjMaterial) -> Result<(String
     obj.push('\n');
 
     // Compute normals if not present
-    let normals = if let Some(ref n) = mesh.normals {
-        n.clone()
+    let normals = if let Some(n) = mesh.normals.as_slice() {
+        n.to_vec()
     } else {
         let mut m = mesh.clone();
         m.compute_normals();
-        m.normals.unwrap_or_default()
+        m.normals.as_slice().map(|s| s.to_vec()).unwrap_or_default()
     };
 
     for n in &normals {
@@ -1520,8 +1554,8 @@ mod tests_mesh_generation {
         mesh.vertices.push([0.0, 1.0, 0.0]);
         mesh.triangles.push([0, 1, 2]);
         mesh.compute_normals();
-        assert!(mesh.normals.is_some());
-        let normals = mesh.normals.as_ref().unwrap();
+        assert!(mesh.normals.is_computed());
+        let normals = mesh.normals.as_slice().unwrap();
         assert_eq!(normals.len(), 3);
         // Normal should point in +z direction for CCW triangle in xy plane
         for n in normals {

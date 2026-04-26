@@ -5,6 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+dicom-types = { path = "../dicom-types" }
 
 [features]
 default = []

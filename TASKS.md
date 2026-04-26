@@ -907,7 +907,7 @@ credential security, pack consolidation, validated constructors, error semantics
 
 **Tasks:**
 
-- [ ] **S11-T1** Split remaining oversized files into submodules
+- [x] **S11-T1** Split remaining oversized files into submodules
   - `dicom-pixel/src/lib.rs` (3,072 lines) → `codec.rs`, `transform.rs`, `display.rs`, `mod.rs`
   - `viewer-core/src/clinical.rs` (2,656 lines) → `measurement.rs`, `segmentation.rs`, `annotation.rs`, `overlay.rs`, `mod.rs`
   - `dicom-io/src/lib.rs` (2,525 lines) → `parser.rs`, `writer.rs`, `transfer_syntax.rs`, `mod.rs`
@@ -921,7 +921,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** `find crates/ -name '*.rs' -exec wc -l {} \; | sort -rn | head -5` shows no file over 800 lines; `cargo test --workspace` passes
   - **Estimated effort:** 6 days
 
-- [ ] **S11-T2** Enrich domain types with behavior (anemic model → rich model)
+- [x] **S11-T2** Enrich domain types with behavior (anemic model → rich model)
   - `dicom-core::Element` — add `validate_vr_value_consistency()`, `as_uid()`, `as_date()`, `as_f64()`, `as_i64()` with VR-aware parsing
   - `dicom-core::Dataset` — add `insert_validated()` that checks VR/value consistency before insertion; add `require()` method
   - `dicom-core::Limits` — add `validate()` returning `Result<()>`; add `Limits::default_sensible()` with production-safe defaults
@@ -936,7 +936,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** All 10 types have behavioral methods; `cargo test --workspace` passes with new method tests
   - **Estimated effort:** 6 days
 
-- [ ] **S11-T3** Unify error types across the codebase
+- [x] **S11-T3** Unify error types across the codebase
   - Add `thiserror` dependency to workspace
   - Define `ViewerError` enum in `viewer-core` with variants: `Clinical(ClinicalError)`, `Mpr(MprError)`, `Volume(VolumeError)`, `Gsdf(GsdfError)`, `HangingProtocol(HangingProtocolError)`
   - Implement `From<ViewerError>` for `Box<Error>` for backward compatibility
@@ -949,7 +949,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** `viewer-core` uses single `ViewerError`; `dicom-core` provides `DiccyError`; `cargo test --workspace` passes
   - **Estimated effort:** 5 days
 
-- [ ] **S11-T4** Replace `Vec<Element>` with `BTreeMap<Tag, Element>` in `Dataset`
+- [x] **S11-T4** Replace `Vec<Element>` with `BTreeMap<Tag, Element>` in `Dataset`
   - Change `Dataset::elements` from `Vec<Element>` to `BTreeMap<Tag, Element>`
   - Update `Dataset::get()` from O(n) `.find()` to O(log n) `BTreeMap::get()`
   - Update `Dataset::insert()` to use `BTreeMap::insert()`
@@ -960,7 +960,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** Benchmark shows >10× improvement for `Dataset::get()` on 200-element dataset; `cargo test -p dicom-core` passes
   - **Estimated effort:** 3 days
 
-- [ ] **S11-T5** Replace boolean traps with semantically meaningful enums
+- [x] **S11-T5** Replace boolean traps with semantically meaningful enums
   - `pack-gsps::PresentationState` — replace `flip_x: Option<bool>`, `flip_y: Option<bool>` with `flip: Flip` enum (`None`, `Horizontal`, `Vertical`, `Both`)
   - `pack-gsps::ViewportState` — replace `rotation_quadrants: Option<i32>` with `rotation: Rotation` enum (`Q0`, `Q90`, `Q180`, `Q270`)
   - `modality-ct::SliceSpacing` — replace `unknown: bool` + `non_uniform: bool` with `spacing: Spacing` enum (`Unknown`, `Uniform(f64)`, `NonUniform(f64)`)
@@ -974,7 +974,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** All 9 types use enums instead of raw bools; `cargo test --workspace` passes; invalid state combinations are unrepresentable
   - **Estimated effort:** 5 days
 
-- [ ] **S11-T6** Create `dicom-types` shared value objects
+- [x] **S11-T6** Create `dicom-types` shared value objects
   - Create new crate `crates/dicom-types`
   - Move shared value types from `dicom-core` and `viewer-core` into `dicom-types`:
     - `WindowLevel` (exists in both `dicom-core` and `viewer-core` with slight differences)
@@ -986,7 +986,7 @@ credential security, pack consolidation, validated constructors, error semantics
   - **Acceptance:** `viewer-core` no longer duplicates types from `dicom-core`; `dicom-types` is the single source of truth for shared value objects
   - **Estimated effort:** 4 days
 
-- [ ] **S11-T7** Replace FNV hash with SHA-256 for audit integrity
+- [x] **S11-T7** Replace FNV hash with SHA-256 for audit integrity
   - Add `sha2` dependency to `dicom-audit` (already a transitive dependency)
   - Replace `fnv_hash()` calls in `AuditChain` with `sha256()`
   - Add chain verification method that recomputes and compares hashes
