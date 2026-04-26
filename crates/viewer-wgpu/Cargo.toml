@@ -5,6 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+bytemuck = { version = "1.14", features = ["derive"] }
 dicom-core = { path = "../dicom-core" }
 dicom-pixel = { path = "../dicom-pixel" }
 viewer-core = { path = "../viewer-core" }

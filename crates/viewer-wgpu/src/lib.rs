@@ -2,6 +2,13 @@
 
 //! GPU renderer implementation (wgpu backend).
 
+pub mod volume_renderer;
+
+pub use volume_renderer::{
+    ArcballCamera, ClipPlane, GpuMipRequest, GpuMprRequest, GpuVrRequest, TransferFunctionPreset,
+    VolumeRenderer,
+};
+
 use std::borrow::Cow;
 
 use dicom_core::{Error, ErrorKind, Limits, Result};

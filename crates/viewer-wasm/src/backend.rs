@@ -668,6 +668,14 @@ impl BackendRuntimeState {
         WEBGPU_SHADER_WGSL
     }
 
+    /// Return whether GPU volume rendering is available.
+    ///
+    /// Volume rendering requires an active WebGPU backend with 3D texture support.
+    /// Returns `true` when the active backend is WebGPU and the lifecycle state is Ready.
+    pub fn volume_rendering_available(&self) -> bool {
+        self.active == RendererBackend::WebGpu && self.webgpu_lifecycle == WebGpuLifecycle::Ready
+    }
+
     pub fn probe_json(&self) -> String {
         format!(
             "{{\"webgpu_api\":{},\"adapter_available\":{},\"webgl2_api\":{},\"max_texture_dimension_2d\":{}}}",

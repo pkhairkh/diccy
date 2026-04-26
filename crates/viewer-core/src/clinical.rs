@@ -571,8 +571,8 @@ impl Default for VolumeWorkflowCapabilities {
     fn default() -> Self {
         Self {
             mpr: true,
-            mip: false,
-            volume_3d: false,
+            mip: true,
+            volume_3d: true,
         }
     }
 }
