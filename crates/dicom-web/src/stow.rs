@@ -7,8 +7,8 @@ use dicom_core::{Limits as LimitsType, Result as ResultType};
 
 #[cfg(feature = "stow")]
 use super::{
-    decode_error, enforce_limit, ensure_ascii_printable, header_value,
-    DicomWebContentType, WebRequest,
+    decode_error, enforce_limit, ensure_ascii_printable, header_value, DicomWebContentType,
+    WebRequest,
 };
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
@@ -16,13 +16,19 @@ use super::StowPreflight;
 
 /// Preflight STOW payload bytes for SOP/transfer-syntax compatibility and study context.
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
-pub fn stow_preflight_compatibility(bytes: &[u8], limits: &LimitsType) -> ResultType<StowPreflight> {
+pub fn stow_preflight_compatibility(
+    bytes: &[u8],
+    limits: &LimitsType,
+) -> ResultType<StowPreflight> {
     let study_uid = dicom_storage::extract_study_uid(bytes, limits)?;
     Ok(StowPreflight { study_uid })
 }
 
 #[cfg(feature = "stow")]
-pub(crate) fn parse_content_type(request: &WebRequest, limits: &Limits) -> Result<DicomWebContentType> {
+pub(crate) fn parse_content_type(
+    request: &WebRequest,
+    limits: &Limits,
+) -> Result<DicomWebContentType> {
     let value = header_value(&request.headers, "content-type")
         .ok_or_else(|| decode_error("missing content-type header"))?;
     enforce_limit(
@@ -107,15 +113,27 @@ pub(crate) fn stow_payloads(
 ) -> Result<Vec<Vec<u8>>> {
     match content_type {
         DicomWebContentType::ApplicationDicom => {
-            enforce_limit("max_input_bytes", body.len() as u64, limits.max_input_bytes())?;
+            enforce_limit(
+                "max_input_bytes",
+                body.len() as u64,
+                limits.max_input_bytes(),
+            )?;
             Ok(vec![body.to_vec()])
         }
         DicomWebContentType::ApplicationDicomXml => {
-            enforce_limit("max_input_bytes", body.len() as u64, limits.max_input_bytes())?;
+            enforce_limit(
+                "max_input_bytes",
+                body.len() as u64,
+                limits.max_input_bytes(),
+            )?;
             Ok(vec![body.to_vec()])
         }
         DicomWebContentType::ApplicationDicomJson => {
-            enforce_limit("max_input_bytes", body.len() as u64, limits.max_input_bytes())?;
+            enforce_limit(
+                "max_input_bytes",
+                body.len() as u64,
+                limits.max_input_bytes(),
+            )?;
             Ok(vec![body.to_vec()])
         }
         DicomWebContentType::MultipartRelated { boundary } => {

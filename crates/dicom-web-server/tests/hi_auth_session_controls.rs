@@ -54,10 +54,7 @@ fn auth_denial_blocks_routed_requests() {
     let err = runtime
         .route_request(request)
         .expect_err("request must be denied");
-    assert!(matches!(
-        err.kind(),
-        ErrorKind::AuthorizationDenied { .. }
-    ));
+    assert!(matches!(err.kind(), ErrorKind::AuthorizationDenied { .. }));
 }
 
 #[test]

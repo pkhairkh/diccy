@@ -131,7 +131,9 @@ impl RigidTransform {
             || !self.ry.is_finite()
             || !self.rz.is_finite()
         {
-            return Err(registration_error("rigid transform parameters must be finite"));
+            return Err(registration_error(
+                "rigid transform parameters must be finite",
+            ));
         }
         Ok(())
     }
@@ -217,7 +219,12 @@ pub struct VolumeGrid {
 
 impl VolumeGrid {
     /// Create a new volume grid with zero-initialized data.
-    pub fn new(width: usize, height: usize, depth: usize, spacing: (f64, f64, f64)) -> Result<Self> {
+    pub fn new(
+        width: usize,
+        height: usize,
+        depth: usize,
+        spacing: (f64, f64, f64),
+    ) -> Result<Self> {
         if width == 0 || height == 0 || depth == 0 {
             return Err(registration_error("volume dimensions must be non-zero"));
         }
@@ -317,7 +324,9 @@ impl MultiResolutionPyramid {
     /// as the finest level.
     pub fn build(volume: &VolumeGrid, factors: &[u32]) -> Result<Self> {
         if factors.is_empty() {
-            return Err(registration_error("pyramid requires at least one level factor"));
+            return Err(registration_error(
+                "pyramid requires at least one level factor",
+            ));
         }
         if volume.is_empty() {
             return Err(registration_error("cannot build pyramid from empty volume"));
@@ -362,9 +371,7 @@ fn downsample_volume(volume: &VolumeGrid, factor: u32) -> Result<VolumeGrid> {
     let new_d = (volume.depth + f - 1) / f;
 
     if new_w == 0 || new_h == 0 || new_d == 0 {
-        return Err(registration_error(
-            "downsampled volume has zero dimensions",
-        ));
+        return Err(registration_error("downsampled volume has zero dimensions"));
     }
 
     let new_spacing = (
@@ -480,11 +487,7 @@ fn compute_mi(fixed: &VolumeGrid, moving: &VolumeGrid) -> Result<f64> {
     // Discretize into 32 bins
     let num_bins = 32;
     let f_min = fixed.data.iter().cloned().fold(f64::INFINITY, f64::min);
-    let f_max = fixed
-        .data
-        .iter()
-        .cloned()
-        .fold(f64::NEG_INFINITY, f64::max);
+    let f_max = fixed.data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let m_min = moving.data.iter().cloned().fold(f64::INFINITY, f64::min);
     let m_max = moving
         .data
@@ -560,7 +563,13 @@ pub fn rigid_register(
     for level_idx in 0..pyramid.level_count() {
         let level_volume = pyramid.level(level_idx).expect("level exists");
         let scale = if level_idx < pyramid.level_count() - 1 {
-            config.pyramid_levels.iter().rev().nth(level_idx).copied().unwrap_or(1) as f64
+            config
+                .pyramid_levels
+                .iter()
+                .rev()
+                .nth(level_idx)
+                .copied()
+                .unwrap_or(1) as f64
         } else {
             1.0
         };
@@ -709,32 +718,74 @@ impl VolumeGrid {
 }
 
 /// Encode a rigid registration result as a DICOM Registration IOD Dataset.
-pub fn encode_registration_iod(result: &RegistrationResult, study_uid: &str, series_uid: &str) -> Result<Dataset> {
+pub fn encode_registration_iod(
+    result: &RegistrationResult,
+    study_uid: &str,
+    series_uid: &str,
+) -> Result<Dataset> {
     let mut ds = Dataset::new();
 
     // SOP Class UID for Spatial Registration Storage (1.2.840.10008.5.1.4.1.1.66.1)
-    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.66.1".to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0016),
+        Vr::Ui,
+        Value::Uid("1.2.840.10008.5.1.4.1.1.66.1".to_string()),
+    )?);
 
     // SOP Instance UID (generate deterministic from content)
-    let sop_uid = format!("1.2.840.113619.6.4.{}.{}", study_uid.len(), series_uid.len());
-    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
+    let sop_uid = format!(
+        "1.2.840.113619.6.4.{}.{}",
+        study_uid.len(),
+        series_uid.len()
+    );
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0018),
+        Vr::Ui,
+        Value::Uid(sop_uid),
+    )?);
 
     // Study Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000D),
+        Vr::Ui,
+        Value::Uid(study_uid.to_string()),
+    )?);
 
     // Series Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000E),
+        Vr::Ui,
+        Value::Uid(series_uid.to_string()),
+    )?);
 
     // Registration Sequence
     let mut reg_item = Dataset::new();
 
     // Matrix Registration Type Code Sequence
     let mut matrix_type_item = Dataset::new();
-    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("RIGID".to_string())).unwrap());
-    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("99DICOM_REG".to_string())).unwrap());
-    matrix_type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Rigid".to_string())).unwrap());
+    matrix_type_item.insert(
+        Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("RIGID".to_string())).unwrap(),
+    );
+    matrix_type_item.insert(
+        Element::new(
+            Tag(0x0008, 0x0102),
+            Vr::Sh,
+            Value::Str("99DICOM_REG".to_string()),
+        )
+        .unwrap(),
+    );
+    matrix_type_item.insert(
+        Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Rigid".to_string())).unwrap(),
+    );
 
-    reg_item.insert(Element::new(Tag(0x0070, 0x030D), Vr::Sq, Value::Sequence(vec![matrix_type_item])).unwrap());
+    reg_item.insert(
+        Element::new(
+            Tag(0x0070, 0x030D),
+            Vr::Sq,
+            Value::Sequence(vec![matrix_type_item]),
+        )
+        .unwrap(),
+    );
 
     // Registration Matrix (4x4 rigid transform)
     // Row-major: rotation matrix + translation
@@ -762,7 +813,11 @@ pub fn encode_registration_iod(result: &RegistrationResult, study_uid: &str, ser
 
     reg_item.insert(Element::new(Tag(0x0070, 0x030C), Vr::Fd, Value::Str(matrix_values)).unwrap());
 
-    ds.insert(Element::new(Tag(0x0070, 0x0308), Vr::Sq, Value::Sequence(vec![reg_item]))?);
+    ds.insert(Element::new(
+        Tag(0x0070, 0x0308),
+        Vr::Sq,
+        Value::Sequence(vec![reg_item]),
+    )?);
 
     Ok(ds)
 }
@@ -793,9 +848,7 @@ impl BSplineTransform {
                 "B-spline grid dimensions must be non-zero",
             ));
         }
-        if !grid_spacing.0.is_finite()
-            || !grid_spacing.1.is_finite()
-            || !grid_spacing.2.is_finite()
+        if !grid_spacing.0.is_finite() || !grid_spacing.1.is_finite() || !grid_spacing.2.is_finite()
         {
             return Err(registration_error("B-spline grid spacing must be finite"));
         }
@@ -804,10 +857,7 @@ impl BSplineTransform {
         }
 
         let (nx, ny, nz) = grid_dimensions;
-        let control_points = vec![
-            vec![vec![[0.0f64; 3]; nx]; ny];
-            nz
-        ];
+        let control_points = vec![vec![vec![[0.0f64; 3]; nx]; ny]; nz];
 
         Ok(Self {
             grid_spacing,
@@ -991,7 +1041,8 @@ impl DeformationVectorField {
 
     /// Apply this DVF to resample a moving image onto the fixed image grid.
     pub fn apply_to_volume(&self, volume: &VolumeGrid) -> Result<VolumeGrid> {
-        if volume.width != self.width || volume.height != self.height || volume.depth != self.depth {
+        if volume.width != self.width || volume.height != self.height || volume.depth != self.depth
+        {
             return Err(registration_error(
                 "DVF and volume dimensions must match for resampling",
             ));
@@ -1039,10 +1090,7 @@ impl DeformationVectorField {
     /// The composed DVF maps from the original source space through self to
     /// the intermediate space, then through other to the target space.
     pub fn compose(&self, other: &DeformationVectorField) -> Result<DeformationVectorField> {
-        if self.width != other.width
-            || self.height != other.height
-            || self.depth != other.depth
-        {
+        if self.width != other.width || self.height != other.height || self.depth != other.depth {
             return Err(registration_error(
                 "DVF dimensions must match for composition",
             ));
@@ -1053,9 +1101,7 @@ impl DeformationVectorField {
         for z in 0..self.depth {
             for y in 0..self.height {
                 for x in 0..self.width {
-                    let [dx1, dy1, dz1] = self
-                        .displacement(x, y, z)
-                        .unwrap_or([0.0; 3]);
+                    let [dx1, dy1, dz1] = self.displacement(x, y, z).unwrap_or([0.0; 3]);
 
                     // Find where self maps this voxel to
                     let mid_x = x as f64 + dx1;
@@ -1135,12 +1181,12 @@ pub fn deformable_register(
     }
 
     // Determine control point grid dimensions based on volume and spacing
-    let nx = ((fixed.width as f64 * fixed.spacing.0 / config.grid_spacing.0).ceil() as usize)
-        .max(4);
-    let ny = ((fixed.height as f64 * fixed.spacing.1 / config.grid_spacing.1).ceil() as usize)
-        .max(4);
-    let nz = ((fixed.depth as f64 * fixed.spacing.2 / config.grid_spacing.2).ceil() as usize)
-        .max(4);
+    let nx =
+        ((fixed.width as f64 * fixed.spacing.0 / config.grid_spacing.0).ceil() as usize).max(4);
+    let ny =
+        ((fixed.height as f64 * fixed.spacing.1 / config.grid_spacing.1).ceil() as usize).max(4);
+    let nz =
+        ((fixed.depth as f64 * fixed.spacing.2 / config.grid_spacing.2).ceil() as usize).max(4);
 
     let mut bspline = BSplineTransform::new((nx, ny, nz), config.grid_spacing)?;
 
@@ -1165,11 +1211,8 @@ pub fn deformable_register(
 
                             let dvf = DeformationVectorField::from_bspline(&bspline, moving)?;
                             let resampled = dvf.apply_to_volume(moving)?;
-                            let trial_metric = compute_metric(
-                                fixed,
-                                &resampled,
-                                RegistrationMetric::MeanSquares,
-                            )?;
+                            let trial_metric =
+                                compute_metric(fixed, &resampled, RegistrationMetric::MeanSquares)?;
 
                             if trial_metric < best_metric {
                                 best_metric = trial_metric;
@@ -1204,7 +1247,11 @@ pub fn encode_deformable_registration_iod(
     let mut ds = Dataset::new();
 
     // SOP Class UID for Deformable Spatial Registration Storage (1.2.840.10008.5.1.4.1.1.66.3)
-    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.66.3".to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0016),
+        Vr::Ui,
+        Value::Uid("1.2.840.10008.5.1.4.1.1.66.3".to_string()),
+    )?);
 
     // SOP Instance UID
     let sop_uid = format!(
@@ -1213,24 +1260,64 @@ pub fn encode_deformable_registration_iod(
         series_uid.len(),
         dvf.width
     );
-    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0018),
+        Vr::Ui,
+        Value::Uid(sop_uid),
+    )?);
 
     // Study Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000D),
+        Vr::Ui,
+        Value::Uid(study_uid.to_string()),
+    )?);
 
     // Series Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000E),
+        Vr::Ui,
+        Value::Uid(series_uid.to_string()),
+    )?);
 
     // Deformable Registration Sequence
     let mut reg_item = Dataset::new();
 
     // Deformable Registration Type Code Sequence
     let mut type_item = Dataset::new();
-    type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("DEFORMABLE".to_string())).unwrap());
-    type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("99DICOM_REG".to_string())).unwrap());
-    type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Deformable".to_string())).unwrap());
+    type_item.insert(
+        Element::new(
+            Tag(0x0008, 0x0100),
+            Vr::Sh,
+            Value::Str("DEFORMABLE".to_string()),
+        )
+        .unwrap(),
+    );
+    type_item.insert(
+        Element::new(
+            Tag(0x0008, 0x0102),
+            Vr::Sh,
+            Value::Str("99DICOM_REG".to_string()),
+        )
+        .unwrap(),
+    );
+    type_item.insert(
+        Element::new(
+            Tag(0x0008, 0x0104),
+            Vr::Lo,
+            Value::Str("Deformable".to_string()),
+        )
+        .unwrap(),
+    );
 
-    reg_item.insert(Element::new(Tag(0x0070, 0x030D), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
+    reg_item.insert(
+        Element::new(
+            Tag(0x0070, 0x030D),
+            Vr::Sq,
+            Value::Sequence(vec![type_item]),
+        )
+        .unwrap(),
+    );
 
     // Grid dimensions
     let (nx, ny, nz) = bspline.grid_dimensions;
@@ -1239,10 +1326,17 @@ pub fn encode_deformable_registration_iod(
     reg_item.insert(Element::new(Tag(0x0070, 0x0307), Vr::Us, Value::I32(nz as i32)).unwrap());
 
     // Grid spacing
-    reg_item.insert(Element::new(Tag(0x0070, 0x0308), Vr::Ds, Value::Str(format!(
-        "{:.6}\\\\{:.6}\\\\{:.6}",
-        bspline.grid_spacing.0, bspline.grid_spacing.1, bspline.grid_spacing.2
-    ))).unwrap());
+    reg_item.insert(
+        Element::new(
+            Tag(0x0070, 0x0308),
+            Vr::Ds,
+            Value::Str(format!(
+                "{:.6}\\\\{:.6}\\\\{:.6}",
+                bspline.grid_spacing.0, bspline.grid_spacing.1, bspline.grid_spacing.2
+            )),
+        )
+        .unwrap(),
+    );
 
     // Vector Grid Data (DVF displacements as OD)
     let mut dvf_bytes = Vec::new();
@@ -1257,7 +1351,11 @@ pub fn encode_deformable_registration_iod(
 
     reg_item.insert(Element::new(Tag(0x0070, 0x0309), Vr::Of, Value::Bytes(dvf_bytes)).unwrap());
 
-    ds.insert(Element::new(Tag(0x0070, 0x0308), Vr::Sq, Value::Sequence(vec![reg_item]))?);
+    ds.insert(Element::new(
+        Tag(0x0070, 0x0308),
+        Vr::Sq,
+        Value::Sequence(vec![reg_item]),
+    )?);
 
     Ok(ds)
 }
@@ -1472,9 +1570,8 @@ mod tests_rigid {
             pyramid_levels: vec![2],
         };
 
-        let result =
-            rigid_register(&fixed, &fixed, RegistrationMetric::MeanSquares, &config)
-                .expect("registration");
+        let result = rigid_register(&fixed, &fixed, RegistrationMetric::MeanSquares, &config)
+            .expect("registration");
 
         // Identity registration should converge near zero
         assert!(
@@ -1652,8 +1749,7 @@ mod tests_deformable {
     #[test]
     fn known_translation_dvf() {
         let vol = small_volume();
-        let dvf = DeformationVectorField::uniform_translation(8, 8, 8, 2.0, 0.0, 0.0)
-            .expect("dvf");
+        let dvf = DeformationVectorField::uniform_translation(8, 8, 8, 2.0, 0.0, 0.0).expect("dvf");
 
         // Check displacements
         let d = dvf.displacement(0, 0, 0).expect("displacement");
@@ -1683,11 +1779,7 @@ mod tests_deformable {
 
         // Composed displacement at any voxel should be [5.0, 0.0, 0.0]
         let d = composed.displacement(4, 4, 4).expect("displacement");
-        assert!(
-            (d[0] - 5.0).abs() < 1e-10,
-            "expected dx=5.0, got {}",
-            d[0]
-        );
+        assert!((d[0] - 5.0).abs() < 1e-10, "expected dx=5.0, got {}", d[0]);
     }
 
     #[test]

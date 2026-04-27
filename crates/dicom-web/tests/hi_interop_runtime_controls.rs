@@ -1,6 +1,7 @@
 use dicom_web::{
-    dicomweb_route_capability_matrix, service_interface_capability_matrix, DicomWebRouteState,
-    HttpMethod, ServiceAvailability, ServiceInterface, ServiceInterfacePolicy,
+    dicomweb_route_capability_matrix, is_route_enabled, service_interface_capability_matrix,
+    DicomWebRoute, DicomWebRouteState, HttpMethod, ServiceAvailability, ServiceInterface,
+    ServiceInterfacePolicy,
 };
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
@@ -60,87 +61,76 @@ fn dicomweb_route_matrix_is_deterministic_and_feature_gated() {
     // REQ-HI-256, REQ-HI-275, REQ-HI-280, REQ-HI-326
     let matrix = dicomweb_route_capability_matrix();
     assert_eq!(matrix.len(), 34);
-    assert_eq!(matrix[0].path, "/studies");
-    assert_eq!(matrix[0].method, HttpMethod::Get);
+    assert_eq!(DicomWebRoute::QidoStudiesGet.path(), "/studies");
+    assert_eq!(DicomWebRoute::QidoStudiesGet.method(), HttpMethod::Get);
     assert_eq!(
-        matrix[33].path,
+        DicomWebRoute::DeleteInstance.path(),
         "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}"
     );
-    assert_eq!(matrix[33].method, HttpMethod::Delete);
+    assert_eq!(DicomWebRoute::DeleteInstance.method(), HttpMethod::Delete);
 
-    let stow_studies = matrix
-        .iter()
-        .find(|row| row.path == "/studies" && row.method == HttpMethod::Post)
-        .expect("stow /studies route");
+    let stow_studies_state = matrix
+        .get(&DicomWebRoute::StowStudiesPost)
+        .copied()
+        .expect("stow studies route");
     assert_eq!(
-        stow_studies.content_type,
+        DicomWebRoute::StowStudiesPost.content_type(),
         Some("application/dicom, application/dicom+xml, application/dicom+json, or multipart/related")
     );
     if cfg!(feature = "stow") {
-        assert_eq!(stow_studies.state, DicomWebRouteState::Implemented);
+        assert_eq!(stow_studies_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(stow_studies.state, DicomWebRouteState::Blocked);
+        assert_eq!(stow_studies_state, DicomWebRouteState::Blocked);
     }
 
-    let wado_instance = matrix
-        .iter()
-        .find(|row| {
-            row.path == "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}"
-                && row.method == HttpMethod::Get
-        })
+    let wado_instance_state = matrix
+        .get(&DicomWebRoute::WadoInstanceRetrieveGet)
+        .copied()
         .expect("wado instance route");
     if cfg!(feature = "wado") {
-        assert_eq!(wado_instance.state, DicomWebRouteState::Implemented);
+        assert_eq!(wado_instance_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(wado_instance.state, DicomWebRouteState::Blocked);
+        assert_eq!(wado_instance_state, DicomWebRouteState::Blocked);
     }
 
-    let wado_study = matrix
-        .iter()
-        .find(|row| row.path == "/studies/{StudyUID}" && row.method == HttpMethod::Get)
+    let wado_study_state = matrix
+        .get(&DicomWebRoute::WadoStudyRetrieveGet)
+        .copied()
         .expect("wado study retrieve route");
     if cfg!(feature = "wado") {
-        assert_eq!(wado_study.state, DicomWebRouteState::Implemented);
+        assert_eq!(wado_study_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(wado_study.state, DicomWebRouteState::Blocked);
+        assert_eq!(wado_study_state, DicomWebRouteState::Blocked);
     }
 
-    let wado_series = matrix
-        .iter()
-        .find(|row| {
-            row.path == "/studies/{StudyUID}/series/{SeriesUID}" && row.method == HttpMethod::Get
-        })
+    let wado_series_state = matrix
+        .get(&DicomWebRoute::WadoSeriesRetrieveGet)
+        .copied()
         .expect("wado series retrieve route");
     if cfg!(feature = "wado") {
-        assert_eq!(wado_series.state, DicomWebRouteState::Implemented);
+        assert_eq!(wado_series_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(wado_series.state, DicomWebRouteState::Blocked);
+        assert_eq!(wado_series_state, DicomWebRouteState::Blocked);
     }
 
-    let wado_rendered = matrix
-        .iter()
-        .find(|row| {
-            row.path == "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered"
-                && row.method == HttpMethod::Get
-        })
+    let wado_rendered_state = matrix
+        .get(&DicomWebRoute::WadoRenderedInstanceGet)
+        .copied()
         .expect("wado rendered route");
     if cfg!(feature = "wado") {
-        assert_eq!(wado_rendered.state, DicomWebRouteState::Implemented);
+        assert_eq!(wado_rendered_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(wado_rendered.state, DicomWebRouteState::Blocked);
+        assert_eq!(wado_rendered_state, DicomWebRouteState::Blocked);
     }
 
-    let wado_bulkdata = matrix
-        .iter()
-        .find(|row| {
-            row.path == "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata"
-                && row.method == HttpMethod::Get
-        })
+    let wado_bulkdata_state = matrix
+        .get(&DicomWebRoute::WadoBulkDataGet)
+        .copied()
         .expect("wado bulkdata route");
     if cfg!(feature = "wado") {
-        assert_eq!(wado_bulkdata.state, DicomWebRouteState::Implemented);
+        assert_eq!(wado_bulkdata_state, DicomWebRouteState::Implemented);
     } else {
-        assert_eq!(wado_bulkdata.state, DicomWebRouteState::Blocked);
+        assert_eq!(wado_bulkdata_state, DicomWebRouteState::Blocked);
     }
 }
 

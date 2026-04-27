@@ -1,11 +1,13 @@
 //! HTTP routing and content negotiation types and functions.
 
+use std::collections::BTreeMap;
+
 use dicom_core::{Error, ErrorKind, Limits, Result};
 
 use super::{
-    decode_error, enforce_limit, ensure_ascii_graphic, ensure_ascii_printable,
-    limit_exceeded, DicomWebRequest, Header, HttpMethod, QueryParam,
-    ThrottleDecision, TlsPolicy, TransportSecurity, WebPolicy, WebRequest,
+    decode_error, enforce_limit, ensure_ascii_graphic, ensure_ascii_printable, limit_exceeded,
+    DicomWebRequest, Header, HttpMethod, QueryParam, ThrottleDecision, TlsPolicy,
+    TransportSecurity, WebPolicy, WebRequest,
 };
 
 #[cfg(any(not(feature = "qido"), not(feature = "wado"), not(feature = "stow")))]
@@ -13,10 +15,9 @@ use super::feature_error;
 
 use super::validate_uid;
 
-
-use super::TAG_STUDY_UID;
-use super::TAG_SERIES_UID;
 use super::TAG_INSTANCE_UID;
+use super::TAG_SERIES_UID;
+use super::TAG_STUDY_UID;
 
 /// Route/method capability state for DICOMweb.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,307 +32,327 @@ pub enum DicomWebRouteState {
     NotExposed,
 }
 
+/// Named DICOMweb route identifiers, one per distinct operation/method pair.
+///
+/// Replaces the previous fixed-size `[DicomWebRouteCapability; 34]` array with a
+/// type-safe enum that makes the route set explicit and extensible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum DicomWebRoute {
+    // QIDO-RS
+    /// QIDO-RS: search for studies (GET).
+    QidoStudiesGet,
+    /// QIDO-RS: search for studies (HEAD).
+    QidoStudiesHead,
+    /// STOW-RS: store instances (POST /studies).
+    StowStudiesPost,
+    /// QIDO-RS: search all series (GET).
+    QidoAllSeriesGet,
+    /// QIDO-RS: search all series (HEAD).
+    QidoAllSeriesHead,
+    /// QIDO-RS: search all instances (GET).
+    QidoAllInstancesGet,
+    /// QIDO-RS: search all instances (HEAD).
+    QidoAllInstancesHead,
+    /// STOW-RS: store instances scoped by study (POST /studies/{StudyUID}).
+    StowStudyScopedPost,
+    // WADO-RS
+    /// WADO-RS: retrieve all instances in a study (GET).
+    WadoStudyRetrieveGet,
+    /// WADO-RS: retrieve all instances in a study (HEAD).
+    WadoStudyRetrieveHead,
+    /// WADO-RS: retrieve all instances in a series (GET).
+    WadoSeriesRetrieveGet,
+    /// WADO-RS: retrieve all instances in a series (HEAD).
+    WadoSeriesRetrieveHead,
+    /// WADO-RS: retrieve a single instance (GET).
+    WadoInstanceRetrieveGet,
+    /// WADO-RS: retrieve a single instance (HEAD).
+    WadoInstanceRetrieveHead,
+    /// WADO-URI: legacy retrieve (GET).
+    WadoUriGet,
+    /// WADO-URI: legacy retrieve (HEAD).
+    WadoUriHead,
+    /// WADO-RS: retrieve study-level metadata (GET).
+    WadoStudyMetadataGet,
+    /// WADO-RS: retrieve series-level metadata (GET).
+    WadoSeriesMetadataGet,
+    /// WADO-RS: retrieve instance-level metadata (GET).
+    WadoInstanceMetadataGet,
+    /// WADO-RS: retrieve a single frame (GET).
+    WadoFrameRetrieveGet,
+    /// WADO-RS: retrieve rendered instance (GET).
+    WadoRenderedInstanceGet,
+    /// WADO-RS: retrieve rendered instance (HEAD).
+    WadoRenderedInstanceHead,
+    /// WADO-RS: retrieve rendered frame (GET).
+    WadoRenderedFrameGet,
+    /// WADO-RS: retrieve bulkdata (GET).
+    WadoBulkDataGet,
+    /// WADO-RS: retrieve bulkdata (HEAD).
+    WadoBulkDataHead,
+    // QIDO-RS (scoped)
+    /// QIDO-RS: search series within a study (GET).
+    QidoSeriesByStudyGet,
+    /// QIDO-RS: search series within a study (HEAD).
+    QidoSeriesByStudyHead,
+    /// QIDO-RS: search instances within a study (GET).
+    QidoStudyInstancesGet,
+    /// QIDO-RS: search instances within a study (HEAD).
+    QidoStudyInstancesHead,
+    /// QIDO-RS: search instances within a series (GET).
+    QidoInstancesByStudySeriesGet,
+    /// QIDO-RS: search instances within a series (HEAD).
+    QidoInstancesByStudySeriesHead,
+    // DELETE
+    /// Delete an entire study.
+    DeleteStudy,
+    /// Delete a series within a study.
+    DeleteSeries,
+    /// Delete a single instance.
+    DeleteInstance,
+}
+
+impl DicomWebRoute {
+    /// Path pattern for this route.
+    pub fn path(self) -> &'static str {
+        match self {
+            Self::QidoStudiesGet | Self::QidoStudiesHead | Self::StowStudiesPost => "/studies",
+            Self::QidoAllSeriesGet | Self::QidoAllSeriesHead => "/series",
+            Self::QidoAllInstancesGet | Self::QidoAllInstancesHead => "/instances",
+            Self::StowStudyScopedPost => "/studies/{StudyUID}",
+            Self::WadoStudyRetrieveGet | Self::WadoStudyRetrieveHead => "/studies/{StudyUID}",
+            Self::WadoSeriesRetrieveGet | Self::WadoSeriesRetrieveHead => "/studies/{StudyUID}/series/{SeriesUID}",
+            Self::WadoInstanceRetrieveGet | Self::WadoInstanceRetrieveHead => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+            Self::WadoUriGet | Self::WadoUriHead => "/wado",
+            Self::WadoStudyMetadataGet => "/studies/{StudyUID}/metadata",
+            Self::WadoSeriesMetadataGet => "/studies/{StudyUID}/series/{SeriesUID}/metadata",
+            Self::WadoInstanceMetadataGet => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/metadata",
+            Self::WadoFrameRetrieveGet => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}",
+            Self::WadoRenderedInstanceGet | Self::WadoRenderedInstanceHead => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered",
+            Self::WadoRenderedFrameGet => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}/rendered",
+            Self::WadoBulkDataGet | Self::WadoBulkDataHead => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata",
+            Self::QidoSeriesByStudyGet | Self::QidoSeriesByStudyHead => "/studies/{StudyUID}/series",
+            Self::QidoStudyInstancesGet | Self::QidoStudyInstancesHead => "/studies/{StudyUID}/instances",
+            Self::QidoInstancesByStudySeriesGet | Self::QidoInstancesByStudySeriesHead => "/studies/{StudyUID}/series/{SeriesUID}/instances",
+            Self::DeleteStudy => "/studies/{StudyUID}",
+            Self::DeleteSeries => "/studies/{StudyUID}/series/{SeriesUID}",
+            Self::DeleteInstance => "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
+        }
+    }
+
+    /// HTTP method for this route.
+    pub fn method(self) -> HttpMethod {
+        match self {
+            Self::QidoStudiesGet
+            | Self::QidoAllSeriesGet
+            | Self::QidoAllInstancesGet
+            | Self::WadoStudyRetrieveGet
+            | Self::WadoSeriesRetrieveGet
+            | Self::WadoInstanceRetrieveGet
+            | Self::WadoUriGet
+            | Self::WadoStudyMetadataGet
+            | Self::WadoSeriesMetadataGet
+            | Self::WadoInstanceMetadataGet
+            | Self::WadoFrameRetrieveGet
+            | Self::WadoRenderedInstanceGet
+            | Self::WadoRenderedFrameGet
+            | Self::WadoBulkDataGet
+            | Self::QidoSeriesByStudyGet
+            | Self::QidoStudyInstancesGet
+            | Self::QidoInstancesByStudySeriesGet => HttpMethod::Get,
+            Self::QidoStudiesHead
+            | Self::QidoAllSeriesHead
+            | Self::QidoAllInstancesHead
+            | Self::WadoStudyRetrieveHead
+            | Self::WadoSeriesRetrieveHead
+            | Self::WadoInstanceRetrieveHead
+            | Self::WadoUriHead
+            | Self::WadoRenderedInstanceHead
+            | Self::WadoBulkDataHead
+            | Self::QidoSeriesByStudyHead
+            | Self::QidoStudyInstancesHead
+            | Self::QidoInstancesByStudySeriesHead => HttpMethod::Head,
+            Self::StowStudiesPost | Self::StowStudyScopedPost => HttpMethod::Post,
+            Self::DeleteStudy | Self::DeleteSeries | Self::DeleteInstance => HttpMethod::Delete,
+        }
+    }
+
+    /// Human-readable operation label.
+    pub fn operation(self) -> &'static str {
+        match self {
+            Self::QidoStudiesGet | Self::QidoStudiesHead => "QIDO studies",
+            Self::StowStudiesPost => "STOW studies",
+            Self::QidoAllSeriesGet | Self::QidoAllSeriesHead => "QIDO all series",
+            Self::QidoAllInstancesGet | Self::QidoAllInstancesHead => "QIDO all instances",
+            Self::StowStudyScopedPost => "STOW scoped by study UID",
+            Self::WadoStudyRetrieveGet | Self::WadoStudyRetrieveHead => "WADO study retrieve",
+            Self::WadoSeriesRetrieveGet | Self::WadoSeriesRetrieveHead => "WADO series retrieve",
+            Self::WadoInstanceRetrieveGet | Self::WadoInstanceRetrieveHead => {
+                "WADO instance retrieve"
+            }
+            Self::WadoUriGet | Self::WadoUriHead => "WADO-URI compatibility retrieve",
+            Self::WadoStudyMetadataGet => "WADO study metadata",
+            Self::WadoSeriesMetadataGet => "WADO series metadata",
+            Self::WadoInstanceMetadataGet => "WADO instance metadata",
+            Self::WadoFrameRetrieveGet => "WADO frame retrieve",
+            Self::WadoRenderedInstanceGet | Self::WadoRenderedInstanceHead => {
+                "WADO rendered instance retrieve"
+            }
+            Self::WadoRenderedFrameGet => "WADO rendered frame retrieve",
+            Self::WadoBulkDataGet | Self::WadoBulkDataHead => "WADO bulkdata retrieve",
+            Self::QidoSeriesByStudyGet | Self::QidoSeriesByStudyHead => "QIDO series by study",
+            Self::QidoStudyInstancesGet | Self::QidoStudyInstancesHead => "QIDO instances by study",
+            Self::QidoInstancesByStudySeriesGet | Self::QidoInstancesByStudySeriesHead => {
+                "QIDO instances by study/series"
+            }
+            Self::DeleteStudy => "Delete study",
+            Self::DeleteSeries => "Delete series",
+            Self::DeleteInstance => "Delete instance",
+        }
+    }
+
+    /// Required feature gate.
+    pub fn required_feature(self) -> &'static str {
+        match self {
+            Self::QidoStudiesGet
+            | Self::QidoStudiesHead
+            | Self::QidoAllSeriesGet
+            | Self::QidoAllSeriesHead
+            | Self::QidoAllInstancesGet
+            | Self::QidoAllInstancesHead
+            | Self::QidoSeriesByStudyGet
+            | Self::QidoSeriesByStudyHead
+            | Self::QidoStudyInstancesGet
+            | Self::QidoStudyInstancesHead
+            | Self::QidoInstancesByStudySeriesGet
+            | Self::QidoInstancesByStudySeriesHead => "qido",
+            Self::StowStudiesPost | Self::StowStudyScopedPost => "stow",
+            Self::WadoStudyRetrieveGet
+            | Self::WadoStudyRetrieveHead
+            | Self::WadoSeriesRetrieveGet
+            | Self::WadoSeriesRetrieveHead
+            | Self::WadoInstanceRetrieveGet
+            | Self::WadoInstanceRetrieveHead
+            | Self::WadoUriGet
+            | Self::WadoUriHead
+            | Self::WadoStudyMetadataGet
+            | Self::WadoSeriesMetadataGet
+            | Self::WadoInstanceMetadataGet
+            | Self::WadoFrameRetrieveGet
+            | Self::WadoRenderedInstanceGet
+            | Self::WadoRenderedInstanceHead
+            | Self::WadoRenderedFrameGet
+            | Self::WadoBulkDataGet
+            | Self::WadoBulkDataHead => "wado",
+            Self::DeleteStudy | Self::DeleteSeries | Self::DeleteInstance => "delete",
+        }
+    }
+
+    /// Content-type contract, if applicable.
+    pub fn content_type(self) -> Option<&'static str> {
+        match self {
+            Self::StowStudiesPost | Self::StowStudyScopedPost => Some(
+                "application/dicom, application/dicom+xml, application/dicom+json, or multipart/related",
+            ),
+            Self::WadoStudyRetrieveGet | Self::WadoStudyRetrieveHead
+            | Self::WadoSeriesRetrieveGet | Self::WadoSeriesRetrieveHead => {
+                Some("multipart/related; type=\"application/dicom\"")
+            }
+            Self::WadoInstanceRetrieveGet | Self::WadoInstanceRetrieveHead
+            | Self::WadoUriGet | Self::WadoUriHead => Some("application/dicom"),
+            Self::WadoStudyMetadataGet
+            | Self::WadoSeriesMetadataGet
+            | Self::WadoInstanceMetadataGet => Some("application/dicom+json"),
+            Self::WadoFrameRetrieveGet => Some("application/octet-stream"),
+            Self::WadoRenderedInstanceGet | Self::WadoRenderedInstanceHead
+            | Self::WadoRenderedFrameGet => Some("image/png or image/jpeg"),
+            Self::WadoBulkDataGet | Self::WadoBulkDataHead => Some("application/octet-stream"),
+            _ => None,
+        }
+    }
+
+    /// Iterate over all known route variants in definition order.
+    pub fn all() -> impl Iterator<Item = Self> {
+        use DicomWebRoute::*;
+        static ROUTES: &[DicomWebRoute] = &[
+            QidoStudiesGet,
+            QidoStudiesHead,
+            StowStudiesPost,
+            QidoAllSeriesGet,
+            QidoAllSeriesHead,
+            QidoAllInstancesGet,
+            QidoAllInstancesHead,
+            StowStudyScopedPost,
+            WadoStudyRetrieveGet,
+            WadoStudyRetrieveHead,
+            WadoSeriesRetrieveGet,
+            WadoSeriesRetrieveHead,
+            WadoInstanceRetrieveGet,
+            WadoInstanceRetrieveHead,
+            WadoUriGet,
+            WadoUriHead,
+            WadoStudyMetadataGet,
+            WadoSeriesMetadataGet,
+            WadoInstanceMetadataGet,
+            WadoFrameRetrieveGet,
+            WadoRenderedInstanceGet,
+            WadoRenderedInstanceHead,
+            WadoRenderedFrameGet,
+            WadoBulkDataGet,
+            WadoBulkDataHead,
+            QidoSeriesByStudyGet,
+            QidoSeriesByStudyHead,
+            QidoStudyInstancesGet,
+            QidoStudyInstancesHead,
+            QidoInstancesByStudySeriesGet,
+            QidoInstancesByStudySeriesHead,
+            DeleteStudy,
+            DeleteSeries,
+            DeleteInstance,
+        ];
+        ROUTES.iter().copied()
+    }
+}
+
 /// A route/method capability entry for DICOMweb interoperability matrices.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DicomWebRouteCapability {
-    /// Route path pattern.
-    pub path: &'static str,
-    /// HTTP method.
-    pub method: HttpMethod,
-    /// Operation label.
-    pub operation: &'static str,
-    /// Required feature gate.
-    pub required_feature: &'static str,
+    /// Named route identifier.
+    pub route: DicomWebRoute,
     /// Availability state for this route/method.
     pub state: DicomWebRouteState,
-    /// Content-type contract when applicable.
-    pub content_type: Option<&'static str>,
+}
+
+/// Route capability registry: maps named routes to their availability state.
+pub type DicomWebRouteCapabilityMatrix = BTreeMap<DicomWebRoute, DicomWebRouteState>;
+
+/// Check whether a specific route is enabled.
+pub fn is_route_enabled(matrix: &DicomWebRouteCapabilityMatrix, route: DicomWebRoute) -> bool {
+    matches!(
+        matrix.get(&route),
+        Some(DicomWebRouteState::Implemented | DicomWebRouteState::Partial)
+    )
 }
 
 /// Build a deterministic DICOMweb route/method capability matrix.
-pub fn dicomweb_route_capability_matrix() -> [DicomWebRouteCapability; 34] {
+pub fn dicomweb_route_capability_matrix() -> DicomWebRouteCapabilityMatrix {
     let qido = route_state(cfg!(feature = "qido"));
     let wado = route_state(cfg!(feature = "wado"));
     let stow = route_state(cfg!(feature = "stow"));
     let delete_state = DicomWebRouteState::Blocked;
-    [
-        DicomWebRouteCapability {
-            path: "/studies",
-            method: HttpMethod::Get,
-            operation: "QIDO studies",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies",
-            method: HttpMethod::Head,
-            operation: "QIDO studies",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies",
-            method: HttpMethod::Post,
-            operation: "STOW studies",
-            required_feature: "stow",
-            state: stow,
-            content_type: Some(
-                "application/dicom, application/dicom+xml, application/dicom+json, or multipart/related",
-            ),
-        },
-        DicomWebRouteCapability {
-            path: "/series",
-            method: HttpMethod::Get,
-            operation: "QIDO all series",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/series",
-            method: HttpMethod::Head,
-            operation: "QIDO all series",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/instances",
-            method: HttpMethod::Get,
-            operation: "QIDO all instances",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/instances",
-            method: HttpMethod::Head,
-            operation: "QIDO all instances",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}",
-            method: HttpMethod::Post,
-            operation: "STOW scoped by study UID",
-            required_feature: "stow",
-            state: stow,
-            content_type: Some(
-                "application/dicom, application/dicom+xml, application/dicom+json, or multipart/related",
-            ),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}",
-            method: HttpMethod::Get,
-            operation: "WADO study retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("multipart/related; type=\"application/dicom\""),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}",
-            method: HttpMethod::Head,
-            operation: "WADO study retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("multipart/related; type=\"application/dicom\""),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}",
-            method: HttpMethod::Get,
-            operation: "WADO series retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("multipart/related; type=\"application/dicom\""),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}",
-            method: HttpMethod::Head,
-            operation: "WADO series retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("multipart/related; type=\"application/dicom\""),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series",
-            method: HttpMethod::Get,
-            operation: "QIDO series by study",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series",
-            method: HttpMethod::Head,
-            operation: "QIDO series by study",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/instances",
-            method: HttpMethod::Get,
-            operation: "QIDO instances by study",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/instances",
-            method: HttpMethod::Head,
-            operation: "QIDO instances by study",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances",
-            method: HttpMethod::Get,
-            operation: "QIDO instances by study/series",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances",
-            method: HttpMethod::Head,
-            operation: "QIDO instances by study/series",
-            required_feature: "qido",
-            state: qido,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
-            method: HttpMethod::Get,
-            operation: "WADO instance retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
-            method: HttpMethod::Head,
-            operation: "WADO instance retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom"),
-        },
-        DicomWebRouteCapability {
-            path: "/wado",
-            method: HttpMethod::Get,
-            operation: "WADO-URI compatibility retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom"),
-        },
-        DicomWebRouteCapability {
-            path: "/wado",
-            method: HttpMethod::Head,
-            operation: "WADO-URI compatibility retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/metadata",
-            method: HttpMethod::Get,
-            operation: "WADO study metadata",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom+json"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/metadata",
-            method: HttpMethod::Get,
-            operation: "WADO series metadata",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom+json"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/metadata",
-            method: HttpMethod::Get,
-            operation: "WADO instance metadata",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/dicom+json"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}",
-            method: HttpMethod::Get,
-            operation: "WADO frame retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/octet-stream"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered",
-            method: HttpMethod::Get,
-            operation: "WADO rendered instance retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("image/png or image/jpeg"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/rendered",
-            method: HttpMethod::Head,
-            operation: "WADO rendered instance retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("image/png or image/jpeg"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/frames/{FrameNumber}/rendered",
-            method: HttpMethod::Get,
-            operation: "WADO rendered frame retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("image/png or image/jpeg"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata",
-            method: HttpMethod::Get,
-            operation: "WADO bulkdata retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/octet-stream"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}/bulkdata",
-            method: HttpMethod::Head,
-            operation: "WADO bulkdata retrieve",
-            required_feature: "wado",
-            state: wado,
-            content_type: Some("application/octet-stream"),
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}",
-            method: HttpMethod::Delete,
-            operation: "Delete study",
-            required_feature: "delete",
-            state: delete_state,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}",
-            method: HttpMethod::Delete,
-            operation: "Delete series",
-            required_feature: "delete",
-            state: delete_state,
-            content_type: None,
-        },
-        DicomWebRouteCapability {
-            path: "/studies/{StudyUID}/series/{SeriesUID}/instances/{InstanceUID}",
-            method: HttpMethod::Delete,
-            operation: "Delete instance",
-            required_feature: "delete",
-            state: delete_state,
-            content_type: None,
-        },
-    ]
+
+    let mut matrix = BTreeMap::new();
+    for route in DicomWebRoute::all() {
+        let state = match route.required_feature() {
+            "qido" => qido,
+            "wado" => wado,
+            "stow" => stow,
+            "delete" => delete_state,
+            _ => DicomWebRouteState::NotExposed,
+        };
+        matrix.insert(route, state);
+    }
+    matrix
 }
 
 fn route_state(feature_enabled: bool) -> DicomWebRouteState {
@@ -427,7 +448,11 @@ pub fn parse_http_request(
     transport: TransportSecurity,
 ) -> Result<WebRequest> {
     let (head, body) = split_head_body(input)?;
-    enforce_limit("max_input_bytes", body.len() as u64, limits.max_input_bytes())?;
+    enforce_limit(
+        "max_input_bytes",
+        body.len() as u64,
+        limits.max_input_bytes(),
+    )?;
 
     let head_str = std::str::from_utf8(head)
         .map_err(|_| decode_error("request headers are not valid UTF-8"))?;
@@ -631,7 +656,8 @@ pub fn parse_dicomweb_request(
             HttpMethod::Get | HttpMethod::Head => {
                 #[cfg(feature = "wado")]
                 {
-                    let transfer_syntax_uid = super::wado::parse_wado_retrieve_query(&request.query)?;
+                    let transfer_syntax_uid =
+                        super::wado::parse_wado_retrieve_query(&request.query)?;
                     let study_uid = validate_uid(TAG_STUDY_UID, _study_uid)?;
                     Ok(DicomWebRequest::WadoStudyRetrieve {
                         study_uid,
@@ -706,7 +732,8 @@ pub fn parse_dicomweb_request(
             HttpMethod::Get | HttpMethod::Head => {
                 #[cfg(feature = "wado")]
                 {
-                    let transfer_syntax_uid = super::wado::parse_wado_retrieve_query(&request.query)?;
+                    let transfer_syntax_uid =
+                        super::wado::parse_wado_retrieve_query(&request.query)?;
                     let study_uid = validate_uid(TAG_STUDY_UID, _study_uid)?;
                     let series_uid = validate_uid(TAG_SERIES_UID, _series_uid)?;
                     Ok(DicomWebRequest::WadoSeriesRetrieve {
@@ -930,7 +957,8 @@ pub fn parse_dicomweb_request(
                 HttpMethod::Get | HttpMethod::Head => {
                     #[cfg(feature = "wado")]
                     {
-                        let transfer_syntax_uid = super::wado::parse_wado_retrieve_query(&request.query)?;
+                        let transfer_syntax_uid =
+                            super::wado::parse_wado_retrieve_query(&request.query)?;
                         let study_uid = validate_uid(TAG_STUDY_UID, _study_uid)?;
                         let series_uid = validate_uid(TAG_SERIES_UID, _series_uid)?;
                         let instance_uid = validate_uid(TAG_INSTANCE_UID, _instance_uid)?;

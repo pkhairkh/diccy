@@ -1991,14 +1991,19 @@ mod tests {
         let caps = VolumeWorkflowCapabilities::default();
         assert!(caps.mpr, "MPR should be enabled by default after Sprint 1");
         assert!(caps.mip, "MIP should be enabled by default after Sprint 1");
-        assert!(caps.volume_3d, "3D volume should be enabled by default after Sprint 1");
+        assert!(
+            caps.volume_3d,
+            "3D volume should be enabled by default after Sprint 1"
+        );
     }
 
     #[test]
     fn volume_workflow_state_allows_enabling_all_capabilities() {
         let mut state = VolumeWorkflowState::new(VolumeWorkflowCapabilities::default());
         assert!(state.set_mpr_enabled(true).is_ok());
-        assert!(state.set_mip_mode(Some(MipProjectionMode::MaxIntensity)).is_ok());
+        assert!(state
+            .set_mip_mode(Some(MipProjectionMode::MaxIntensity))
+            .is_ok());
         assert!(state.set_volume_3d_enabled(true).is_ok());
         let status = state.status();
         assert!(status.mpr_enabled);
@@ -2009,10 +2014,20 @@ mod tests {
     #[test]
     fn volume_workflow_state_toggle_mip_modes() {
         let mut state = VolumeWorkflowState::new(VolumeWorkflowCapabilities::default());
-        assert!(state.set_mip_mode(Some(MipProjectionMode::MaxIntensity)).is_ok());
-        assert_eq!(state.status().mip_mode, Some(MipProjectionMode::MaxIntensity));
-        assert!(state.set_mip_mode(Some(MipProjectionMode::MinIntensity)).is_ok());
-        assert_eq!(state.status().mip_mode, Some(MipProjectionMode::MinIntensity));
+        assert!(state
+            .set_mip_mode(Some(MipProjectionMode::MaxIntensity))
+            .is_ok());
+        assert_eq!(
+            state.status().mip_mode,
+            Some(MipProjectionMode::MaxIntensity)
+        );
+        assert!(state
+            .set_mip_mode(Some(MipProjectionMode::MinIntensity))
+            .is_ok());
+        assert_eq!(
+            state.status().mip_mode,
+            Some(MipProjectionMode::MinIntensity)
+        );
         assert!(state.set_mip_mode(None).is_ok());
         assert_eq!(state.status().mip_mode, None);
     }
@@ -2026,11 +2041,24 @@ mod tests {
         };
         let mut state = VolumeWorkflowState::new(caps);
         let mpr_err = state.set_mpr_enabled(true).expect_err("mpr disabled");
-        assert!(matches!(mpr_err, ClinicalError::CapabilityDisabled { capability: "mpr" }));
-        let mip_err = state.set_mip_mode(Some(MipProjectionMode::MaxIntensity)).expect_err("mip disabled");
-        assert!(matches!(mip_err, ClinicalError::CapabilityDisabled { capability: "mip" }));
+        assert!(matches!(
+            mpr_err,
+            ClinicalError::CapabilityDisabled { capability: "mpr" }
+        ));
+        let mip_err = state
+            .set_mip_mode(Some(MipProjectionMode::MaxIntensity))
+            .expect_err("mip disabled");
+        assert!(matches!(
+            mip_err,
+            ClinicalError::CapabilityDisabled { capability: "mip" }
+        ));
         let vol_err = state.set_volume_3d_enabled(true).expect_err("3d disabled");
-        assert!(matches!(vol_err, ClinicalError::CapabilityDisabled { capability: "volume_3d" }));
+        assert!(matches!(
+            vol_err,
+            ClinicalError::CapabilityDisabled {
+                capability: "volume_3d"
+            }
+        ));
     }
 
     #[test]
@@ -2053,13 +2081,22 @@ mod tests {
     fn fusion_overlay_registration_lifecycle() {
         let mut fusion = FusionOverlayState::new("CT", "MR");
         // Starts unregistered
-        assert!(matches!(fusion.registration, FusionRegistrationState::Unregistered));
+        assert!(matches!(
+            fusion.registration,
+            FusionRegistrationState::Unregistered
+        ));
         // Mark as registered
         fusion.mark_registered();
-        assert!(matches!(fusion.registration, FusionRegistrationState::Registered));
+        assert!(matches!(
+            fusion.registration,
+            FusionRegistrationState::Registered
+        ));
         // Mark as geometry mismatch
         fusion.mark_geometry_mismatch("frame of reference UID differs");
-        assert!(matches!(fusion.registration, FusionRegistrationState::GeometryMismatch { .. }));
+        assert!(matches!(
+            fusion.registration,
+            FusionRegistrationState::GeometryMismatch { .. }
+        ));
     }
 
     #[test]
@@ -2094,7 +2131,10 @@ mod tests {
         assert_eq!(lm.height, 5);
         assert_eq!(lm.depth, 3);
         assert_eq!(lm.labels.len(), 5 * 5 * 3);
-        assert!(lm.labels.iter().all(|&l| l == 0), "all labels should be 0 (background)");
+        assert!(
+            lm.labels.iter().all(|&l| l == 0),
+            "all labels should be 0 (background)"
+        );
     }
 
     #[test]
@@ -2110,11 +2150,20 @@ mod tests {
 
     #[test]
     fn brush_config_validation() {
-        let valid = BrushConfig { radius_voxels: 5, mode: BrushMode::Paint };
+        let valid = BrushConfig {
+            radius_voxels: 5,
+            mode: BrushMode::Paint,
+        };
         assert!(valid.validate().is_ok());
-        let zero_radius = BrushConfig { radius_voxels: 0, mode: BrushMode::Paint };
+        let zero_radius = BrushConfig {
+            radius_voxels: 0,
+            mode: BrushMode::Paint,
+        };
         assert!(zero_radius.validate().is_err());
-        let too_large = BrushConfig { radius_voxels: 65, mode: BrushMode::Erase };
+        let too_large = BrushConfig {
+            radius_voxels: 65,
+            mode: BrushMode::Erase,
+        };
         assert!(too_large.validate().is_err());
     }
 
@@ -2137,7 +2186,10 @@ mod tests {
         let count = lm.count_voxels_with_label(1);
         assert_eq!(count, modified, "all modified voxels should have label 1");
         // Approximate: circle with radius 3 should have about π*9 ≈ 28 voxels
-        assert!(count > 20 && count < 40, "circle of radius 3 should have ~28 voxels, got {count}");
+        assert!(
+            count > 20 && count < 40,
+            "circle of radius 3 should have ~28 voxels, got {count}"
+        );
     }
 
     #[test]
@@ -2164,7 +2216,10 @@ mod tests {
             mode: BrushMode::Erase,
         };
         let erased = lm.apply_brush_stroke(&erase, 1).expect("erase");
-        assert_eq!(erased, painted, "erasing same region should remove same count");
+        assert_eq!(
+            erased, painted,
+            "erasing same region should remove same count"
+        );
         assert_eq!(lm.count_voxels_with_label(1), 0, "no voxels should remain");
     }
 
@@ -2194,7 +2249,9 @@ mod tests {
             radius_voxels: 2,
             mode: BrushMode::Paint,
         };
-        let err = lm.apply_brush_stroke(&stroke, 1).expect_err("slice out of range");
+        let err = lm
+            .apply_brush_stroke(&stroke, 1)
+            .expect_err("slice out of range");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
@@ -2227,7 +2284,10 @@ mod tests {
         };
         let modified = lm.apply_brush_stroke(&stroke, 1).expect("clip paint");
         assert!(modified > 0, "should paint some voxels at corner");
-        assert!(modified < 30, "corner clip should reduce voxel count from full circle");
+        assert!(
+            modified < 30,
+            "corner clip should reduce voxel count from full circle"
+        );
         assert_eq!(lm.label(0, 0, 0), Some(1), "center should be painted");
     }
 
@@ -2277,7 +2337,11 @@ mod tests {
         let modified = interpolate_slices_morphological(&mut lm, 2, 7, 1).expect("interp");
         assert!(modified > 0, "should fill intermediate slices");
         // Intermediate slices should now have the intersection
-        assert_eq!(lm.label(5, 5, 4), Some(1), "middle slice should be interpolated");
+        assert_eq!(
+            lm.label(5, 5, 4),
+            Some(1),
+            "middle slice should be interpolated"
+        );
     }
 
     #[test]
@@ -2296,7 +2360,10 @@ mod tests {
         }
         let modified = interpolate_slices_morphological(&mut lm, 0, 4, 1).expect("interp");
         // No overlap between slices, so morphological interpolation fills nothing
-        assert_eq!(modified, 0, "no intersection means no morphological interpolation");
+        assert_eq!(
+            modified, 0,
+            "no intersection means no morphological interpolation"
+        );
     }
 
     #[test]
@@ -2312,7 +2379,11 @@ mod tests {
         let modified = interpolate_slices_linear(&mut lm, 0, 4, 1).expect("linear interp");
         assert!(modified > 0, "should fill intermediate slices");
         // Slices closer to the boundary should be filled (weight > 0.5)
-        assert_eq!(lm.label(5, 5, 1), Some(1), "slice 1 should be filled (close to slice 0)");
+        assert_eq!(
+            lm.label(5, 5, 1),
+            Some(1),
+            "slice 1 should be filled (close to slice 0)"
+        );
     }
 
     #[test]
@@ -2376,20 +2447,48 @@ mod tests {
         let modified = threshold_segment_volume(&mut lm, &voxels, &config, 1).expect("threshold");
         // Only slices 1 and 2 should be segmented
         assert_eq!(modified, 2 * 10 * 10);
-        assert_eq!(lm.label(0, 0, 0), Some(0), "slice 0 should not be segmented");
+        assert_eq!(
+            lm.label(0, 0, 0),
+            Some(0),
+            "slice 0 should not be segmented"
+        );
         assert_eq!(lm.label(0, 0, 1), Some(1), "slice 1 should be segmented");
-        assert_eq!(lm.label(0, 0, 3), Some(0), "slice 3 should not be segmented");
+        assert_eq!(
+            lm.label(0, 0, 3),
+            Some(0),
+            "slice 3 should not be segmented"
+        );
     }
 
     #[test]
     fn threshold_config_validation() {
-        let valid = ThresholdConfig { hu_min: -1000, hu_max: 3000, slice_start: 0, slice_end: 5 };
+        let valid = ThresholdConfig {
+            hu_min: -1000,
+            hu_max: 3000,
+            slice_start: 0,
+            slice_end: 5,
+        };
         assert!(valid.validate().is_ok());
-        let inverted_hu = ThresholdConfig { hu_min: 500, hu_max: 200, slice_start: 0, slice_end: 5 };
+        let inverted_hu = ThresholdConfig {
+            hu_min: 500,
+            hu_max: 200,
+            slice_start: 0,
+            slice_end: 5,
+        };
         assert!(inverted_hu.validate().is_err());
-        let inverted_slice = ThresholdConfig { hu_min: 0, hu_max: 100, slice_start: 5, slice_end: 3 };
+        let inverted_slice = ThresholdConfig {
+            hu_min: 0,
+            hu_max: 100,
+            slice_start: 5,
+            slice_end: 3,
+        };
         assert!(inverted_slice.validate().is_err());
-        let equal_slices = ThresholdConfig { hu_min: 0, hu_max: 100, slice_start: 3, slice_end: 3 };
+        let equal_slices = ThresholdConfig {
+            hu_min: 0,
+            hu_max: 100,
+            slice_start: 3,
+            slice_end: 3,
+        };
         assert!(equal_slices.validate().is_err());
     }
 
@@ -2397,8 +2496,14 @@ mod tests {
     fn threshold_segment_rejects_wrong_voxel_buffer_size() {
         let mut lm = LabelMap3D::new(10, 10, 5).expect("valid");
         let wrong_size = vec![0i32; 100]; // Way too small
-        let config = ThresholdConfig { hu_min: 0, hu_max: 100, slice_start: 0, slice_end: 5 };
-        let err = threshold_segment_volume(&mut lm, &wrong_size, &config, 1).expect_err("buffer size");
+        let config = ThresholdConfig {
+            hu_min: 0,
+            hu_max: 100,
+            slice_start: 0,
+            slice_end: 5,
+        };
+        let err =
+            threshold_segment_volume(&mut lm, &wrong_size, &config, 1).expect_err("buffer size");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
@@ -2412,7 +2517,13 @@ mod tests {
                 voxels[1 * 100 + y * 10 + x] = 50;
             }
         }
-        let seed = RegionGrowSeed { x: 5, y: 5, z: 1, hu_min: 40, hu_max: 60 };
+        let seed = RegionGrowSeed {
+            x: 5,
+            y: 5,
+            z: 1,
+            hu_min: 40,
+            hu_max: 60,
+        };
         let modified = region_grow(&mut lm, &voxels, &seed, 2).expect("region grow");
         assert_eq!(modified, 36, "6x6 block = 36 voxels");
         assert_eq!(lm.label(5, 5, 1), Some(2));
@@ -2421,7 +2532,7 @@ mod tests {
     #[test]
     fn region_grow_stops_at_hu_boundary() {
         let mut lm = LabelMap3D::new(10, 10, 1).expect("valid"); // Single slice
-        // Create a small island of target HU in the center, surrounded by different HU
+                                                                 // Create a small island of target HU in the center, surrounded by different HU
         let mut voxels = vec![0i32; 10 * 10];
         // 4x4 block of target HU in the center
         for y in 3..7 {
@@ -2429,17 +2540,32 @@ mod tests {
                 voxels[y * 10 + x] = 50;
             }
         }
-        let seed = RegionGrowSeed { x: 5, y: 5, z: 0, hu_min: 40, hu_max: 60 };
+        let seed = RegionGrowSeed {
+            x: 5,
+            y: 5,
+            z: 0,
+            hu_min: 40,
+            hu_max: 60,
+        };
         let modified = region_grow(&mut lm, &voxels, &seed, 2).expect("region grow");
         // Should only grow within the 4x4 block = 16 voxels
-        assert_eq!(modified, 16, "should be limited to the 4x4 island, got {modified}");
+        assert_eq!(
+            modified, 16,
+            "should be limited to the 4x4 island, got {modified}"
+        );
     }
 
     #[test]
     fn region_grow_seed_outside_hu_range_returns_zero() {
         let mut lm = LabelMap3D::new(10, 10, 3).expect("valid");
         let voxels = vec![0i32; 10 * 10 * 3];
-        let seed = RegionGrowSeed { x: 5, y: 5, z: 1, hu_min: 100, hu_max: 200 };
+        let seed = RegionGrowSeed {
+            x: 5,
+            y: 5,
+            z: 1,
+            hu_min: 100,
+            hu_max: 200,
+        };
         let modified = region_grow(&mut lm, &voxels, &seed, 1).expect("region grow");
         assert_eq!(modified, 0, "seed HU outside range should return 0 voxels");
     }
@@ -2448,7 +2574,13 @@ mod tests {
     fn region_grow_rejects_out_of_bounds_seed() {
         let mut lm = LabelMap3D::new(10, 10, 3).expect("valid");
         let voxels = vec![0i32; 10 * 10 * 3];
-        let seed = RegionGrowSeed { x: 20, y: 5, z: 1, hu_min: -1000, hu_max: 3000 };
+        let seed = RegionGrowSeed {
+            x: 20,
+            y: 5,
+            z: 1,
+            hu_min: -1000,
+            hu_max: 3000,
+        };
         let err = region_grow(&mut lm, &voxels, &seed, 1).expect_err("seed out of bounds");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
@@ -2461,11 +2593,19 @@ mod tests {
     fn roi_statistics_rect_computes_mean_and_stddev() {
         // 10x10 image with uniform value 100 on slice 0
         let voxels = vec![100i32; 10 * 10 * 3];
-        let roi = RoiShape::Rect { left: 2, top: 2, right: 7, bottom: 7 };
+        let roi = RoiShape::Rect {
+            left: 2,
+            top: 2,
+            right: 7,
+            bottom: 7,
+        };
         let stats = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect("rect stats");
         assert_eq!(stats.voxel_count, 36, "6x6 rect = 36 voxels");
         assert!((stats.mean - 100.0).abs() < 0.01, "mean should be 100");
-        assert!(stats.std_dev < 0.01, "uniform values should have ~0 std dev");
+        assert!(
+            stats.std_dev < 0.01,
+            "uniform values should have ~0 std dev"
+        );
         assert_eq!(stats.min, 100.0);
         assert_eq!(stats.max, 100.0);
     }
@@ -2479,11 +2619,19 @@ mod tests {
                 voxels[y * 10 + x] = (x + y) as i32;
             }
         }
-        let roi = RoiShape::Rect { left: 2, top: 2, right: 7, bottom: 7 };
+        let roi = RoiShape::Rect {
+            left: 2,
+            top: 2,
+            right: 7,
+            bottom: 7,
+        };
         let stats = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect("stats");
         assert_eq!(stats.voxel_count, 36);
         assert!(stats.mean > 0.0, "mean should be positive");
-        assert!(stats.std_dev > 0.0, "varying values should have positive std dev");
+        assert!(
+            stats.std_dev > 0.0,
+            "varying values should have positive std dev"
+        );
         assert!(stats.min < stats.max, "min should be less than max");
     }
 
@@ -2496,12 +2644,16 @@ mod tests {
             semi_col: 5.0,
             semi_row: 5.0,
         };
-        let stats = compute_roi_statistics(&voxels, 20, 20, 3, 0, &roi, None).expect("ellipse stats");
+        let stats =
+            compute_roi_statistics(&voxels, 20, 20, 3, 0, &roi, None).expect("ellipse stats");
         assert!(stats.voxel_count > 0, "should include voxels in ellipse");
         assert!((stats.mean - 50.0).abs() < 0.01);
         // Approximate area: π * 5 * 5 ≈ 78.5
-        assert!(stats.voxel_count > 60 && stats.voxel_count < 100,
-            "area should be approximately π*25, got {}", stats.voxel_count);
+        assert!(
+            stats.voxel_count > 60 && stats.voxel_count < 100,
+            "area should be approximately π*25, got {}",
+            stats.voxel_count
+        );
     }
 
     #[test]
@@ -2511,7 +2663,8 @@ mod tests {
         let roi = RoiShape::Freehand {
             points: vec![(10.0, 5.0), (5.0, 15.0), (15.0, 15.0)],
         };
-        let stats = compute_roi_statistics(&voxels, 20, 20, 3, 0, &roi, None).expect("freehand stats");
+        let stats =
+            compute_roi_statistics(&voxels, 20, 20, 3, 0, &roi, None).expect("freehand stats");
         assert!(stats.voxel_count > 0, "triangle should contain voxels");
         assert!((stats.mean - 42.0).abs() < 0.01);
     }
@@ -2519,11 +2672,22 @@ mod tests {
     #[test]
     fn roi_statistics_with_pixel_spacing() {
         let voxels = vec![100i32; 10 * 10 * 3];
-        let roi = RoiShape::Rect { left: 0, top: 0, right: 4, bottom: 4 };
+        let roi = RoiShape::Rect {
+            left: 0,
+            top: 0,
+            right: 4,
+            bottom: 4,
+        };
         let stats = compute_roi_statistics(
-            &voxels, 10, 10, 3, 0, &roi,
-            Some((0.5, 0.5)),  // 0.5mm x 0.5mm pixel spacing
-        ).expect("stats with spacing");
+            &voxels,
+            10,
+            10,
+            3,
+            0,
+            &roi,
+            Some((0.5, 0.5)), // 0.5mm x 0.5mm pixel spacing
+        )
+        .expect("stats with spacing");
         assert_eq!(stats.voxel_count, 25);
         let expected_mm2 = 25.0 * 0.5 * 0.5;
         assert!(stats.area_mm2.is_some());
@@ -2533,41 +2697,70 @@ mod tests {
     #[test]
     fn roi_statistics_histogram_is_256_bins() {
         let voxels = vec![100i32; 10 * 10 * 3];
-        let roi = RoiShape::Rect { left: 0, top: 0, right: 4, bottom: 4 };
+        let roi = RoiShape::Rect {
+            left: 0,
+            top: 0,
+            right: 4,
+            bottom: 4,
+        };
         let stats = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect("stats");
         assert_eq!(stats.histogram.len(), 256, "histogram should have 256 bins");
-        assert!(stats.histogram.iter().sum::<u64>() > 0, "histogram should contain counts");
+        assert!(
+            stats.histogram.iter().sum::<u64>() > 0,
+            "histogram should contain counts"
+        );
     }
 
     #[test]
     fn roi_statistics_rejects_invalid_rect_bounds() {
         let voxels = vec![0i32; 10 * 10 * 3];
-        let roi = RoiShape::Rect { left: 0, top: 0, right: 20, bottom: 20 }; // Exceeds dimensions
-        let err = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("invalid rect");
+        let roi = RoiShape::Rect {
+            left: 0,
+            top: 0,
+            right: 20,
+            bottom: 20,
+        }; // Exceeds dimensions
+        let err =
+            compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("invalid rect");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
     #[test]
     fn roi_statistics_rejects_invalid_freehand_too_few_points() {
         let voxels = vec![0i32; 10 * 10 * 3];
-        let roi = RoiShape::Freehand { points: vec![(1.0, 1.0), (2.0, 2.0)] }; // Only 2 points
-        let err = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("too few points");
+        let roi = RoiShape::Freehand {
+            points: vec![(1.0, 1.0), (2.0, 2.0)],
+        }; // Only 2 points
+        let err =
+            compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("too few points");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
     #[test]
     fn roi_statistics_rejects_invalid_ellipse_semi_axes() {
         let voxels = vec![0i32; 10 * 10 * 3];
-        let roi = RoiShape::Ellipse { center_col: 5.0, center_row: 5.0, semi_col: 0.0, semi_row: 5.0 };
-        let err = compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("zero semi axis");
+        let roi = RoiShape::Ellipse {
+            center_col: 5.0,
+            center_row: 5.0,
+            semi_col: 0.0,
+            semi_row: 5.0,
+        };
+        let err =
+            compute_roi_statistics(&voxels, 10, 10, 3, 0, &roi, None).expect_err("zero semi axis");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
     #[test]
     fn roi_statistics_rejects_invalid_slice_index() {
         let voxels = vec![0i32; 10 * 10 * 3];
-        let roi = RoiShape::Rect { left: 0, top: 0, right: 5, bottom: 5 };
-        let err = compute_roi_statistics(&voxels, 10, 10, 3, 10, &roi, None).expect_err("invalid slice");
+        let roi = RoiShape::Rect {
+            left: 0,
+            top: 0,
+            right: 5,
+            bottom: 5,
+        };
+        let err =
+            compute_roi_statistics(&voxels, 10, 10, 3, 10, &roi, None).expect_err("invalid slice");
         assert!(matches!(err, ClinicalError::InvalidInput { .. }));
     }
 
@@ -2634,9 +2827,17 @@ mod tests {
         let mut store = SegmentationStore::new();
         let id = store.create_labelmap("Tumor").expect("create");
         store.set_locked(&id, true).expect("lock");
-        let err = store.update_style(&id, SegmentationStyle {
-            visible: false, opacity: 0.1, color_rgb: [0, 0, 0], active: false,
-        }).expect_err("update locked");
+        let err = store
+            .update_style(
+                &id,
+                SegmentationStyle {
+                    visible: false,
+                    opacity: 0.1,
+                    color_rgb: [0, 0, 0],
+                    active: false,
+                },
+            )
+            .expect_err("update locked");
         assert!(matches!(err, ClinicalError::Locked { .. }));
     }
 
@@ -2646,9 +2847,17 @@ mod tests {
         let id = store.create_labelmap("Tumor").expect("create");
         store.set_locked(&id, true).expect("lock");
         store.set_locked(&id, false).expect("unlock");
-        store.update_style(&id, SegmentationStyle {
-            visible: false, opacity: 0.1, color_rgb: [0, 0, 0], active: false,
-        }).expect("update after unlock should work");
+        store
+            .update_style(
+                &id,
+                SegmentationStyle {
+                    visible: false,
+                    opacity: 0.1,
+                    color_rgb: [0, 0, 0],
+                    active: false,
+                },
+            )
+            .expect("update after unlock should work");
     }
 
     // =======================================================================
@@ -2658,18 +2867,29 @@ mod tests {
     #[test]
     fn measurement_store_multiple_measurements() {
         let mut store = MeasurementStore::new();
-        let id1 = store.create_measurement(
-            MeasurementKind::Distance2D,
-            vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 10.0, y: 0.0 }],
-            Some(10.0),
-            MeasurementUnit::Millimeter,
-        ).expect("create dist");
-        let id2 = store.create_measurement(
-            MeasurementKind::Angle2D,
-            vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 5.0, y: 5.0 }, ImagePoint { x: 10.0, y: 0.0 }],
-            Some(45.0),
-            MeasurementUnit::Degree,
-        ).expect("create angle");
+        let id1 = store
+            .create_measurement(
+                MeasurementKind::Distance2D,
+                vec![
+                    ImagePoint { x: 0.0, y: 0.0 },
+                    ImagePoint { x: 10.0, y: 0.0 },
+                ],
+                Some(10.0),
+                MeasurementUnit::Millimeter,
+            )
+            .expect("create dist");
+        let id2 = store
+            .create_measurement(
+                MeasurementKind::Angle2D,
+                vec![
+                    ImagePoint { x: 0.0, y: 0.0 },
+                    ImagePoint { x: 5.0, y: 5.0 },
+                    ImagePoint { x: 10.0, y: 0.0 },
+                ],
+                Some(45.0),
+                MeasurementUnit::Degree,
+            )
+            .expect("create angle");
         assert_eq!(store.active_measurements().len(), 2);
         assert!(store.measurement(&id1).is_some());
         assert!(store.measurement(&id2).is_some());
@@ -2678,7 +2898,9 @@ mod tests {
     #[test]
     fn measurement_store_delete_nonexistent_fails() {
         let mut store = MeasurementStore::new();
-        let err = store.delete_measurement("nonexistent").expect_err("delete missing");
+        let err = store
+            .delete_measurement("nonexistent")
+            .expect_err("delete missing");
         assert!(matches!(err, ClinicalError::NotFound { .. }));
     }
 
@@ -2688,12 +2910,14 @@ mod tests {
         // No undo when empty
         assert!(!store.undo());
         assert!(!store.redo());
-        let id = store.create_measurement(
-            MeasurementKind::Distance2D,
-            vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 5.0, y: 5.0 }],
-            Some(7.07),
-            MeasurementUnit::Millimeter,
-        ).expect("create");
+        let id = store
+            .create_measurement(
+                MeasurementKind::Distance2D,
+                vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 5.0, y: 5.0 }],
+                Some(7.07),
+                MeasurementUnit::Millimeter,
+            )
+            .expect("create");
         store.delete_measurement(&id).expect("delete");
         assert!(store.undo()); // undo delete
         assert!(store.redo()); // redo delete
@@ -2703,18 +2927,22 @@ mod tests {
     #[test]
     fn measurement_store_sr_payload_reports_correct_count() {
         let mut store = MeasurementStore::new();
-        store.create_measurement(
-            MeasurementKind::Distance2D,
-            vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 5.0, y: 5.0 }],
-            Some(7.07),
-            MeasurementUnit::Millimeter,
-        ).expect("create 1");
-        store.create_measurement(
-            MeasurementKind::Probe,
-            vec![ImagePoint { x: 3.0, y: 3.0 }],
-            Some(45.0),
-            MeasurementUnit::Pixel,
-        ).expect("create 2");
+        store
+            .create_measurement(
+                MeasurementKind::Distance2D,
+                vec![ImagePoint { x: 0.0, y: 0.0 }, ImagePoint { x: 5.0, y: 5.0 }],
+                Some(7.07),
+                MeasurementUnit::Millimeter,
+            )
+            .expect("create 1");
+        store
+            .create_measurement(
+                MeasurementKind::Probe,
+                vec![ImagePoint { x: 3.0, y: 3.0 }],
+                Some(45.0),
+                MeasurementUnit::Pixel,
+            )
+            .expect("create 2");
         let payload = store.sr_payload();
         assert_eq!(payload.measurement_count, 2);
     }

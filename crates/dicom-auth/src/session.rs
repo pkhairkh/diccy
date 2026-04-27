@@ -33,7 +33,11 @@ impl SessionPolicy {
     /// Create a new session policy with validation.
     ///
     /// Validates that `inactivity_timeout_secs > 0`.
-    pub fn new(inactivity_timeout_secs: u64, warning_window_secs: u64, max_failures: u32) -> Result<Self> {
+    pub fn new(
+        inactivity_timeout_secs: u64,
+        warning_window_secs: u64,
+        max_failures: u32,
+    ) -> Result<Self> {
         if inactivity_timeout_secs == 0 {
             return Err(session_error("", "inactivity_timeout_secs must be > 0"));
         }
@@ -139,7 +143,8 @@ impl SessionStatus {
                 session_id,
                 format!(
                     "session locked after {} failed attempts (max allowed: {})",
-                    self.failed_attempts, policy.max_failures()
+                    self.failed_attempts,
+                    policy.max_failures()
                 ),
             ));
         }
@@ -299,13 +304,22 @@ impl SessionDirectory {
             ));
         }
         if request.security_context_hash.trim().is_empty() {
-            return Err(session_error(&request.session_id, "security_context_hash must not be empty"));
+            return Err(session_error(
+                &request.session_id,
+                "security_context_hash must not be empty",
+            ));
         }
         if request.expires_epoch_secs <= request.issued_epoch_secs {
-            return Err(session_error(&request.session_id, "session expiry must be after issue time"));
+            return Err(session_error(
+                &request.session_id,
+                "session expiry must be after issue time",
+            ));
         }
         if self.sessions.contains_key(&request.session_id) {
-            return Err(session_error(&request.session_id, "session_id already exists"));
+            return Err(session_error(
+                &request.session_id,
+                "session_id already exists",
+            ));
         }
         let record = SessionRecord {
             session_id: request.session_id.clone(),
@@ -369,13 +383,13 @@ impl SessionDirectory {
             .get(session_id)
             .ok_or_else(|| session_error(session_id, "session token not found"))?;
         if record.principal != principal {
-            return Err(auth_denied(
-                "session",
-                "session token principal mismatch",
-            ));
+            return Err(auth_denied("session", "session token principal mismatch"));
         }
         if record.security_context_hash != security_context_hash {
-            return Err(session_error(session_id, "session token security context mismatch"));
+            return Err(session_error(
+                session_id,
+                "session token security context mismatch",
+            ));
         }
         if record.revoked_epoch_secs.is_some() {
             return Err(session_error(session_id, "session token has been revoked"));
@@ -479,7 +493,10 @@ fn is_shared_identity(principal: &str) -> bool {
 }
 
 fn session_error(session_id: impl Into<String>, detail: impl Into<String>) -> Box<Error> {
-    dicom_util::decode_error("dicom-auth-session", &format!("session {}: {}", session_id.into(), detail.into()))
+    dicom_util::decode_error(
+        "dicom-auth-session",
+        &format!("session {}: {}", session_id.into(), detail.into()),
+    )
 }
 
 fn auth_denied(resource: impl Into<String>, reason: impl Into<String>) -> Box<Error> {

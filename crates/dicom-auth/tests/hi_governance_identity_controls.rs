@@ -1,7 +1,7 @@
 use dicom_auth::{
     activate_break_glass_access, activate_secure_default_override, commit_secret_entry,
-    evaluate_clipboard_policy, force_reauth_suspicious,
-    permission_denied_view, validate_interface_change_control_record, validate_release_text_input,
+    evaluate_clipboard_policy, force_reauth_suspicious, permission_denied_view,
+    validate_interface_change_control_record, validate_release_text_input,
     validate_removable_media_export, validate_requirement_revision_record,
     validate_screenshot_export_policy, validate_startup_fail_closed_controls,
     validate_system_metadata_view, validate_ui_string_change_review, workspace_privacy_mode,

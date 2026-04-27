@@ -545,12 +545,10 @@ mod tests {
 
     fn dataset_with_uids(study: &str, series: &str, sop: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string())).unwrap());
+        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string())).unwrap());
         dataset
     }
 
@@ -562,10 +560,11 @@ mod tests {
         modality: &str,
     ) -> Dataset {
         let mut dataset = dataset_with_uids(study, series, sop);
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id.to_string())).unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string())).unwrap());
         dataset
     }
 
@@ -579,10 +578,17 @@ mod tests {
         study_date: &str,
     ) -> Dataset {
         let mut dataset = dataset_with_metadata(study, series, sop, patient_id, modality);
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str(accession_number.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str(study_date.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Lo,
+                Value::Str(accession_number.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str(study_date.to_string())).unwrap(),
+        );
         dataset
     }
 
@@ -779,8 +785,8 @@ mod tests {
     fn query_rejects_candidate_missing_required_uid_for_level() {
         // REQ-QR-303: candidate datasets missing required UIDs must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
 
         let query_request = Query {
             level: QueryLevel::Series,
@@ -799,10 +805,10 @@ mod tests {
     fn query_rejects_candidate_invalid_required_uid_for_level() {
         // REQ-QR-303: candidate datasets with invalid required UIDs must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("2.3.x".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("2.3.x".to_string())).unwrap());
 
         let query_request = Query {
             level: QueryLevel::Series,
@@ -816,10 +822,11 @@ mod tests {
     fn identifier_query_builds_from_dataset() {
         // REQ-QR-300: supported UID keys are parsed from identifier datasets.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Series);
         assert_eq!(query.keys.len(), 2);
@@ -829,7 +836,14 @@ mod tests {
     fn identifier_query_rejects_unsupported_key() {
         // REQ-QR-300: unsupported keys must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(Tag(0x0008, 0x1030), Vr::Lo, Value::Str("CT HEAD".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                Tag(0x0008, 0x1030),
+                Vr::Lo,
+                Value::Str("CT HEAD".to_string()),
+            )
+            .unwrap(),
+        );
         let err = query_from_identifier(&dataset, &limits()).expect_err("expected error");
         assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
@@ -838,8 +852,9 @@ mod tests {
     fn identifier_query_accepts_patient_id() {
         // REQ-QR-300: Patient ID is accepted as a supported identifier key.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 1);
@@ -851,10 +866,17 @@ mod tests {
     fn identifier_query_accepts_accession_and_study_date() {
         // REQ-QR-300: Accession Number and Study Date are accepted identifier keys.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str("ACC123".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260211".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Lo,
+                Value::Str("ACC123".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260211".to_string())).unwrap(),
+        );
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 2);
@@ -869,10 +891,9 @@ mod tests {
     fn identifier_query_duplicate_tag_replaced() {
         // REQ-QR-302: Duplicate tags are replaced by BTreeMap, so the latest value wins.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
         let query = query_from_identifier(&dataset, &limits()).expect("query");
         assert_eq!(query.level, QueryLevel::Study);
         assert_eq!(query.keys.len(), 1);

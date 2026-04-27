@@ -167,14 +167,46 @@ impl UserColor {
 /// Predefined color palette for collaboration users.
 pub fn user_colors() -> &'static [UserColor] {
     static COLORS: &[UserColor] = &[
-        UserColor { r: 0, g: 120, b: 215 },   // Blue
-        UserColor { r: 232, g: 65, b: 24 },   // Red
-        UserColor { r: 46, g: 204, b: 113 },  // Green
-        UserColor { r: 155, g: 89, b: 182 },  // Purple
-        UserColor { r: 241, g: 196, b: 15 },  // Yellow
-        UserColor { r: 230, g: 126, b: 34 },  // Orange
-        UserColor { r: 26, g: 188, b: 156 },  // Teal
-        UserColor { r: 236, g: 100, b: 159 }, // Pink
+        UserColor {
+            r: 0,
+            g: 120,
+            b: 215,
+        }, // Blue
+        UserColor {
+            r: 232,
+            g: 65,
+            b: 24,
+        }, // Red
+        UserColor {
+            r: 46,
+            g: 204,
+            b: 113,
+        }, // Green
+        UserColor {
+            r: 155,
+            g: 89,
+            b: 182,
+        }, // Purple
+        UserColor {
+            r: 241,
+            g: 196,
+            b: 15,
+        }, // Yellow
+        UserColor {
+            r: 230,
+            g: 126,
+            b: 34,
+        }, // Orange
+        UserColor {
+            r: 26,
+            g: 188,
+            b: 156,
+        }, // Teal
+        UserColor {
+            r: 236,
+            g: 100,
+            b: 159,
+        }, // Pink
     ];
     COLORS
 }
@@ -481,10 +513,7 @@ impl<T: Clone + PartialEq + Ord> OrSet<T> {
             // This tag was already removed; skip
             return;
         }
-        self.active
-            .entry(element)
-            .or_default()
-            .insert(tag, ());
+        self.active.entry(element).or_default().insert(tag, ());
     }
 
     /// Remove an element by removing all its tags.
@@ -633,7 +662,10 @@ impl CollabSession {
     /// Add a user to the collaboration session.
     pub fn join(&mut self, user_id: UserId, display_name: String) -> Result<()> {
         if self.users.contains_key(&user_id) {
-            return Err(collab_error(self.session_id.as_ref(), "user already in session"));
+            return Err(collab_error(
+                self.session_id.as_ref(),
+                "user already in session",
+            ));
         }
         let color_index = self.users.len();
         let mut presence = UserPresence::new(user_id.clone(), display_name, color_index);
@@ -647,7 +679,10 @@ impl CollabSession {
     /// Remove a user from the collaboration session.
     pub fn leave(&mut self, user_id: &UserId) -> Result<()> {
         if !self.users.contains_key(user_id) {
-            return Err(collab_error(self.session_id.as_ref(), "user not in session"));
+            return Err(collab_error(
+                self.session_id.as_ref(),
+                "user not in session",
+            ));
         }
         self.users.remove(user_id);
         self.record_audit("leave", user_id.as_ref());
@@ -658,12 +693,18 @@ impl CollabSession {
     pub fn apply_operation(&mut self, operation: CollabOperation) -> Result<()> {
         let user_id = operation.user_id().clone();
         if !self.users.contains_key(&user_id) {
-            return Err(collab_error(self.session_id.as_ref(), "operation from unknown user"));
+            return Err(collab_error(
+                self.session_id.as_ref(),
+                "operation from unknown user",
+            ));
         }
 
         // Advance vector clock
         self.tick = self.tick.next();
-        *self.vector_clock.entry(user_id.clone()).or_insert(Tick::zero()) = self.tick;
+        *self
+            .vector_clock
+            .entry(user_id.clone())
+            .or_insert(Tick::zero()) = self.tick;
 
         // Apply the operation
         match &operation {
@@ -692,7 +733,10 @@ impl CollabSession {
                 tick: _,
                 ..
             } => {
-                self.annotations.add(annotation_id.clone(), format!("add-{}-{}", annotation_id, self.tick));
+                self.annotations.add(
+                    annotation_id.clone(),
+                    format!("add-{}-{}", annotation_id, self.tick),
+                );
             }
             CollabOperation::AnnotationRemove {
                 annotation_id,
@@ -752,7 +796,11 @@ impl CollabSession {
     /// Merge operations from another session (e.g., after network partition healing).
     pub fn merge_from(&mut self, other_log: &[CrdtEntry]) {
         for entry in other_log {
-            let user_tick = self.vector_clock.get(entry.operation.user_id()).copied().unwrap_or_default();
+            let user_tick = self
+                .vector_clock
+                .get(entry.operation.user_id())
+                .copied()
+                .unwrap_or_default();
             if entry.operation.tick() > user_tick {
                 let _ = self.apply_operation(entry.operation.clone());
             }
@@ -772,7 +820,12 @@ impl CollabSession {
             vector_clock: self.vector_clock.clone(),
             users: self.users.values().cloned().collect(),
         };
-        serde_json::to_string(&state).map_err(|e| collab_error(self.session_id.as_ref(), format!("serialization failed: {e}")))
+        serde_json::to_string(&state).map_err(|e| {
+            collab_error(
+                self.session_id.as_ref(),
+                format!("serialization failed: {e}"),
+            )
+        })
     }
 
     fn record_audit(&self, operation: &'static str, subject_id: &str) {
@@ -911,11 +964,13 @@ mod tests_collab {
             viewport_index: 0,
         };
 
-        session.apply_operation(CollabOperation::ViewportChange {
-            state: state.clone(),
-            tick: tk(1),
-            user_id: uid("user1"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::ViewportChange {
+                state: state.clone(),
+                tick: tk(1),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
         let synced = session.viewport_state(0).unwrap();
         assert_eq!(synced.pan_x, 10.0);
@@ -927,12 +982,14 @@ mod tests_collab {
         let mut session = CollabSession::new(sid("session-1"));
         session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
-        session.apply_operation(CollabOperation::CursorMove {
-            position: (100.0, 200.0),
-            viewport_index: 0,
-            tick: tk(1),
-            user_id: uid("user1"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::CursorMove {
+                position: (100.0, 200.0),
+                viewport_index: 0,
+                tick: tk(1),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
         let cursors = session.viewport_cursors(0);
         assert_eq!(cursors.len(), 1);
@@ -1015,20 +1072,24 @@ mod tests_collab {
         let mut session = CollabSession::new(sid("session-1"));
         session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
-        session.apply_operation(CollabOperation::AnnotationAdd {
-            annotation_id: "ann-1".to_string(),
-            annotation_data: "{}".to_string(),
-            tick: tk(1),
-            user_id: uid("user1"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::AnnotationAdd {
+                annotation_id: "ann-1".to_string(),
+                annotation_data: "{}".to_string(),
+                tick: tk(1),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
         assert_eq!(session.annotations.len(), 1);
 
-        session.apply_operation(CollabOperation::AnnotationRemove {
-            annotation_id: "ann-1".to_string(),
-            tick: tk(2),
-            user_id: uid("user1"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::AnnotationRemove {
+                annotation_id: "ann-1".to_string(),
+                tick: tk(2),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
         assert_eq!(session.annotations.len(), 0);
     }
@@ -1039,12 +1100,14 @@ mod tests_collab {
         session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
 
         for i in 0..10 {
-            session.apply_operation(CollabOperation::CursorMove {
-                position: (i as f64, i as f64),
-                viewport_index: 0,
-                tick: tk(i),
-                user_id: uid("user1"),
-            }).unwrap();
+            session
+                .apply_operation(CollabOperation::CursorMove {
+                    position: (i as f64, i as f64),
+                    viewport_index: 0,
+                    tick: tk(i),
+                    user_id: uid("user1"),
+                })
+                .unwrap();
         }
 
         assert!(session.operation_log().len() <= 5);
@@ -1063,19 +1126,25 @@ mod tests_collab {
     #[test]
     fn merge_from_another_session() {
         let mut session1 = CollabSession::new(sid("session-1"));
-        session1.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
+        session1
+            .join(uid("user1"), "Dr. Smith".to_string())
+            .unwrap();
 
         let mut session2 = CollabSession::new(sid("session-1"));
-        session2.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
+        session2
+            .join(uid("user1"), "Dr. Smith".to_string())
+            .unwrap();
 
-        session2.apply_operation(CollabOperation::ViewportChange {
-            state: SharedViewportState {
-                zoom: 3.0,
-                ..SharedViewportState::default()
-            },
-            tick: tk(10),
-            user_id: uid("user1"),
-        }).unwrap();
+        session2
+            .apply_operation(CollabOperation::ViewportChange {
+                state: SharedViewportState {
+                    zoom: 3.0,
+                    ..SharedViewportState::default()
+                },
+                tick: tk(10),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
         session1.merge_from(session2.operation_log());
         // After merge, session1 should have the viewport change
@@ -1088,19 +1157,23 @@ mod tests_collab {
         session.join(uid("user1"), "Dr. Smith".to_string()).unwrap();
         session.join(uid("user2"), "Dr. Jones".to_string()).unwrap();
 
-        session.apply_operation(CollabOperation::CursorMove {
-            position: (10.0, 20.0),
-            viewport_index: 0,
-            tick: tk(1),
-            user_id: uid("user1"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::CursorMove {
+                position: (10.0, 20.0),
+                viewport_index: 0,
+                tick: tk(1),
+                user_id: uid("user1"),
+            })
+            .unwrap();
 
-        session.apply_operation(CollabOperation::CursorMove {
-            position: (30.0, 40.0),
-            viewport_index: 0,
-            tick: tk(2),
-            user_id: uid("user2"),
-        }).unwrap();
+        session
+            .apply_operation(CollabOperation::CursorMove {
+                position: (30.0, 40.0),
+                viewport_index: 0,
+                tick: tk(2),
+                user_id: uid("user2"),
+            })
+            .unwrap();
 
         let cursors = session.viewport_cursors(0);
         assert_eq!(cursors.len(), 2);

@@ -64,7 +64,7 @@ pub struct HeadPose {
 impl Default for HeadPose {
     fn default() -> Self {
         Self {
-            position: [0.0, 1.7, 0.0], // default standing height 1.7m
+            position: [0.0, 1.7, 0.0],         // default standing height 1.7m
             orientation: [0.0, 0.0, 0.0, 1.0], // identity quaternion
             timestamp_s: 0.0,
         }
@@ -80,9 +80,11 @@ impl HeadPose {
             + orientation[1] * orientation[1]
             + orientation[2] * orientation[2]
             + orientation[3] * orientation[3])
-        .sqrt();
+            .sqrt();
         if (len - 1.0).abs() > 0.1 {
-            return Err(xr_error("head pose orientation quaternion is not unit length"));
+            return Err(xr_error(
+                "head pose orientation quaternion is not unit length",
+            ));
         }
         Ok(Self {
             position,
@@ -102,9 +104,11 @@ impl HeadPose {
             + self.orientation[1] * self.orientation[1]
             + self.orientation[2] * self.orientation[2]
             + self.orientation[3] * self.orientation[3])
-        .sqrt();
+            .sqrt();
         if (len - 1.0).abs() > 0.1 {
-            return Err(xr_error("head pose orientation quaternion is not unit length"));
+            return Err(xr_error(
+                "head pose orientation quaternion is not unit length",
+            ));
         }
         Ok(())
     }
@@ -224,7 +228,11 @@ impl HandTrackingData {
     pub fn index_ray(&self) -> [f64; 3] {
         let proximal = self.joint_positions[HandJoint::IndexProximal as usize];
         let tip = self.joint_positions[HandJoint::IndexTip as usize];
-        let mut ray = [tip[0] - proximal[0], tip[1] - proximal[1], tip[2] - proximal[2]];
+        let mut ray = [
+            tip[0] - proximal[0],
+            tip[1] - proximal[1],
+            tip[2] - proximal[2],
+        ];
         let len = (ray[0] * ray[0] + ray[1] * ray[1] + ray[2] * ray[2]).sqrt();
         if len > 1e-12 {
             ray[0] /= len;
@@ -825,11 +833,7 @@ impl ArOverlaySession {
     }
 
     /// Add a tracked surgical instrument.
-    pub fn add_instrument(
-        &mut self,
-        name: &str,
-        world_position_m: [f64; 3],
-    ) -> String {
+    pub fn add_instrument(&mut self, name: &str, world_position_m: [f64; 3]) -> String {
         self.tick = self.tick.saturating_add(1);
         let id = format!("inst{}", self.markers.len());
         // Compute patient position using inverse registration
@@ -913,7 +917,11 @@ impl ArOverlaySession {
             .map(|p| (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt())
             .sum::<f64>()
             / n;
-        let scale = if patient_rms > 1e-12 { world_rms / patient_rms } else { 0.001 };
+        let scale = if patient_rms > 1e-12 {
+            world_rms / patient_rms
+        } else {
+            0.001
+        };
 
         // Simple rotation estimate using cross-covariance (simplified Kabsch)
         let mut h = [[0.0f64; 3]; 3];
@@ -942,15 +950,18 @@ impl ArOverlaySession {
 
         // Compute translation from centroids
         let translation = [
-            world_centroid[0] - (rotation[0][0] * patient_centroid[0] * scale
-                + rotation[0][1] * patient_centroid[1] * scale
-                + rotation[0][2] * patient_centroid[2] * scale),
-            world_centroid[1] - (rotation[1][0] * patient_centroid[0] * scale
-                + rotation[1][1] * patient_centroid[1] * scale
-                + rotation[1][2] * patient_centroid[2] * scale),
-            world_centroid[2] - (rotation[2][0] * patient_centroid[0] * scale
-                + rotation[2][1] * patient_centroid[1] * scale
-                + rotation[2][2] * patient_centroid[2] * scale),
+            world_centroid[0]
+                - (rotation[0][0] * patient_centroid[0] * scale
+                    + rotation[0][1] * patient_centroid[1] * scale
+                    + rotation[0][2] * patient_centroid[2] * scale),
+            world_centroid[1]
+                - (rotation[1][0] * patient_centroid[0] * scale
+                    + rotation[1][1] * patient_centroid[1] * scale
+                    + rotation[1][2] * patient_centroid[2] * scale),
+            world_centroid[2]
+                - (rotation[2][0] * patient_centroid[0] * scale
+                    + rotation[2][1] * patient_centroid[1] * scale
+                    + rotation[2][2] * patient_centroid[2] * scale),
         ];
 
         // Compute registration error (RMS)
@@ -1102,7 +1113,9 @@ impl XrRenderer {
     pub fn render_frame(&self, _eye: Eye, _session: &XrViewerSession) -> Result<()> {
         Err(Error::from_kind(
             ErrorKind::InternalError {
-                detail: "XrRenderer::render_frame() is a stub — no actual XR rendering is implemented".to_string(),
+                detail:
+                    "XrRenderer::render_frame() is a stub — no actual XR rendering is implemented"
+                        .to_string(),
             },
             "STUB: XrRenderer cannot render frames",
         )
@@ -1172,7 +1185,10 @@ mod tests_stub_assertions {
         assert!(result.is_err());
         let err = result.unwrap_err();
         let msg = format!("{err}");
-        assert!(msg.to_lowercase().contains("stub"), "error should mention stub: {err}");
+        assert!(
+            msg.to_lowercase().contains("stub"),
+            "error should mention stub: {err}"
+        );
     }
 
     #[test]
@@ -1183,7 +1199,10 @@ mod tests_stub_assertions {
         assert!(result.is_err());
         let err = result.unwrap_err();
         let msg = format!("{err}");
-        assert!(msg.to_lowercase().contains("stub"), "error should mention stub: {err}");
+        assert!(
+            msg.to_lowercase().contains("stub"),
+            "error should mention stub: {err}"
+        );
     }
 
     #[test]
@@ -1470,7 +1489,9 @@ mod tests_ar_overlay {
         session.add_fiducial([100.0, 0.0, 0.0], [-0.1, 0.0, 0.0]);
         session.add_fiducial([0.0, 100.0, 0.0], [0.0, 0.0, 0.1]);
 
-        let result = session.compute_registration_from_fiducials().expect("registration");
+        let result = session
+            .compute_registration_from_fiducials()
+            .expect("registration");
         assert!(result.rms_error_mm >= 0.0);
         assert_eq!(result.fiducial_count, 3);
         assert!(session.registration.verified);

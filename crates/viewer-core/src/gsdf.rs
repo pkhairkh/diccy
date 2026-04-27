@@ -88,7 +88,10 @@ impl std::fmt::Display for GsdfError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GsdfError::InvalidLuminanceRange { min, max } => {
-                write!(f, "invalid luminance range: min={min}, max={max} (need 0 < min < max)")
+                write!(
+                    f,
+                    "invalid luminance range: min={min}, max={max} (need 0 < min < max)"
+                )
             }
             GsdfError::InvalidBitDepth { depth } => {
                 write!(f, "invalid bit depth: {depth} (must be 8-16)")
@@ -678,7 +681,11 @@ mod tests {
         };
         let lut = generate_gsdf_lut(&config).expect("10-bit LUT");
         // 10-bit produces (2^10 - 1) = 1023 entries (one per P-value step)
-        assert!(lut.luminance_values.len() >= 1023, "10-bit should produce ~1024 entries, got {}", lut.luminance_values.len());
+        assert!(
+            lut.luminance_values.len() >= 1023,
+            "10-bit should produce ~1024 entries, got {}",
+            lut.luminance_values.len()
+        );
         // Should still be monotonic
         let mut prev = 0.0f64;
         for (i, &l) in lut.luminance_values.iter().enumerate() {
@@ -729,6 +736,9 @@ mod tests {
             .collect();
         let max_error = compute_conformance(&config, &measured).expect("conformance");
         // A linear display should have worse conformance than a perfect one
-        assert!(max_error > 0.0, "poor display should have non-zero conformance error");
+        assert!(
+            max_error > 0.0,
+            "poor display should have non-zero conformance error"
+        );
     }
 }

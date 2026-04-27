@@ -1,22 +1,20 @@
 //! DIMSE service trait, request/response types, and protocol logic.
 
 use crate::commitment::{
-    StorageCommitmentLifecycleEvent, StorageCommitmentLifecycleSink, StorageCommitmentNActionRequest,
+    StorageCommitmentLifecycleEvent, StorageCommitmentLifecycleSink,
+    StorageCommitmentNActionRequest,
 };
 use crate::ian::IanNotification;
 use crate::{
-    decode_error, workstation_default_association_policy,
-    SOP_CLASS_CR_IMAGE_STORAGE, SOP_CLASS_CT_IMAGE_STORAGE, SOP_CLASS_DX_PRESENTATION,
-    SOP_CLASS_MR_IMAGE_STORAGE, SOP_CLASS_MULTI_FRAME_SC_BYTE, SOP_CLASS_MULTI_FRAME_SC_TRUE_COLOR,
+    decode_error, workstation_default_association_policy, SOP_CLASS_CR_IMAGE_STORAGE,
+    SOP_CLASS_CT_IMAGE_STORAGE, SOP_CLASS_DX_PRESENTATION, SOP_CLASS_MR_IMAGE_STORAGE,
+    SOP_CLASS_MULTI_FRAME_SC_BYTE, SOP_CLASS_MULTI_FRAME_SC_TRUE_COLOR,
     SOP_CLASS_MULTI_FRAME_SC_WORD, SOP_CLASS_PET_IMAGE_STORAGE, SOP_CLASS_SECONDARY_CAPTURE,
     SOP_CLASS_STUDY_ROOT_FIND, SOP_CLASS_STUDY_ROOT_GET, SOP_CLASS_STUDY_ROOT_MOVE,
     SOP_CLASS_VERIFICATION, TRANSFER_SYNTAX_EXPLICIT_VR_LE, TRANSFER_SYNTAX_IMPLICIT_VR_LE,
 };
 use dicom_core::{Error, ErrorKind, Limits, Result, Tag};
-use dicom_storage::{
-    Storage, StorageCommitmentRequest,
-    StorageCommitmentState, WriteAheadLog,
-};
+use dicom_storage::{Storage, StorageCommitmentRequest, StorageCommitmentState, WriteAheadLog};
 use std::collections::BTreeSet;
 use std::path::Path;
 

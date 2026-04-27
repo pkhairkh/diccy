@@ -378,33 +378,41 @@ fn record_worklist_audit(
 
 fn worklist_item_to_dataset(item: WorklistItem) -> Dataset {
     let mut sps_item = Dataset::new();
-    sps_item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(item.scheduled_step_id),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(item.modality),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(item.start_date),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(item.start_time),
-    ).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(item.scheduled_step_id)).unwrap());
+    sps_item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(item.modality)).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(item.start_date)).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(item.start_time)).unwrap());
     if let Some(requested_procedure_id) = item.requested_procedure_id {
-        sps_item.insert(Element::new(TAG_REQUESTED_PROCEDURE_ID, Vr::Sh, Value::Str(requested_procedure_id),
-        ).unwrap());
+        sps_item.insert(
+            Element::new(
+                TAG_REQUESTED_PROCEDURE_ID,
+                Vr::Sh,
+                Value::Str(requested_procedure_id),
+            )
+            .unwrap(),
+        );
     }
     if let Some(scheduled_station_ae_title) = item.scheduled_station_ae_title {
-        sps_item.insert(Element::new(TAG_SCHEDULED_STATION_AE_TITLE, Vr::Ae, Value::Str(scheduled_station_ae_title),
-        ).unwrap());
+        sps_item.insert(
+            Element::new(
+                TAG_SCHEDULED_STATION_AE_TITLE,
+                Vr::Ae,
+                Value::Str(scheduled_station_ae_title),
+            )
+            .unwrap(),
+        );
     }
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![sps_item]),
-    ).unwrap());
+    dataset
+        .insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![sps_item])).unwrap());
     if let Some(patient_id) = item.patient_id {
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id)).unwrap());
     }
     if let Some(accession_number) = item.accession_number {
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str(accession_number),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str(accession_number)).unwrap(),
+        );
     }
     dataset
 }
@@ -663,18 +671,18 @@ mod tests {
 
     fn worklist_dataset(step_id: &str, modality: &str, date: &str, time: &str) -> Dataset {
         let mut item = Dataset::new();
-        item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(date.to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(time.to_string()),
-        ).unwrap());
+        item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string())).unwrap());
+        item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string())).unwrap());
+        item.insert(
+            Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(date.to_string())).unwrap(),
+        );
+        item.insert(
+            Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(time.to_string())).unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item])).unwrap());
         dataset
     }
 
@@ -698,8 +706,8 @@ mod tests {
     fn worklist_rejects_empty_sequence() {
         // REQ-WL-300: empty sequence must fail closed.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(Vec::new()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(Vec::new())).unwrap());
         let err = validate_worklist_item(&dataset, &limits()).expect_err("expected error");
         assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
@@ -759,10 +767,17 @@ mod tests {
         // REQ-WL-303: persisted worklist queries are deterministic and filterable.
         let mut store = WorklistStore::new(Limits::default());
         let mut dataset = worklist_dataset("STEP1", "CT", "20240101", "090000");
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str("ACC123".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Sh,
+                Value::Str("ACC123".to_string()),
+            )
+            .unwrap(),
+        );
         let outcome = store.upsert_dataset(&dataset).expect("upsert");
         assert_eq!(outcome, UpsertOutcome::Inserted);
 

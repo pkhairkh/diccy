@@ -17,8 +17,8 @@ pub use stow::*;
 use dicom_audit::AuditEvent;
 use dicom_auth::{AllowAll, AuthDenyReason};
 use dicom_auth::{Authorizer, DenyAll};
-use dicom_core::{Error, ErrorKind, Limits, Result};
 use dicom_core::{validate_uid_strict, Tag};
+use dicom_core::{Error, ErrorKind, Limits, Result};
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
 use dicom_storage::Storage;
 
@@ -972,7 +972,13 @@ fn execute_routed_read_only_request(
             ..
         } => {
             if let Some(frame_number) = frame_number {
-                wado::validate_frame_number(storage, study_uid, series_uid, instance_uid, *frame_number)?;
+                wado::validate_frame_number(
+                    storage,
+                    study_uid,
+                    series_uid,
+                    instance_uid,
+                    *frame_number,
+                )?;
             }
             let bytes = storage
                 .instance_bytes(study_uid, series_uid, instance_uid)
@@ -986,7 +992,8 @@ fn execute_routed_read_only_request(
             transfer_syntax_uid,
         } => {
             let _ = transfer_syntax_uid;
-            let bytes = wado::wado_dataset_retrieve_multipart_bytes(storage, Some(study_uid), None)?;
+            let bytes =
+                wado::wado_dataset_retrieve_multipart_bytes(storage, Some(study_uid), None)?;
             Ok(DicomWebResponse::WadoMultipart {
                 media_type: wado::WADO_MULTIPART_CONTENT_TYPE.to_string(),
                 bytes,
@@ -998,8 +1005,11 @@ fn execute_routed_read_only_request(
             transfer_syntax_uid,
         } => {
             let _ = transfer_syntax_uid;
-            let bytes =
-                wado::wado_dataset_retrieve_multipart_bytes(storage, Some(study_uid), Some(series_uid))?;
+            let bytes = wado::wado_dataset_retrieve_multipart_bytes(
+                storage,
+                Some(study_uid),
+                Some(series_uid),
+            )?;
             Ok(DicomWebResponse::WadoMultipart {
                 media_type: wado::WADO_MULTIPART_CONTENT_TYPE.to_string(),
                 bytes,
@@ -1019,7 +1029,8 @@ fn execute_routed_read_only_request(
             transfer_syntax_uid,
         } => {
             let _ = transfer_syntax_uid;
-            let bytes = wado::metadata_response_bytes(storage, Some(study_uid), Some(series_uid), None)?;
+            let bytes =
+                wado::metadata_response_bytes(storage, Some(study_uid), Some(series_uid), None)?;
             Ok(DicomWebResponse::WadoMetadata { bytes })
         }
         DicomWebRequest::WadoInstanceMetadata {
@@ -1047,7 +1058,13 @@ fn execute_routed_read_only_request(
         } => {
             let _ = transfer_syntax_uid;
             if let Some(frame_number) = frame_number {
-                wado::validate_frame_number(storage, study_uid, series_uid, instance_uid, *frame_number)?;
+                wado::validate_frame_number(
+                    storage,
+                    study_uid,
+                    series_uid,
+                    instance_uid,
+                    *frame_number,
+                )?;
             }
             let bytes = storage
                 .instance_bytes(study_uid, series_uid, instance_uid)
@@ -1205,10 +1222,10 @@ mod tests {
     use dicom_core::{Dataset, Element, Value, Vr};
     #[cfg(all(feature = "qido", feature = "wado", feature = "stow"))]
     use dicom_storage::{IngestOutcome, Storage};
-    #[cfg(all(feature = "qido", feature = "wado", feature = "stow"))]
-    use std::sync::{Arc, Mutex};
     #[cfg(feature = "qido")]
     use qido::{TAG_ACCESSION_NUMBER, TAG_MODALITY, TAG_PATIENT_ID, TAG_STUDY_DATE};
+    #[cfg(all(feature = "qido", feature = "wado", feature = "stow"))]
+    use std::sync::{Arc, Mutex};
 
     fn limits() -> Limits {
         Limits::default()
@@ -1429,19 +1446,27 @@ mod tests {
         // REQ-QR-300: only supported UID keys may be used for matching.
         // REQ-QR-301: query results are deterministically ordered by UID.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
         let mut dataset_other = Dataset::new();
-        dataset_other.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string()),
-        ).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string())).unwrap());
+        dataset_other.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string())).unwrap(),
+        );
         let datasets = vec![dataset, dataset_other];
 
         let req = WebRequest {
@@ -1466,27 +1491,42 @@ mod tests {
     fn qido_query_matches_patient_and_modality() {
         // REQ-QR-300: QIDO query mapping supports PatientID and Modality keys.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
+        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
         let mut dataset_other = Dataset::new();
-        dataset_other.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.9".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.9.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("MR".to_string()),
-        ).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset_other.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.9".to_string())).unwrap(),
+        );
+        dataset_other.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.9.1".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset_other.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
+        dataset_other
+            .insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("MR".to_string())).unwrap());
         let datasets = vec![dataset, dataset_other];
 
         let req = WebRequest {
@@ -1517,28 +1557,50 @@ mod tests {
     fn qido_query_matches_accession_and_study_date() {
         // REQ-QR-300: QIDO query mapping supports AccessionNumber and StudyDate keys.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str("ACC123".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260211".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Lo,
+                Value::Str("ACC123".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260211".to_string())).unwrap(),
+        );
 
         let mut dataset_other = Dataset::new();
-        dataset_other.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str("ACC999".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260101".to_string()),
-        ).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string())).unwrap());
+        dataset_other.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string())).unwrap(),
+        );
+        dataset_other.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Lo,
+                Value::Str("ACC999".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset_other.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20260101".to_string())).unwrap(),
+        );
         let datasets = vec![dataset, dataset_other];
 
         let req = WebRequest {
@@ -1569,28 +1631,43 @@ mod tests {
     fn qido_query_matches_study_instances_path() {
         // REQ-WEB-300: /studies/{StudyUID}/instances maps to instance-level queries.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
 
         let mut dataset_same_study = Dataset::new();
-        dataset_same_study.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset_same_study.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.9".to_string()),
-        ).unwrap());
-        dataset_same_study.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.9.1".to_string()),
-        ).unwrap());
+        dataset_same_study
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset_same_study.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.9".to_string())).unwrap(),
+        );
+        dataset_same_study.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.9.1".to_string()),
+            )
+            .unwrap(),
+        );
 
         let mut dataset_other_study = Dataset::new();
-        dataset_other_study.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
-        dataset_other_study.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string()),
-        ).unwrap());
-        dataset_other_study.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string()),
-        ).unwrap());
+        dataset_other_study
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
+        dataset_other_study
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string())).unwrap());
+        dataset_other_study.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string())).unwrap(),
+        );
 
         let datasets = vec![dataset_same_study, dataset_other_study, dataset];
 
@@ -1618,24 +1695,31 @@ mod tests {
     fn qido_query_matches_all_series_path() {
         // REQ-WEB-300: /series maps to series-level queries.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
 
         let mut dataset_other = Dataset::new();
-        dataset_other.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("MR".to_string()),
-        ).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string())).unwrap());
+        dataset_other.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string())).unwrap(),
+        );
+        dataset_other
+            .insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("MR".to_string())).unwrap());
 
         let datasets = vec![dataset_other, dataset];
 
@@ -1663,24 +1747,34 @@ mod tests {
     fn qido_query_matches_all_instances_path() {
         // REQ-WEB-300: /instances maps to instance-level queries.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4.5".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
 
         let mut dataset_other = Dataset::new();
-        dataset_other.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string()),
-        ).unwrap());
-        dataset_other.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_B".to_string()),
-        ).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("9.9".to_string())).unwrap());
+        dataset_other
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("9.9.1".to_string())).unwrap());
+        dataset_other.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("9.9.1.1".to_string())).unwrap(),
+        );
+        dataset_other.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_B".to_string())).unwrap(),
+        );
 
         let datasets = vec![dataset_other, dataset];
 
@@ -1750,20 +1844,34 @@ mod tests {
     #[test]
     fn qido_limit_and_offset_are_applied_deterministically() {
         let mut dataset_a = Dataset::new();
-        dataset_a.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset_a.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.1".to_string()),
-        ).unwrap());
-        dataset_a.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.1.1".to_string()),
-        ).unwrap());
+        dataset_a
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset_a.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.1".to_string())).unwrap(),
+        );
+        dataset_a.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.1.1".to_string()),
+            )
+            .unwrap(),
+        );
 
         let mut dataset_b = Dataset::new();
-        dataset_b.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.4".to_string()),
-        ).unwrap());
-        dataset_b.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.4.1".to_string()),
-        ).unwrap());
-        dataset_b.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.4.1.1".to_string()),
-        ).unwrap());
+        dataset_b
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.4".to_string())).unwrap());
+        dataset_b.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.4.1".to_string())).unwrap(),
+        );
+        dataset_b.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.4.1.1".to_string()),
+            )
+            .unwrap(),
+        );
 
         let req = WebRequest {
             method: HttpMethod::Get,
@@ -1793,14 +1901,22 @@ mod tests {
     #[test]
     fn qido_accepts_normalized_keyword_and_tag_key_forms() {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.1.1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid("1.2.3.1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.1.1".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PATIENT_A".to_string())).unwrap(),
+        );
 
         let req = WebRequest {
             method: HttpMethod::Get,
@@ -2461,10 +2577,7 @@ mod tests {
                 &mut storage,
             )
             .expect_err("expected deny");
-        assert!(matches!(
-            err.kind(),
-            ErrorKind::AuthorizationDenied { .. }
-        ));
+        assert!(matches!(err.kind(), ErrorKind::AuthorizationDenied { .. }));
 
         let events = events.lock().expect("audit lock");
         assert_eq!(events.len(), 1);

@@ -721,12 +721,7 @@ mod tests {
         let mut cache = DeterministicCache::new(1024 * 1024);
 
         // Insert study data into cache
-        engine.cache_study_data(
-            &mut cache,
-            "1.2.3.4.5",
-            vec![1u8, 2, 3, 4, 5],
-            5,
-        );
+        engine.cache_study_data(&mut cache, "1.2.3.4.5", vec![1u8, 2, 3, 4, 5], 5);
 
         // Check cache hit
         let data = engine.check_cache(&mut cache, "1.2.3.4.5");

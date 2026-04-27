@@ -20,18 +20,27 @@ fn temp_snapshot_path(name: &str) -> PathBuf {
 
 fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time: &str) -> Dataset {
     let mut item = Dataset::new();
-    item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
-    ).unwrap());
-    item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string()),
-    ).unwrap());
-    item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str(start_date.to_string()),
-    ).unwrap());
-    item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str(start_time.to_string()),
-    ).unwrap());
+    item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string())).unwrap());
+    item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str(modality.to_string())).unwrap());
+    item.insert(
+        Element::new(
+            TAG_SPS_START_DATE,
+            Vr::Da,
+            Value::Str(start_date.to_string()),
+        )
+        .unwrap(),
+    );
+    item.insert(
+        Element::new(
+            TAG_SPS_START_TIME,
+            Vr::Tm,
+            Value::Str(start_time.to_string()),
+        )
+        .unwrap(),
+    );
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item]),
-    ).unwrap());
+    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![item])).unwrap());
     dataset
 }
 
@@ -39,22 +48,32 @@ fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time:
 fn worklist_validation_rejects_multi_item_sps_and_empty_filters() {
     // REQ-HI-433, REQ-HI-435
     let mut first = Dataset::new();
-    first.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("A".to_string()),
-    ).unwrap());
-    first.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-    ).unwrap());
-    first.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
-    ).unwrap());
-    first.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str("090000".to_string()),
-    ).unwrap());
+    first.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("A".to_string())).unwrap());
+    first.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
+    first.insert(
+        Element::new(
+            TAG_SPS_START_DATE,
+            Vr::Da,
+            Value::Str("20260214".to_string()),
+        )
+        .unwrap(),
+    );
+    first.insert(
+        Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str("090000".to_string())).unwrap(),
+    );
 
     let mut second = first.clone();
-    second.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("B".to_string()),
-    ).unwrap());
+    second.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str("B".to_string())).unwrap());
 
     let mut invalid = Dataset::new();
-    invalid.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![first, second]),
-    ).unwrap());
+    invalid.insert(
+        Element::new(
+            TAG_SPS_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![first, second]),
+        )
+        .unwrap(),
+    );
 
     let err = validate_worklist_item(&invalid, &Limits::default()).expect_err("single-item SPS");
     assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));

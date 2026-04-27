@@ -641,16 +641,29 @@ mod tests {
 
     fn dataset_with_status(status: &str, sop_uid: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_uid.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20240101".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("120000".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid(sop_uid.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_PERFORMED_STEP_ID,
+                Vr::Sh,
+                Value::Str("STEP1".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_START_DATE, Vr::Da, Value::Str("20240101".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_START_TIME, Vr::Tm, Value::Str("120000".to_string())).unwrap(),
+        );
         dataset
     }
 
@@ -693,10 +706,11 @@ mod tests {
         let dataset = dataset_with_status("IN PROGRESS", "1.2.3");
         store.ingest_update(&dataset).expect("insert");
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
-        ).unwrap());
-        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string()),
-        ).unwrap());
+        completed.insert(
+            Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string())).unwrap(),
+        );
+        completed
+            .insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string())).unwrap());
         let outcome = store.ingest_update(&completed).expect("update");
         assert_eq!(outcome, IngestOutcome::Updated);
 
@@ -738,10 +752,11 @@ mod tests {
         assert_eq!(inserted, IngestOutcome::Inserted);
 
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
-        ).unwrap());
-        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string()),
-        ).unwrap());
+        completed.insert(
+            Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string())).unwrap(),
+        );
+        completed
+            .insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("130000".to_string())).unwrap());
         let updated = service.ingest(&completed).expect("update");
         assert_eq!(updated, IngestOutcome::Updated);
 
@@ -766,10 +781,11 @@ mod tests {
         let path = temp_snapshot_path("mpps");
         let mut store = MppsStore::open(Limits::default(), &path).expect("open");
         let mut completed = dataset_with_status("COMPLETED", "1.2.3");
-        completed.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string()),
-        ).unwrap());
-        completed.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("121500".to_string()),
-        ).unwrap());
+        completed.insert(
+            Element::new(TAG_END_DATE, Vr::Da, Value::Str("20240101".to_string())).unwrap(),
+        );
+        completed
+            .insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("121500".to_string())).unwrap());
         store.ingest_update(&completed).expect("ingest");
         drop(store);
 

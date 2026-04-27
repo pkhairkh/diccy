@@ -174,9 +174,18 @@ impl WsiMetadata {
 
     /// Parse WSI metadata from a DICOM dataset.
     pub fn from_dataset(dataset: &Dataset) -> Result<Self> {
-        let sop_uid = dataset.get_uid(Tag(0x0008, 0x0018)).unwrap_or("").to_string();
-        let study_uid = dataset.get_uid(Tag(0x0020, 0x000D)).unwrap_or("").to_string();
-        let series_uid = dataset.get_uid(Tag(0x0020, 0x000E)).unwrap_or("").to_string();
+        let sop_uid = dataset
+            .get_uid(Tag(0x0008, 0x0018))
+            .unwrap_or("")
+            .to_string();
+        let study_uid = dataset
+            .get_uid(Tag(0x0020, 0x000D))
+            .unwrap_or("")
+            .to_string();
+        let series_uid = dataset
+            .get_uid(Tag(0x0020, 0x000E))
+            .unwrap_or("")
+            .to_string();
 
         Ok(Self {
             sop_instance_uid: sop_uid,
@@ -254,9 +263,11 @@ impl WsiViewport {
         let half_h = self.viewport_height as f64 * scale / 2.0;
 
         let min_x = ((self.center_x - half_w).max(0.0) / level.tile_width as f64) as u64;
-        let max_x = ((self.center_x + half_w).min(level.width as f64) / level.tile_width as f64) as u64;
+        let max_x =
+            ((self.center_x + half_w).min(level.width as f64) / level.tile_width as f64) as u64;
         let min_y = ((self.center_y - half_h).max(0.0) / level.tile_height as f64) as u64;
-        let max_y = ((self.center_y + half_h).min(level.height as f64) / level.tile_height as f64) as u64;
+        let max_y =
+            ((self.center_y + half_h).min(level.height as f64) / level.tile_height as f64) as u64;
 
         let mut tiles = Vec::new();
         for col in min_x..=max_x {
@@ -301,7 +312,11 @@ impl CellCountResult {
     /// Create a cell count result from counts and area.
     pub fn new(counts_by_type: BTreeMap<String, u64>, area_mm2: f64) -> Self {
         let total_count = counts_by_type.values().sum();
-        let density = if area_mm2 > 0.0 { total_count as f64 / area_mm2 } else { 0.0 };
+        let density = if area_mm2 > 0.0 {
+            total_count as f64 / area_mm2
+        } else {
+            0.0
+        };
         Self {
             total_count,
             counts_by_type,
@@ -396,10 +411,18 @@ pub fn count_cells(mask: &[u8], width: usize, height: usize) -> u64 {
                 let cx = current % width;
                 let cy = current / width;
 
-                if cx > 0 { stack.push(cy * width + cx - 1); }
-                if cx + 1 < width { stack.push(cy * width + cx + 1); }
-                if cy > 0 { stack.push((cy - 1) * width + cx); }
-                if cy + 1 < height { stack.push((cy + 1) * width + cx); }
+                if cx > 0 {
+                    stack.push(cy * width + cx - 1);
+                }
+                if cx + 1 < width {
+                    stack.push(cy * width + cx + 1);
+                }
+                if cy > 0 {
+                    stack.push((cy - 1) * width + cx);
+                }
+                if cy + 1 < height {
+                    stack.push((cy + 1) * width + cx);
+                }
             }
 
             count += 1;
@@ -464,7 +487,8 @@ impl WsiSlideStore {
         if metadata.sop_instance_uid.is_empty() {
             return Err(wsi_error("SOP Instance UID must not be empty"));
         }
-        self.slides.insert(metadata.sop_instance_uid.clone(), metadata);
+        self.slides
+            .insert(metadata.sop_instance_uid.clone(), metadata);
         Ok(())
     }
 
@@ -537,7 +561,7 @@ mod tests_wsi {
     fn pyramid_level_tile_counts() {
         let level = PyramidLevel::new(0, 1000, 800, 256, 256);
         assert_eq!(level.tile_columns(), 4); // ceil(1000/256)
-        assert_eq!(level.tile_rows(), 4);    // ceil(800/256)
+        assert_eq!(level.tile_rows(), 4); // ceil(800/256)
         assert_eq!(level.total_tiles(), 16);
     }
 

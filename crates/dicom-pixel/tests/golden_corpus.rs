@@ -116,41 +116,93 @@ fn make_dataset(
     pixel_data: Vec<u8>,
 ) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Bytes(cols.to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SAMPLES_PER_PIXEL, Vr::Us, Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PHOTOMETRIC_INTERPRETATION, Vr::Cs, Value::Str(photometric.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Bytes(bits_stored.to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Bytes(high_bit.to_le_bytes().to_vec()),
-    ).unwrap());
+    dataset
+        .insert(Element::new(TAG_ROWS, Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec())).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_COLUMNS,
+            Vr::Us,
+            Value::Bytes(cols.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SAMPLES_PER_PIXEL,
+            Vr::Us,
+            Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PHOTOMETRIC_INTERPRETATION,
+            Vr::Cs,
+            Value::Str(photometric.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_ALLOCATED,
+            Vr::Us,
+            Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_STORED,
+            Vr::Us,
+            Value::Bytes(bits_stored.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_HIGH_BIT,
+            Vr::Us,
+            Value::Bytes(high_bit.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
     if photometric.starts_with("MONOCHROME") {
-        dataset.insert(Element::new(TAG_PIXEL_REPRESENTATION, Vr::Us, Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_PIXEL_REPRESENTATION,
+                Vr::Us,
+                Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
     }
     if let Some(planar) = planar_configuration {
-        dataset.insert(Element::new(TAG_PLANAR_CONFIGURATION, Vr::Us, Value::Bytes(planar.to_le_bytes().to_vec()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_PLANAR_CONFIGURATION,
+                Vr::Us,
+                Value::Bytes(planar.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
     }
-    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data),
-    ).unwrap());
+    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data)).unwrap());
     dataset
 }
 
 fn insert_ds(dataset: &mut Dataset, tag: Tag, value: &str) {
-    dataset.insert(Element::new(tag, Vr::Ds, Value::Str(value.to_string()),
-    ).unwrap());
+    dataset.insert(Element::new(tag, Vr::Ds, Value::Str(value.to_string())).unwrap());
 }
 
 fn insert_padding_value(dataset: &mut Dataset, value: i16) {
-    dataset.insert(Element::new(TAG_PIXEL_PADDING_VALUE, Vr::Ss, Value::Bytes(value.to_le_bytes().to_vec()),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_PIXEL_PADDING_VALUE,
+            Vr::Ss,
+            Value::Bytes(value.to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
 }
 
 fn sample_rle_mono_2x2() -> Vec<u8> {

@@ -19,11 +19,10 @@ pub mod session;
 
 // Re-export all session types.
 pub use session::{
-    SessionPolicy, SessionStatus, force_reauth_suspicious,
-    force_reauthentication_for_suspicious_session,
-    session_requires_reauthentication, UserRole, SessionOpenRequest, SessionRecord,
-    SessionSummary, IdentityBanner, RoleChangeEvent, SessionDirectory, PermissionDeniedView,
-    permission_denied_view, SecretCommitReceipt, commit_secret_entry,
+    commit_secret_entry, force_reauth_suspicious, force_reauthentication_for_suspicious_session,
+    permission_denied_view, session_requires_reauthentication, IdentityBanner,
+    PermissionDeniedView, RoleChangeEvent, SecretCommitReceipt, SessionDirectory,
+    SessionOpenRequest, SessionPolicy, SessionRecord, SessionStatus, SessionSummary, UserRole,
 };
 
 // Re-export config_control types.
@@ -31,35 +30,35 @@ pub use config_control::{ConfigChangeJournal, ConfigChangeJournalEntry, ConfigCh
 
 // Re-export break_glass types.
 pub use break_glass::{
+    activate_break_glass_access, activate_secure_default_override, ActiveSecureDefaultOverride,
     BreakGlassGrant, BreakGlassOutcome, BreakGlassPolicy, BreakGlassRequest,
-    activate_break_glass_access, SecureDefaultOverrideRequest, ActiveSecureDefaultOverride,
-    activate_secure_default_override,
+    SecureDefaultOverrideRequest,
 };
 
 // Re-export claim_surface types.
 pub use claim_surface::{
-    ClaimConflictResolution, ClaimedRect, UiClaimSurface, APPROVED_INTENDED_PURPOSE_TEXT,
-    ControlledWordingPolicy, validate_release_text_input, UiStringChangeReview,
-    validate_ui_string_change_review,
+    validate_release_text_input, validate_ui_string_change_review, ClaimConflictResolution,
+    ClaimedRect, ControlledWordingPolicy, UiClaimSurface, UiStringChangeReview,
+    APPROVED_INTENDED_PURPOSE_TEXT,
 };
 
 // Re-export interface_control types.
 pub use interface_control::{
-    InterfaceChangeControlDisposition, InterfaceChangeControlRecord, InterfaceChangeRecord,
-    InterfaceImpactClass, RequirementRevision, RequirementRevisionRecord,
-    ScreenshotExportPolicy, validate_interface_change_control_record,
-    validate_requirement_revision, validate_requirement_revision_record,
-    validate_screenshot_export_policy, FeatureProfile, PackActivationState,
-    SecurityPostureIndicators, RuntimeLimitIndicators, IntegrityStatus,
-    UnsupportedWorkflowState, HighRiskToggleSummary, SystemMetadataView,
-    validate_system_metadata_view, StartupFailClosedControls, validate_startup_fail_closed_controls,
+    validate_interface_change_control_record, validate_requirement_revision,
+    validate_requirement_revision_record, validate_screenshot_export_policy,
+    validate_startup_fail_closed_controls, validate_system_metadata_view, FeatureProfile,
+    HighRiskToggleSummary, IntegrityStatus, InterfaceChangeControlDisposition,
+    InterfaceChangeControlRecord, InterfaceChangeRecord, InterfaceImpactClass, PackActivationState,
+    RequirementRevision, RequirementRevisionRecord, RuntimeLimitIndicators, ScreenshotExportPolicy,
+    SecurityPostureIndicators, StartupFailClosedControls, SystemMetadataView,
+    UnsupportedWorkflowState,
 };
 
 // Re-export export_policy types.
 pub use export_policy::{
+    evaluate_clipboard_policy, validate_removable_media_export, workspace_privacy_mode,
     ClipboardPolicy, ClipboardPolicyDecision, RemovableMediaExportRequest, RemovableMediaPolicy,
-    WorkspacePrivacyMode, evaluate_clipboard_policy, validate_removable_media_export,
-    workspace_privacy_mode,
+    WorkspacePrivacyMode,
 };
 
 use dicom_core::{Error, ErrorKind, Result};
@@ -386,7 +385,10 @@ impl Authorizer for DenyAll {
 /// for production use, replacing the deprecated [`AllowAll`].
 pub struct RbacAuthorizer {
     /// Mapping from role to the set of allowed (action, resource) pairs.
-    policy: std::collections::BTreeMap<session::UserRole, std::collections::BTreeSet<(AuthAction, AuthResourceKey)>>,
+    policy: std::collections::BTreeMap<
+        session::UserRole,
+        std::collections::BTreeSet<(AuthAction, AuthResourceKey)>,
+    >,
 }
 
 impl RbacAuthorizer {
@@ -395,17 +397,21 @@ impl RbacAuthorizer {
         let mut policy = std::collections::BTreeMap::new();
 
         // Administrator: full access
-        let admin_rules: std::collections::BTreeSet<(AuthAction, AuthResourceKey)> = DEFAULT_POLICY_KEYS
-            .iter()
-            .map(|k| (k.action, k.resource))
-            .collect();
+        let admin_rules: std::collections::BTreeSet<(AuthAction, AuthResourceKey)> =
+            DEFAULT_POLICY_KEYS
+                .iter()
+                .map(|k| (k.action, k.resource))
+                .collect();
         policy.insert(session::UserRole::Administrator, admin_rules);
 
         // Reporter: query + retrieve + storage commitment
         let reporter_rules: std::collections::BTreeSet<(AuthAction, AuthResourceKey)> = [
             (AuthAction::Query, AuthResourceKey::Study),
             (AuthAction::Retrieve, AuthResourceKey::Instance),
-            (AuthAction::StorageCommitment, AuthResourceKey::StorageCommitment),
+            (
+                AuthAction::StorageCommitment,
+                AuthResourceKey::StorageCommitment,
+            ),
             (AuthAction::Echo, AuthResourceKey::Study),
         ]
         .into_iter()
@@ -417,8 +423,14 @@ impl RbacAuthorizer {
             (AuthAction::Query, AuthResourceKey::Study),
             (AuthAction::Retrieve, AuthResourceKey::Instance),
             (AuthAction::Echo, AuthResourceKey::Study),
-            (AuthAction::ViewerMeasurementWrite, AuthResourceKey::ViewerMeasurement),
-            (AuthAction::ViewerSegmentationWrite, AuthResourceKey::ViewerSegmentation),
+            (
+                AuthAction::ViewerMeasurementWrite,
+                AuthResourceKey::ViewerMeasurement,
+            ),
+            (
+                AuthAction::ViewerSegmentationWrite,
+                AuthResourceKey::ViewerSegmentation,
+            ),
         ]
         .into_iter()
         .collect();
@@ -430,7 +442,10 @@ impl RbacAuthorizer {
             (AuthAction::Delete, AuthResourceKey::Study),
             (AuthAction::Delete, AuthResourceKey::Series),
             (AuthAction::Delete, AuthResourceKey::Instance),
-            (AuthAction::ViewerOverlayWrite, AuthResourceKey::ViewerOverlay),
+            (
+                AuthAction::ViewerOverlayWrite,
+                AuthResourceKey::ViewerOverlay,
+            ),
         ]
         .into_iter()
         .collect();
@@ -450,7 +465,12 @@ impl RbacAuthorizer {
     }
 
     /// Grant an additional permission to a role.
-    pub fn grant(&mut self, role: session::UserRole, action: AuthAction, resource: AuthResourceKey) {
+    pub fn grant(
+        &mut self,
+        role: session::UserRole,
+        action: AuthAction,
+        resource: AuthResourceKey,
+    ) {
         self.policy
             .entry(role)
             .or_default()
@@ -458,7 +478,12 @@ impl RbacAuthorizer {
     }
 
     /// Revoke a permission from a role.
-    pub fn revoke(&mut self, role: session::UserRole, action: AuthAction, resource: AuthResourceKey) {
+    pub fn revoke(
+        &mut self,
+        role: session::UserRole,
+        action: AuthAction,
+        resource: AuthResourceKey,
+    ) {
         if let Some(rules) = self.policy.get_mut(&role) {
             rules.remove(&(action, resource));
         }
@@ -541,10 +566,7 @@ mod tests {
         assert!(!decision.is_allowed());
         let err = decision.enforce().expect_err("denied");
         assert_eq!(err.code(), "DVF.AUTH.DENIED");
-        assert!(matches!(
-            err.kind(),
-            ErrorKind::AuthorizationDenied { .. }
-        ));
+        assert!(matches!(err.kind(), ErrorKind::AuthorizationDenied { .. }));
     }
 
     #[test]

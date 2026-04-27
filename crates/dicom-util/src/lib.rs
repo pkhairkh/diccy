@@ -2,12 +2,15 @@
 //!
 //! Consolidates helper functions that were duplicated across 13+ crates.
 
-use dicom_core::{Error, ErrorKind, Tag, Dataset, Value};
+use dicom_core::{Dataset, Error, ErrorKind, Tag, Value};
 
 /// Create a decode error with a stage identifier.
 pub fn decode_error(stage: &str, detail: &str) -> Box<Error> {
     Box::new(Error::from_kind(
-        ErrorKind::DecodeError { stage: stage.to_string(), detail: detail.to_string() },
+        ErrorKind::DecodeError {
+            stage: stage.to_string(),
+            detail: detail.to_string(),
+        },
         detail.to_string(),
     ))
 }
@@ -45,7 +48,13 @@ pub fn missing_required_tag(tag: Tag) -> Box<Error> {
 pub fn require_uid(dataset: &Dataset, tag: Tag) -> Result<String, Box<Error>> {
     let element = dataset.get(tag).ok_or_else(|| missing_required_tag(tag))?;
     match element.value() {
-        Value::Uid(uid) => if uid.is_empty() { Err(missing_required_tag(tag)) } else { Ok(uid.clone()) },
+        Value::Uid(uid) => {
+            if uid.is_empty() {
+                Err(missing_required_tag(tag))
+            } else {
+                Ok(uid.clone())
+            }
+        }
         _ => Err(missing_required_tag(tag)),
     }
 }
@@ -64,7 +73,9 @@ pub fn parse_uid(s: &str) -> Result<String, Box<Error>> {
 /// Create an integrity error.
 pub fn integrity_error(detail: &str) -> Box<Error> {
     Box::new(Error::from_kind(
-        ErrorKind::IntegrityError { detail: detail.to_string() },
+        ErrorKind::IntegrityError {
+            detail: detail.to_string(),
+        },
         detail.to_string(),
     ))
 }
@@ -72,7 +83,9 @@ pub fn integrity_error(detail: &str) -> Box<Error> {
 /// Create an IO error.
 pub fn io_error(detail: &str) -> Box<Error> {
     Box::new(Error::from_kind(
-        ErrorKind::IoError { detail: detail.to_string() },
+        ErrorKind::IoError {
+            detail: detail.to_string(),
+        },
         detail.to_string(),
     ))
 }

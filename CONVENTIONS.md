@@ -122,3 +122,53 @@ When using `Arc<dyn Trait>`:
 - **Read-only traits:** Document that trait methods take `&self`. Keep `Arc<dyn Trait>`.
 - **Mutation needed:** Use `Arc<Mutex<dyn Trait>>` or `Arc<RwLock<dyn Trait>>`.
 - **Always** add `Send + Sync` bounds on trait objects.
+
+## Type Naming Conventions
+
+All types follow consistent naming patterns:
+
+| Category | Suffix | Examples |
+|----------|--------|---------|
+| Configuration | `*Config` | `DicomWebServiceConfig`, `S3Config`, `RdvfConfig`, `ReaderConfig`, `VolumeAssemblyConfig` |
+| Builder | `*Builder` | `RdvfConfigBuilder`, `LimitsBuilder` |
+| Error | `*Error` | `ViewerError`, `VolumeError`, `ClinicalError`, `FhirAdapterError` |
+| Request | `*Request` | `StorageCommitmentRequest`, `BreakGlassRequest` |
+| Response/Result | `*Result` | `CalciumScoreResult`, `EjectionFractionResult` |
+| Policy | `*Policy` | `RetentionPolicy`, `SessionPolicy`, `WebPolicy` |
+| State | `*State` | `DicomWebRouteState`, `FusionOverlayState`, `SessionStatus` |
+| Newtype (domain) | Domain name | `Uid`, `AeTitle`, `SopClassUid`, `MeasurementId`, `Timestamp`, `MonotonicTick` |
+
+**Deprecated aliases** are provided for backward compatibility:
+- `VolumeAssemblyOptions` → `VolumeAssemblyConfig` (deprecated since 0.14.0)
+- `ReaderOptions` → `ReaderConfig` (deprecated since 0.14.0)
+- `Config` → `RdvfConfig` (deprecated since 0.14.0)
+- `ConfigBuilder` → `RdvfConfigBuilder` (deprecated since 0.14.0)
+
+## Crate Naming Conventions
+
+| Prefix | Purpose | Examples |
+|--------|---------|---------|
+| `dicom-` | DICOM protocol/domain crates | `dicom-core`, `dicom-io`, `dicom-web`, `dicom-auth` |
+| `pack-` | DICOM IOD pack crates | `pack-gsps`, `pack-seg`, `pack-rt`, `pack-shared` |
+| `modality-` | Modality-specific packs | `modality-ct`, `modality-pet`, `modality-mg`, `modality-cr` |
+| `viewer-` | Viewer stack | `viewer-core`, `viewer-wgpu`, `viewer-wasm` |
+| `rdvf` | Public API facade (no prefix) | `rdvf` |
+
+## Route Capability Pattern
+
+DICOMweb route capabilities use the type-safe `DicomWebRoute` enum + `BTreeMap`:
+
+```rust
+// Get the capability matrix
+let matrix = dicomweb_route_capability_matrix();
+
+// Check if a specific route is enabled
+if is_route_enabled(&matrix, DicomWebRoute::WadoInstanceRetrieveGet) {
+    // ...
+}
+
+// Access route metadata
+let path = DicomWebRoute::WadoInstanceRetrieveGet.path();
+let method = DicomWebRoute::WadoInstanceRetrieveGet.method();
+let state = matrix.get(&DicomWebRoute::WadoInstanceRetrieveGet);
+```

@@ -1,13 +1,13 @@
 //! Deterministic route-matrix exporter for DICOMweb operations.
 
-use dicom_web::{dicomweb_route_capability_matrix, HttpMethod};
+use dicom_web::{dicomweb_route_capability_matrix, DicomWebRoute};
 
-fn method_to_text(method: &HttpMethod) -> &'static str {
+fn method_to_text(method: dicom_web::HttpMethod) -> &'static str {
     match method {
-        HttpMethod::Get => "GET",
-        HttpMethod::Head => "HEAD",
-        HttpMethod::Post => "POST",
-        HttpMethod::Delete => "DELETE",
+        dicom_web::HttpMethod::Get => "GET",
+        dicom_web::HttpMethod::Head => "HEAD",
+        dicom_web::HttpMethod::Post => "POST",
+        dicom_web::HttpMethod::Delete => "DELETE",
     }
 }
 
@@ -25,19 +25,24 @@ fn escape_json(value: &str) -> String {
 }
 
 fn main() {
+    let matrix = dicomweb_route_capability_matrix();
     let mut rows_json = String::from("[");
-    for (index, route) in dicomweb_route_capability_matrix().iter().enumerate() {
+    for (index, route) in DicomWebRoute::all().enumerate() {
         if index > 0 {
             rows_json.push(',');
         }
+        let state = matrix
+            .get(&route)
+            .copied()
+            .unwrap_or(dicom_web::DicomWebRouteState::NotExposed);
         rows_json.push_str(&format!(
             "{{\"service\":\"dicom-web\",\"method\":\"{}\",\"path\":\"{}\",\"operation\":\"{}\",\"required_feature\":\"{}\",\"state\":\"{}\",\"content_type\":{}}}",
-            method_to_text(&route.method),
-            escape_json(route.path),
-            escape_json(route.operation),
-            escape_json(route.required_feature),
-            state_to_text(route.state),
-            match route.content_type {
+            method_to_text(route.method()),
+            escape_json(route.path()),
+            escape_json(route.operation()),
+            escape_json(route.required_feature()),
+            state_to_text(state),
+            match route.content_type() {
                 Some(content_type) => format!("\"{}\"", escape_json(content_type)),
                 None => "null".to_string(),
             }

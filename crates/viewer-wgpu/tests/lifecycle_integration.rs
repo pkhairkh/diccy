@@ -4,7 +4,10 @@ use viewer_core::Viewport2D;
 use viewer_wgpu::{GpuCapabilities, Renderer, WgpuRenderer};
 
 fn test_renderer(max_gpu_texture_bytes: u64) -> WgpuRenderer {
-    let limits = Limits::builder().max_gpu_texture_bytes(max_gpu_texture_bytes).build().unwrap();
+    let limits = Limits::builder()
+        .max_gpu_texture_bytes(max_gpu_texture_bytes)
+        .build()
+        .unwrap();
     WgpuRenderer::from_capabilities(
         GpuCapabilities {
             max_texture_dimension_2d: 4096,
@@ -30,7 +33,10 @@ fn try_runtime_renderer(max_gpu_texture_bytes: u64) -> Option<WgpuRenderer> {
     ))
     .ok()?;
 
-    let limits = Limits::builder().max_gpu_texture_bytes(max_gpu_texture_bytes).build().unwrap();
+    let limits = Limits::builder()
+        .max_gpu_texture_bytes(max_gpu_texture_bytes)
+        .build()
+        .unwrap();
     let capabilities = WgpuRenderer::probe_capabilities(&device);
     let mut renderer = WgpuRenderer::from_capabilities(capabilities, &limits);
     renderer

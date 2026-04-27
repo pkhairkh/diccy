@@ -299,11 +299,7 @@ impl HangingProtocolEngine {
     }
 
     /// Evaluate all criteria against a study context (logical AND).
-    fn evaluate_criteria(
-        &self,
-        criteria: &[MatchCriterion],
-        context: &StudyMatchContext,
-    ) -> bool {
+    fn evaluate_criteria(&self, criteria: &[MatchCriterion], context: &StudyMatchContext) -> bool {
         for criterion in criteria {
             if !self.evaluate_criterion(criterion, context) {
                 return false;
@@ -313,11 +309,7 @@ impl HangingProtocolEngine {
     }
 
     /// Evaluate a single match criterion against a study context.
-    fn evaluate_criterion(
-        &self,
-        criterion: &MatchCriterion,
-        context: &StudyMatchContext,
-    ) -> bool {
+    fn evaluate_criterion(&self, criterion: &MatchCriterion, context: &StudyMatchContext) -> bool {
         match criterion {
             MatchCriterion::Modality { code } => context
                 .modalities
@@ -748,7 +740,9 @@ mod tests {
     fn mammography_protocol_matches_mg_modality() {
         let mut engine = HangingProtocolEngine::new();
         engine.register(mammography_protocol()).expect("register");
-        engine.register(default_fallback_protocol()).expect("register");
+        engine
+            .register(default_fallback_protocol())
+            .expect("register");
 
         let context = StudyMatchContext {
             modalities: vec!["MG".to_string()],
@@ -770,8 +764,12 @@ mod tests {
     #[test]
     fn ct_chest_protocol_matches_ct_chest() {
         let mut engine = HangingProtocolEngine::new();
-        engine.register(ct_chest_abdomen_protocol()).expect("register");
-        engine.register(default_fallback_protocol()).expect("register");
+        engine
+            .register(ct_chest_abdomen_protocol())
+            .expect("register");
+        engine
+            .register(default_fallback_protocol())
+            .expect("register");
 
         let context = StudyMatchContext {
             modalities: vec!["CT".to_string()],
@@ -791,7 +789,9 @@ mod tests {
     fn fallback_used_when_no_primary_matches() {
         let mut engine = HangingProtocolEngine::new();
         engine.register(mammography_protocol()).expect("register");
-        engine.register(default_fallback_protocol()).expect("register");
+        engine
+            .register(default_fallback_protocol())
+            .expect("register");
 
         let context = StudyMatchContext {
             modalities: vec!["US".to_string()],
@@ -862,7 +862,9 @@ mod tests {
     #[test]
     fn study_description_pattern_is_substring_match() {
         let mut engine = HangingProtocolEngine::new();
-        engine.register(ct_chest_abdomen_protocol()).expect("register");
+        engine
+            .register(ct_chest_abdomen_protocol())
+            .expect("register");
 
         let context = StudyMatchContext {
             modalities: vec!["CT".to_string()],
@@ -899,7 +901,9 @@ mod tests {
     fn match_score_increases_with_criteria_count() {
         let mut engine = HangingProtocolEngine::new();
         engine.register(mammography_protocol()).expect("register");
-        engine.register(ct_chest_abdomen_protocol()).expect("register");
+        engine
+            .register(ct_chest_abdomen_protocol())
+            .expect("register");
 
         // MG modality only matches mammography protocol
         let context = StudyMatchContext {
@@ -1027,7 +1031,9 @@ mod tests {
     #[test]
     fn body_part_criterion_fails_when_missing_in_context() {
         let mut engine = HangingProtocolEngine::new();
-        engine.register(ct_chest_abdomen_protocol()).expect("register");
+        engine
+            .register(ct_chest_abdomen_protocol())
+            .expect("register");
 
         let context = StudyMatchContext {
             modalities: vec!["CT".to_string()],
@@ -1106,21 +1112,31 @@ mod tests {
             protocol_id: "multi_image_set".to_string(),
             name: "Multi Image Set".to_string(),
             priority: 10,
-            match_criteria: vec![MatchCriterion::Modality { code: "MG".to_string() }],
+            match_criteria: vec![MatchCriterion::Modality {
+                code: "MG".to_string(),
+            }],
             image_sets: vec![
                 ImageSetDefinition {
                     set_id: "current_cc".to_string(),
                     criteria: vec![
-                        MatchCriterion::Modality { code: "MG".to_string() },
-                        MatchCriterion::Laterality { code: "L".to_string() },
+                        MatchCriterion::Modality {
+                            code: "MG".to_string(),
+                        },
+                        MatchCriterion::Laterality {
+                            code: "L".to_string(),
+                        },
                     ],
                     time_perspective: TimePerspective::Current,
                 },
                 ImageSetDefinition {
                     set_id: "prior_cc".to_string(),
                     criteria: vec![
-                        MatchCriterion::Modality { code: "MG".to_string() },
-                        MatchCriterion::Laterality { code: "L".to_string() },
+                        MatchCriterion::Modality {
+                            code: "MG".to_string(),
+                        },
+                        MatchCriterion::Laterality {
+                            code: "L".to_string(),
+                        },
                     ],
                     time_perspective: TimePerspective::Prior,
                 },
@@ -1161,10 +1177,14 @@ mod tests {
             protocol_id: "temp_protocol".to_string(),
             name: "Temp".to_string(),
             priority: 10,
-            match_criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+            match_criteria: vec![MatchCriterion::Modality {
+                code: "CT".to_string(),
+            }],
             image_sets: vec![ImageSetDefinition {
                 set_id: "is1".to_string(),
-                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                criteria: vec![MatchCriterion::Modality {
+                    code: "CT".to_string(),
+                }],
                 time_perspective: TimePerspective::Current,
             }],
             display_sets: vec![DisplaySetAssignment {
@@ -1203,10 +1223,14 @@ mod tests {
             protocol_id: "wl_preset".to_string(),
             name: "W/L Preset".to_string(),
             priority: 10,
-            match_criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+            match_criteria: vec![MatchCriterion::Modality {
+                code: "CT".to_string(),
+            }],
             image_sets: vec![ImageSetDefinition {
                 set_id: "ct_lung".to_string(),
-                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                criteria: vec![MatchCriterion::Modality {
+                    code: "CT".to_string(),
+                }],
                 time_perspective: TimePerspective::Current,
             }],
             display_sets: vec![
@@ -1261,12 +1285,18 @@ mod tests {
             name: "Body Part Required".to_string(),
             priority: 10,
             match_criteria: vec![
-                MatchCriterion::Modality { code: "CT".to_string() },
-                MatchCriterion::BodyPart { code: "CHEST".to_string() },
+                MatchCriterion::Modality {
+                    code: "CT".to_string(),
+                },
+                MatchCriterion::BodyPart {
+                    code: "CHEST".to_string(),
+                },
             ],
             image_sets: vec![ImageSetDefinition {
                 set_id: "is1".to_string(),
-                criteria: vec![MatchCriterion::Modality { code: "CT".to_string() }],
+                criteria: vec![MatchCriterion::Modality {
+                    code: "CT".to_string(),
+                }],
                 time_perspective: TimePerspective::Current,
             }],
             display_sets: vec![DisplaySetAssignment {
@@ -1306,10 +1336,14 @@ mod tests {
             protocol_id: "desc_match".to_string(),
             name: "Description Match".to_string(),
             priority: 10,
-            match_criteria: vec![MatchCriterion::StudyDescription { pattern: "BRAIN".to_string() }],
+            match_criteria: vec![MatchCriterion::StudyDescription {
+                pattern: "BRAIN".to_string(),
+            }],
             image_sets: vec![ImageSetDefinition {
                 set_id: "is1".to_string(),
-                criteria: vec![MatchCriterion::StudyDescription { pattern: "BRAIN".to_string() }],
+                criteria: vec![MatchCriterion::StudyDescription {
+                    pattern: "BRAIN".to_string(),
+                }],
                 time_perspective: TimePerspective::Current,
             }],
             display_sets: vec![DisplaySetAssignment {

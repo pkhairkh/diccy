@@ -9,12 +9,10 @@ const TAG_STUDY_DATE: Tag = Tag(0x0008, 0x0020);
 
 fn dataset_with_uids(study_uid: &str, series_uid: &str, sop_uid: &str) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop_uid.to_string()),
-    ).unwrap());
+    dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study_uid.to_string())).unwrap());
+    dataset
+        .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series_uid.to_string())).unwrap());
+    dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop_uid.to_string())).unwrap());
     dataset
 }
 
@@ -28,9 +26,16 @@ fn query_identifier_builder_enforces_supported_key_sets_by_level() {
     assert_eq!(series_query.level, QueryLevel::Instance);
 
     let mut unsupported = Dataset::new();
-    unsupported.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.840.11".to_string()),
-    ).unwrap());
-    unsupported.insert(Element::new(Tag(0x0008, 0x1030), Vr::Lo, Value::Str("UNSUPPORTED".to_string())).unwrap());
+    unsupported
+        .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.840.11".to_string())).unwrap());
+    unsupported.insert(
+        Element::new(
+            Tag(0x0008, 0x1030),
+            Vr::Lo,
+            Value::Str("UNSUPPORTED".to_string()),
+        )
+        .unwrap(),
+    );
     let err = query_from_identifier(&unsupported, &limits).expect_err("unsupported key must fail");
     match &err.kind() {
         ErrorKind::DecodeError { detail, .. } => {
@@ -81,8 +86,8 @@ fn query_execution_fails_closed_on_missing_required_uids_and_orders_deterministi
     let limits = Limits::default();
 
     let mut missing_series = Dataset::new();
-    missing_series.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.840.20".to_string()),
-    ).unwrap());
+    missing_series
+        .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.840.20".to_string())).unwrap());
     let err = query(
         &[missing_series],
         &Query {

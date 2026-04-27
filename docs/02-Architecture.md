@@ -10,7 +10,7 @@ Verification:
 
 The framework is structured as a Cargo workspace with a **portable core** (no OS APIs, WASM-compatible), service-layer crates for networking/storage/workflow, and **platform glue** layers for native and web rendering. A strict conformance/workflow envelope governs which DICOM objects, services, and operational behaviors are accepted.
 
-## Workspace layout (proposed)
+## Workspace layout
 
 This repository uses a workspace layout that makes portability and security boundaries explicit (see **REQ-ARCH-101**).
 
@@ -18,34 +18,88 @@ Reference structure (informative; names may evolve, responsibilities must not):
 
 ```
 crates/
-  rdvf/             # public API facade, feature aggregation, stable re-exports
-  dicom-core/        # tags, VRs, dataset model, element decoding primitives
-  dicom-io/          # P10 reader, streaming, limits, filesystem helpers (native-only)
-  dicom-net/         # UL PDU parsing, association negotiation, state machine
-  dicom-dimse/       # DIMSE command parsing (echo/store/query/retrieve)
-  dicom-dimse-service/ # DIMSE SCU/SCP service harness
-  dicom-web/         # DICOMweb request parsing/routing (QIDO/WADO/STOW)
-  dicom-storage/     # deterministic ingest + dedup + write-ahead log
-  dicom-index/       # deterministic metadata indexing
-  dicom-query/       # deterministic query/retrieve matching
-  dicom-worklist/    # Modality Worklist validation/ordering
-  dicom-mpps/        # MPPS validation/transition handling
-  dicom-auth/        # authn/authz policy hooks
-  dicom-audit/       # audit redaction and retention controls
-  dicom-series/      # series/study assembly, geometry validation, ordering
-  dicom-pixel/       # transfer syntax decode + pixel pipeline (CPU boundary deterministic)
-  viewer-core/       # viewport model, interaction state machine, tools, scene graph
-  viewer-wgpu/       # wgpu renderer implementation (native + web)
-  viewer-wasm/       # wasm glue (bindings, browser IO adapters)
-  modality-ct/       # optional pack (enhanced CT specifics)
-  modality-pet/      # optional pack (SUV, fusion constraints)
-  modality-mg/       # optional pack (mammography constraints)
-  modality-xr/       # optional pack (XR/CR/DR constraints)
-codex/
-  rules/
-docs/
-.agents/
-  skills/
+  # ── Public API facade ────────────────────────────────────────────
+  rdvf/                     # public API facade, feature aggregation, stable re-exports
+
+  # ── Core & shared types ──────────────────────────────────────────
+  dicom-core/               # tags, VRs, dataset model, element decoding, error model, newtypes (Uid, AeTitle, …)
+  dicom-types/              # shared value objects (WindowLevel, Vr, Value, PatientPosition)
+  dicom-util/               # shared helpers (decode_error, enforce_limit, missing_required_tag, redaction)
+  dicom-test-util/          # test-only helpers (factory datasets, assertion macros, parse_manifest_uids)
+
+  # ── I/O & parsing ────────────────────────────────────────────────
+  dicom-io/                 # P10 reader, streaming, limits, filesystem helpers (native-only)
+
+  # ── Networking ───────────────────────────────────────────────────
+  dicom-net/                # UL PDU parsing, association negotiation, state machine, Transport trait
+  dicom-dimse/              # DIMSE command parsing (echo/store/query/retrieve)
+  dicom-dimse-service/      # DIMSE SCU/SCP service harness (protocol, commitment, transport, middleware, IAN)
+
+  # ── DICOMweb ─────────────────────────────────────────────────────
+  dicom-web/                # DICOMweb request parsing/routing (QIDO/WADO/STOW), route capability matrix
+  dicom-web-server/         # HTTP server binary for DICOMweb endpoints
+
+  # ── Storage & indexing ───────────────────────────────────────────
+  dicom-storage/            # deterministic ingest + dedup + WAL + commitment module + S3 backend + VNA engine
+  dicom-index/              # deterministic metadata indexing
+
+  # ── Query & workflow ─────────────────────────────────────────────
+  dicom-query/              # deterministic query/retrieve matching
+  dicom-worklist/           # Modality Worklist validation/ordering
+  dicom-mpps/               # MPPS validation/transition handling
+  dicom-ups/                # Unified Procedure Step tracking
+  dicom-workflow-server/    # multi-tenant workflow runtime (config, HL7, tenant, SR workflow, reconciliation)
+
+  # ── Security & audit ─────────────────────────────────────────────
+  dicom-auth/               # authn/authz policy hooks (session, break-glass, claim-surface, export-policy, config-control)
+  dicom-audit/              # audit redaction, SHA-256 chain integrity, retention controls
+
+  # ── Series & pixel pipeline ──────────────────────────────────────
+  dicom-series/             # series/study assembly, geometry validation, ordering
+  dicom-pixel/              # transfer syntax decode + pixel pipeline (CPU boundary deterministic)
+
+  # ── Interoperability ─────────────────────────────────────────────
+  dicom-fhir/               # FHIR R4 adapter (Patient, ImagingStudy, Observation mapping)
+  dicom-hl7/                # HL7 v2 adapter (ADT, ORM, ORU, MLLP transport)
+  dicom-ihe/                # IHE integration profiles (SWF, PIR, ARI, XDS-I, AIR)
+  dicom-encapsulate/        # Non-DICOM content encapsulation (PDF, JPEG, TIFF, video, CDA)
+  dicom-env-contract/       # environment contract for deployment validation
+
+  # ── Registration & imaging ───────────────────────────────────────
+  dicom-registration/       # rigid + deformable image registration, DVF, DICOM Registration IOD
+  dicom-inference/          # AI inference runtime trait, model manifest, preprocessing/postprocessing
+  dicom-mesh/               # marching cubes, STL/3MF/OBJ export, DICOM encapsulated 3D model
+
+  # ── Domain-specific modules ──────────────────────────────────────
+  dicom-cardio/             # calcium scoring, coronary analysis, ejection fraction
+  dicom-collab/             # real-time collaboration (WebSocket sync, CRDT conflict resolution)
+  dicom-telerad/            # teleradiology gateway (bandwidth-adaptive streaming, offline sync)
+  dicom-wsi/                # whole-slide imaging (pyramid/tile streaming, deep zoom)
+  dicom-xr/                 # extended reality visualization (OpenXR/WebXR, AR overlay)
+  dicom-visualizer/         # CLI multi-DICOM visualization (folder → PNG previews + gallery)
+
+  # ── Viewer stack ─────────────────────────────────────────────────
+  viewer-core/              # viewport model, interaction state machine, tools, scene graph, MPR, measurements
+  viewer-wgpu/              # wgpu renderer implementation (native + web, volume rendering, MPR, MIP, VR)
+  viewer-wasm/              # wasm glue (bindings, browser IO adapters)
+
+  # ── Modality packs ───────────────────────────────────────────────
+  modality-ct/              # enhanced CT specifics (slice spacing, calibration)
+  modality-pet/             # SUV computation, fusion constraints
+  modality-mg/              # mammography (tomosynthesis, CADe, MQSA, dual-monitor hanging)
+  modality-cr/              # CR/DR radiography constraints
+
+  # ── DICOM IOD packs ──────────────────────────────────────────────
+  pack-shared/              # shared pack helpers (Pack trait, FromDataset, OverlayRenderable, read_str, etc.)
+  pack-enhanced/            # Enhanced DICOM objects
+  pack-gsps/                # Grayscale Softcopy Presentation State (GSPS) parsing & encoding
+  pack-seg/                 # DICOM Segmentation IOD parsing & overlay
+  pack-rt/                  # DICOM-RT (dose grids, structure sets, plans) parsing & overlay
+  pack-sr/                  # DICOM Structured Reporting (TID templates, measurement encoding)
+  pack-calibration-shared/  # shared calibration types (CalibrationSource, MeasurementWarning)
+  pack-us/                  # Ultrasound pack
+  pack-nm/                  # Nuclear Medicine pack
+  pack-xa/                  # X-ray Angiography pack
 ```
 
 ### Normative requirements

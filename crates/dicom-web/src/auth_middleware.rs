@@ -3,15 +3,15 @@
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
 use dicom_audit::{AuditEventKind, AuditField, AuditValue};
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
-use dicom_auth::{AuthDenyReason, AuthDecision};
+use dicom_auth::{AuthDecision, AuthDenyReason};
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
-use dicom_auth::{enforce_tenant_scope, AuthAction, AuthRequest, AuthResource, AuthResourceKey, AuthSubject};
-
-#[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
-use super::{
-    AuditCallback, DicomWebRequest, WebAuthConfig,
+use dicom_auth::{
+    enforce_tenant_scope, AuthAction, AuthRequest, AuthResource, AuthResourceKey, AuthSubject,
 };
+
+#[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
+use super::{AuditCallback, DicomWebRequest, WebAuthConfig};
 
 #[cfg(any(feature = "qido", feature = "wado", feature = "stow"))]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

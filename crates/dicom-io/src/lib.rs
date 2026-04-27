@@ -214,9 +214,9 @@ pub struct FileMeta {
     pub media_storage_sop_instance_uid: Option<String>,
 }
 
-/// Reader options for explicit raw-mode handling and diagnostics capture.
+/// Reader configuration for explicit raw-mode handling and diagnostics capture.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReaderOptions {
+pub struct ReaderConfig {
     /// Enable raw-dataset fallback when P10 meta parsing fails.
     pub raw_mode: bool,
     /// Capture parser warnings.
@@ -225,7 +225,11 @@ pub struct ReaderOptions {
     pub capture_debug_offsets: bool,
 }
 
-impl Default for ReaderOptions {
+/// Backward-compatible alias for [`ReaderConfig`].
+#[deprecated(since = "0.14.0", note = "Use ReaderConfig instead")]
+pub type ReaderOptions = ReaderConfig;
+
+impl Default for ReaderConfig {
     fn default() -> Self {
         Self {
             raw_mode: false,
@@ -274,7 +278,7 @@ pub struct DatasetDiagnostics {
 pub struct P10Reader<S: DicomSource> {
     source: S,
     limits: Limits,
-    options: ReaderOptions,
+    options: ReaderConfig,
     warnings: Vec<ParserWarning>,
 }
 
@@ -284,7 +288,7 @@ impl<S: DicomSource> P10Reader<S> {
         Self {
             source,
             limits: Limits::default(),
-            options: ReaderOptions::default(),
+            options: ReaderConfig::default(),
             warnings: Vec::new(),
         }
     }
@@ -294,13 +298,13 @@ impl<S: DicomSource> P10Reader<S> {
         Self {
             source,
             limits,
-            options: ReaderOptions::default(),
+            options: ReaderConfig::default(),
             warnings: Vec::new(),
         }
     }
 
     /// Create a new reader with explicit limits and options.
-    pub fn with_limits_and_options(source: S, limits: Limits, options: ReaderOptions) -> Self {
+    pub fn with_limits_and_options(source: S, limits: Limits, options: ReaderConfig) -> Self {
         Self {
             source,
             limits,
@@ -315,7 +319,7 @@ impl<S: DicomSource> P10Reader<S> {
     }
 
     /// Return active reader options.
-    pub fn options(&self) -> &ReaderOptions {
+    pub fn options(&self) -> &ReaderConfig {
         &self.options
     }
 
@@ -343,7 +347,10 @@ impl<S: DicomSource> P10Reader<S> {
     pub fn read_meta(&mut self) -> Result<FileMeta> {
         self.enforce_len_hint()?;
         let data = self.source.read_to_end()?;
-        self.enforce_input_limit(u64::try_from(data.len()).map_err(|_| decode_error("p10", "input length exceeds u64"))?)?;
+        self.enforce_input_limit(
+            u64::try_from(data.len())
+                .map_err(|_| decode_error("p10", "input length exceeds u64"))?,
+        )?;
         let (meta, _, _, warnings) = parse_meta_with_raw_mode(&data, &self.limits, &self.options)?;
         self.warnings = warnings;
         Ok(meta)
@@ -359,7 +366,10 @@ impl<S: DicomSource> P10Reader<S> {
     pub fn read_dataset_with_diagnostics(&mut self) -> Result<DatasetDiagnostics> {
         self.enforce_len_hint()?;
         let data = self.source.read_to_end()?;
-        self.enforce_input_limit(u64::try_from(data.len()).map_err(|_| decode_error("p10", "input length exceeds u64"))?)?;
+        self.enforce_input_limit(
+            u64::try_from(data.len())
+                .map_err(|_| decode_error("p10", "input length exceeds u64"))?,
+        )?;
         let (meta, offset, raw_mode_used, mut warnings) =
             parse_meta_with_raw_mode(&data, &self.limits, &self.options)?;
         let transfer_syntax =
@@ -421,7 +431,8 @@ pub fn parse_dataset_bytes(
     transfer_syntax_uid: &str,
     limits: &Limits,
 ) -> Result<Dataset> {
-    let data_len_u64 = u64::try_from(data.len()).map_err(|_| decode_error("dataset", "input length exceeds u64"))?;
+    let data_len_u64 = u64::try_from(data.len())
+        .map_err(|_| decode_error("dataset", "input length exceeds u64"))?;
     if data_len_u64 > limits.max_input_bytes() {
         return Err(limit_exceeded(
             "max_input_bytes",
@@ -483,7 +494,7 @@ fn transfer_syntax_from_uid(uid: &str) -> Result<TransferSyntax> {
 fn parse_meta_with_raw_mode(
     data: &[u8],
     limits: &Limits,
-    options: &ReaderOptions,
+    options: &ReaderConfig,
 ) -> Result<(FileMeta, usize, bool, Vec<ParserWarning>)> {
     match parse_p10_meta(data, limits) {
         Ok((meta, offset)) => Ok((meta, offset, false, Vec::new())),
@@ -613,7 +624,8 @@ fn parse_p10_meta(data: &[u8], limits: &Limits) -> Result<(FileMeta, usize)> {
 
         let (vr, length) = parser.read_explicit_vr_and_len()?;
         parser.enforce_element_length(length)?;
-        let value_len = usize::try_from(length).map_err(|_| decode_error("p10", "element value length exceeds usize"))?;
+        let value_len = usize::try_from(length)
+            .map_err(|_| decode_error("p10", "element value length exceeds usize"))?;
         let value_bytes = parser.read_bytes(value_len)?;
 
         match tag {
@@ -770,7 +782,8 @@ fn is_supported_sop_class(sop_class_uid: &str) -> bool {
     }
 
     let caps = dicom_core::capabilities();
-    if caps.pack_enhanced() && matches!(sop_class_uid, SOP_CLASS_ENHANCED_CT | SOP_CLASS_ENHANCED_MR)
+    if caps.pack_enhanced()
+        && matches!(sop_class_uid, SOP_CLASS_ENHANCED_CT | SOP_CLASS_ENHANCED_MR)
     {
         return true;
     }
@@ -921,7 +934,9 @@ fn read_u16(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
         None => Ok(None),
         Some(element) => match element.value() {
             Value::I32(value) if *value >= 0 && *value <= i32::from(u16::MAX) => {
-                Ok(Some(u16::try_from(*value).map_err(|_| invalid_tag_value(tag, "i32 value out of u16 range"))?))
+                Ok(Some(u16::try_from(*value).map_err(|_| {
+                    invalid_tag_value(tag, "i32 value out of u16 range")
+                })?))
             }
             Value::Bytes(bytes) => Ok(Some(parse_u16_le(bytes, tag)?)),
             _ => Err(invalid_tag_value(tag, "expected u16 value")),
@@ -985,21 +1000,13 @@ fn parse_dataset_internal(
         if length == u32::MAX {
             if tag == Tag(0x7FE0, 0x0010) {
                 let bytes = parse_fragments(parser)?;
-                dataset.insert(Element::new(
-                    tag,
-                    vr,
-                    Value::Bytes(bytes),
-                )?);
+                dataset.insert(Element::new(tag, vr, Value::Bytes(bytes))?);
                 continue;
             }
             if is_undefined_length_sequence_container(parser, vr, transfer_syntax) {
                 let items = parse_sequence(parser, transfer_syntax, depth + 1, None)?;
                 let effective_vr = if vr == Vr::Un { Vr::Sq } else { vr };
-                dataset.insert(Element::new(
-                    tag,
-                    effective_vr,
-                    Value::Sequence(items),
-                )?);
+                dataset.insert(Element::new(tag, effective_vr, Value::Sequence(items))?);
                 continue;
             }
 
@@ -1010,16 +1017,13 @@ fn parse_dataset_internal(
         }
 
         parser.enforce_element_length(length)?;
-        let value_len_usize = usize::try_from(length).map_err(|_| decode_error("dataset", "element value length exceeds usize"))?;
+        let value_len_usize = usize::try_from(length)
+            .map_err(|_| decode_error("dataset", "element value length exceeds usize"))?;
         let value_bytes = parser.read_bytes(value_len_usize)?;
 
         if vr == Vr::Sq {
             let items = parse_sequence(parser, transfer_syntax, depth + 1, Some(length))?;
-            dataset.insert(Element::new(
-                tag,
-                vr,
-                Value::Sequence(items),
-            )?);
+            dataset.insert(Element::new(tag, vr, Value::Sequence(items))?);
             continue;
         }
 
@@ -1080,8 +1084,14 @@ fn parse_sequence(
         let item_end = if item_len == u32::MAX {
             None
         } else {
-            let item_len_usize = usize::try_from(item_len).map_err(|_| decode_error("sequence", "item length exceeds usize"))?;
-            Some(parser.offset().checked_add(item_len_usize).ok_or_else(|| decode_error("sequence", "offset overflow"))?)
+            let item_len_usize = usize::try_from(item_len)
+                .map_err(|_| decode_error("sequence", "item length exceeds usize"))?;
+            Some(
+                parser
+                    .offset()
+                    .checked_add(item_len_usize)
+                    .ok_or_else(|| decode_error("sequence", "offset overflow"))?,
+            )
         };
         let item_dataset = parse_dataset_internal(parser, item_end, transfer_syntax, depth)?;
         items.push(item_dataset);
@@ -1109,8 +1119,11 @@ fn parse_fragments(parser: &mut Parser<'_>) -> Result<Vec<u8>> {
         if item_len == u32::MAX {
             return Err(decode_error("fragments", "undefined fragment length"));
         }
-        let item_len_usize = usize::try_from(item_len).map_err(|_| decode_error("fragments", "fragment length exceeds usize"))?;
-        let new_len = u64::try_from(bytes.len()).map_err(|_| decode_error("fragments", "accumulated length exceeds u64"))? + u64::from(item_len);
+        let item_len_usize = usize::try_from(item_len)
+            .map_err(|_| decode_error("fragments", "fragment length exceeds usize"))?;
+        let new_len = u64::try_from(bytes.len())
+            .map_err(|_| decode_error("fragments", "accumulated length exceeds u64"))?
+            + u64::from(item_len);
         if new_len > parser.limits.max_element_vl_bytes() {
             return Err(limit_exceeded(
                 "max_element_vl_bytes",
@@ -1151,7 +1164,8 @@ fn parse_uid(bytes: &[u8], limits: &Limits) -> Result<String> {
 }
 
 fn parse_string(bytes: &[u8], limits: &Limits) -> Result<String> {
-    let bytes_len_u64 = u64::try_from(bytes.len()).map_err(|_| decode_error("string", "string length exceeds u64"))?;
+    let bytes_len_u64 = u64::try_from(bytes.len())
+        .map_err(|_| decode_error("string", "string length exceeds u64"))?;
     if bytes_len_u64 > limits.max_string_bytes() {
         return Err(limit_exceeded(
             "max_string_bytes",
@@ -1337,7 +1351,7 @@ mod tests {
     #[cfg(feature = "codec-jpegls")]
     use super::TS_JPEGLS_LOSSLESS;
     use super::{
-        BytesSource, DicomSource, FileSource, P10Reader, ReaderOptions, Tag, TS_EXPLICIT_VR_LE,
+        BytesSource, DicomSource, FileSource, P10Reader, ReaderConfig, Tag, TS_EXPLICIT_VR_LE,
         TS_IMPLICIT_VR_LE, TS_JPEG_BASELINE, TS_RLE_LOSSLESS,
     };
     use dicom_core::{ErrorKind, Limits};
@@ -1370,7 +1384,12 @@ mod tests {
         if bytes.len() % 2 == 1 {
             bytes.push(0);
         }
-        buf.extend_from_slice(&u16::try_from(bytes.len()).map_err(|_| "test: bytes exceed u16".to_string()).unwrap_or_default().to_le_bytes());
+        buf.extend_from_slice(
+            &u16::try_from(bytes.len())
+                .map_err(|_| "test: bytes exceed u16".to_string())
+                .unwrap_or_default()
+                .to_le_bytes(),
+        );
         buf.extend_from_slice(&bytes);
         buf
     }
@@ -1379,7 +1398,12 @@ mod tests {
         let mut buf = Vec::new();
         buf.extend_from_slice(&tag.0.to_le_bytes());
         buf.extend_from_slice(&tag.1.to_le_bytes());
-        buf.extend_from_slice(&u32::try_from(value.len()).map_err(|_| "test: value exceeds u32".to_string()).unwrap_or_default().to_le_bytes());
+        buf.extend_from_slice(
+            &u32::try_from(value.len())
+                .map_err(|_| "test: value exceeds u32".to_string())
+                .unwrap_or_default()
+                .to_le_bytes(),
+        );
         buf.extend_from_slice(value);
         buf
     }
@@ -1420,10 +1444,20 @@ mod tests {
         match &vr {
             b"OB" | b"OW" | b"SQ" | b"UN" | b"UT" => {
                 buf.extend_from_slice(&0u16.to_le_bytes());
-                buf.extend_from_slice(&u32::try_from(bytes.len()).map_err(|_| "test: bytes exceed u32".to_string()).unwrap_or_default().to_le_bytes());
+                buf.extend_from_slice(
+                    &u32::try_from(bytes.len())
+                        .map_err(|_| "test: bytes exceed u32".to_string())
+                        .unwrap_or_default()
+                        .to_le_bytes(),
+                );
             }
             _ => {
-                buf.extend_from_slice(&u16::try_from(bytes.len()).map_err(|_| "test: bytes exceed u16".to_string()).unwrap_or_default().to_le_bytes());
+                buf.extend_from_slice(
+                    &u16::try_from(bytes.len())
+                        .map_err(|_| "test: bytes exceed u16".to_string())
+                        .unwrap_or_default()
+                        .to_le_bytes(),
+                );
             }
         }
         buf.extend_from_slice(&bytes);
@@ -1650,7 +1684,10 @@ mod tests {
                 }
                 _ => {
                     let len_bytes = &dataset[offset + 6..offset + 8];
-                    (u32::from(u16::from_le_bytes([len_bytes[0], len_bytes[1]])), 8)
+                    (
+                        u32::from(u16::from_le_bytes([len_bytes[0], len_bytes[1]])),
+                        8,
+                    )
                 }
             };
             let len_usize = usize::try_from(len).unwrap_or(usize::MAX);
@@ -1746,7 +1783,7 @@ mod tests {
         let mut raw_reader = P10Reader::with_limits_and_options(
             BytesSource::new(dataset),
             Limits::default(),
-            ReaderOptions {
+            ReaderConfig {
                 raw_mode: true,
                 capture_warnings: true,
                 capture_debug_offsets: true,
@@ -1776,7 +1813,7 @@ mod tests {
         let mut reader = P10Reader::with_limits_and_options(
             BytesSource::new(bytes),
             Limits::default(),
-            ReaderOptions {
+            ReaderConfig {
                 raw_mode: false,
                 capture_warnings: true,
                 capture_debug_offsets: false,
@@ -1841,7 +1878,11 @@ mod tests {
             0x0008, 0x1115,
         )));
         let item_payload = dataset_element_implicit(Tag(0x0008, 0x1155), b"1.2.3");
-        dataset.extend_from_slice(&item_tag_with_length(u32::try_from(item_payload.len()).map_err(|_| "test: payload exceeds u32".to_string()).unwrap_or_default()));
+        dataset.extend_from_slice(&item_tag_with_length(
+            u32::try_from(item_payload.len())
+                .map_err(|_| "test: payload exceeds u32".to_string())
+                .unwrap_or_default(),
+        ));
         dataset.extend_from_slice(&item_payload);
         dataset.extend_from_slice(&sequence_delim_tag());
 
@@ -1877,7 +1918,12 @@ mod tests {
         dataset.extend_from_slice(&Tag(0x0010, 0x0010).0.to_le_bytes());
         dataset.extend_from_slice(&Tag(0x0010, 0x0010).1.to_le_bytes());
         dataset.extend_from_slice(b"LO");
-        dataset.extend_from_slice(&u16::try_from(value.len()).map_err(|_| "test: value exceeds u16".to_string()).unwrap_or_default().to_le_bytes());
+        dataset.extend_from_slice(
+            &u16::try_from(value.len())
+                .map_err(|_| "test: value exceeds u16".to_string())
+                .unwrap_or_default()
+                .to_le_bytes(),
+        );
         dataset.extend_from_slice(&value);
 
         let bytes = build_p10(TS_EXPLICIT_VR_LE, &dataset);
@@ -2441,7 +2487,11 @@ mod tests {
         let mut reader = P10Reader::new(BytesSource::new(bytes));
         let err = reader.read_dataset().expect_err("expected error");
         let kind = err.kind().clone();
-        assert!(matches!(kind, ErrorKind::MissingRequiredTag { .. }), "expected MissingRequiredTag, got {:?}", kind);
+        assert!(
+            matches!(kind, ErrorKind::MissingRequiredTag { .. }),
+            "expected MissingRequiredTag, got {:?}",
+            kind
+        );
     }
 
     #[test]

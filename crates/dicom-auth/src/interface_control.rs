@@ -3,7 +3,7 @@
 //! Contains `InterfaceChangeRecord`, `RequirementRevision`, `ScreenshotExportPolicy`,
 //! system metadata view types, and startup fail-closed controls.
 
-use crate::claim_surface::{ControlledWordingPolicy, validate_release_text_input};
+use crate::claim_surface::{validate_release_text_input, ControlledWordingPolicy};
 use dicom_core::{Error, ErrorKind, Result};
 
 /// Backward-compatible alias for [`InterfaceChangeRecord`].
@@ -52,17 +52,24 @@ pub fn validate_interface_change_control_record(
     record: &InterfaceChangeRecord,
 ) -> Result<InterfaceChangeControlDisposition> {
     if record.change_id.trim().is_empty() {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "interface change record requires change_id",
         ));
     }
     let boundary_affected = record.affects_claim_boundary || record.affects_conformance_boundary;
     if boundary_affected {
         let ticket = record.evidence_review_ticket.as_deref().ok_or_else(|| {
-            policy_violation("interface_change","boundary-impacting changes require evidence review ticket")
+            policy_violation(
+                "interface_change",
+                "boundary-impacting changes require evidence review ticket",
+            )
         })?;
         if ticket.trim().is_empty() {
-            return Err(policy_violation("interface_change","evidence review ticket must not be empty"));
+            return Err(policy_violation(
+                "interface_change",
+                "evidence review ticket must not be empty",
+            ));
         }
     }
     Ok(InterfaceChangeControlDisposition {
@@ -95,12 +102,14 @@ pub fn validate_requirement_revision(record: &RequirementRevision) -> Result<()>
         || record.version.trim().is_empty()
         || record.approver_signature.trim().is_empty()
     {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "requirement revisions require requirement_id, version, and approver signature",
         ));
     }
     if !is_iso_date(&record.effective_date) {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "requirement revisions require effective_date in YYYY-MM-DD format",
         ));
     }
@@ -119,7 +128,8 @@ pub struct ScreenshotExportPolicy {
 /// Validate screenshot/export-to-image policy settings.
 pub fn validate_screenshot_export_policy(policy: &ScreenshotExportPolicy) -> Result<()> {
     if !policy.watermark_required {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "screenshot/export policy requires watermark enforcement",
         ));
     }
@@ -242,7 +252,8 @@ pub fn validate_system_metadata_view(
     policy: &ControlledWordingPolicy,
 ) -> Result<()> {
     if view.intended_purpose != policy.approved_intended_purpose {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "intended purpose text does not match approved controlled wording",
         ));
     }
@@ -268,24 +279,28 @@ pub fn validate_system_metadata_view(
         || view.runtime_limits.max_gpu_bytes == 0
         || view.runtime_limits.max_transport_connections == 0
     {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "runtime limits must be explicit non-zero values",
         ));
     }
 
     for workflow in &view.unsupported_workflows {
         if workflow.workflow_id.trim().is_empty() {
-            return Err(policy_violation("interface_change",
+            return Err(policy_violation(
+                "interface_change",
                 "unsupported workflow entries require workflow_id",
             ));
         }
         if workflow.rationale.trim().is_empty() {
-            return Err(policy_violation("interface_change",
+            return Err(policy_violation(
+                "interface_change",
                 "unsupported workflows require structured rationale",
             ));
         }
         if workflow.visible && workflow.enabled {
-            return Err(policy_violation("interface_change",
+            return Err(policy_violation(
+                "interface_change",
                 "unsupported workflows must be hidden or explicitly disabled",
             ));
         }
@@ -293,12 +308,14 @@ pub fn validate_system_metadata_view(
 
     for toggle in &view.high_risk_toggles {
         if toggle.toggle_id.trim().is_empty() {
-            return Err(policy_violation("interface_change",
+            return Err(policy_violation(
+                "interface_change",
                 "high-risk toggle entries require toggle_id",
             ));
         }
         if toggle.enabled && toggle.risk_summary.trim().is_empty() {
-            return Err(policy_violation("interface_change",
+            return Err(policy_violation(
+                "interface_change",
                 "high-risk toggles require risk summary before enablement",
             ));
         }
@@ -307,12 +324,18 @@ pub fn validate_system_metadata_view(
     match &view.integrity_status {
         IntegrityStatus::Valid { checksum } => {
             if checksum.trim().is_empty() {
-                return Err(policy_violation("interface_change","valid integrity status requires checksum"));
+                return Err(policy_violation(
+                    "interface_change",
+                    "valid integrity status requires checksum",
+                ));
             }
         }
         IntegrityStatus::Invalid { reason } => {
             if reason.trim().is_empty() {
-                return Err(policy_violation("interface_change","invalid integrity status requires reason"));
+                return Err(policy_violation(
+                    "interface_change",
+                    "invalid integrity status requires reason",
+                ));
             }
         }
         IntegrityStatus::Missing => {}
@@ -344,7 +367,8 @@ pub fn validate_startup_fail_closed_controls(controls: StartupFailClosedControls
         || !controls.claim_surface_policy_loaded
         || !controls.integrity_checks_valid
     {
-        return Err(policy_violation("interface_change",
+        return Err(policy_violation(
+            "interface_change",
             "startup blocked: required fail-closed controls missing or invalid",
         ));
     }

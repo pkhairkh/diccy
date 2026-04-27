@@ -7,9 +7,8 @@ use dicom_storage::Storage;
 
 #[cfg(feature = "wado")]
 use super::{
-    decode_error, ensure_ascii_printable, header_value, not_found_error, validate_uid,
-    Header, QueryParam, TAG_INSTANCE_UID, TAG_SERIES_UID, TAG_STUDY_UID,
-    TAG_TRANSFER_SYNTAX_UID,
+    decode_error, ensure_ascii_printable, header_value, not_found_error, validate_uid, Header,
+    QueryParam, TAG_INSTANCE_UID, TAG_SERIES_UID, TAG_STUDY_UID, TAG_TRANSFER_SYNTAX_UID,
 };
 
 #[cfg(feature = "wado")]
@@ -192,8 +191,8 @@ pub(crate) fn parse_frame_number(value: &str) -> Result<u32> {
 
 #[cfg(feature = "wado")]
 pub(crate) fn parse_transfer_syntax_uid(value: &str) -> Result<String> {
-    use dicom_core::validate_uid_strict;
     use super::unsupported_transfer_syntax;
+    use dicom_core::validate_uid_strict;
 
     validate_uid_strict(TAG_TRANSFER_SYNTAX_UID, value)?;
     if value != TRANSFER_SYNTAX_IMPLICIT_VR_LE && value != TRANSFER_SYNTAX_EXPLICIT_VR_LE {

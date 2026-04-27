@@ -192,7 +192,11 @@ fn raster_dimensions(format: RasterFormat, bytes: &[u8], limits: &Limits) -> Res
     let pixels = (width as u64)
         .checked_mul(height as u64)
         .ok_or_else(|| limit_overflow("max_pixels_per_frame", limits.max_pixels_per_frame()))?;
-    enforce_limit("max_pixels_per_frame", pixels, limits.max_pixels_per_frame())?;
+    enforce_limit(
+        "max_pixels_per_frame",
+        pixels,
+        limits.max_pixels_per_frame(),
+    )?;
     Ok((width, height))
 }
 
@@ -2148,30 +2152,90 @@ mod tests {
         pixel_data: Vec<u8>,
     ) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(tags::TAG_ROWS, dicom_core::Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_COLUMNS, dicom_core::Vr::Us, Value::Bytes(cols.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_SAMPLES_PER_PIXEL, dicom_core::Vr::Us, Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_PHOTOMETRIC_INTERPRETATION, dicom_core::Vr::Cs, Value::Str(photometric.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_BITS_ALLOCATED, dicom_core::Vr::Us, Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_BITS_STORED, dicom_core::Vr::Us, Value::Bytes(bits_stored.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_HIGH_BIT, dicom_core::Vr::Us, Value::Bytes(high_bit.to_le_bytes().to_vec()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_ROWS,
+                dicom_core::Vr::Us,
+                Value::Bytes(rows.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_COLUMNS,
+                dicom_core::Vr::Us,
+                Value::Bytes(cols.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_SAMPLES_PER_PIXEL,
+                dicom_core::Vr::Us,
+                Value::Bytes(samples_per_pixel.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_PHOTOMETRIC_INTERPRETATION,
+                dicom_core::Vr::Cs,
+                Value::Str(photometric.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_BITS_ALLOCATED,
+                dicom_core::Vr::Us,
+                Value::Bytes(bits_allocated.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_BITS_STORED,
+                dicom_core::Vr::Us,
+                Value::Bytes(bits_stored.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_HIGH_BIT,
+                dicom_core::Vr::Us,
+                Value::Bytes(high_bit.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
         if photometric.starts_with("MONOCHROME") {
-            dataset.insert(Element::new(tags::TAG_PIXEL_REPRESENTATION, dicom_core::Vr::Us, Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    tags::TAG_PIXEL_REPRESENTATION,
+                    dicom_core::Vr::Us,
+                    Value::Bytes(pixel_representation.to_le_bytes().to_vec()),
+                )
+                .unwrap(),
+            );
         }
         if let Some(planar) = planar_configuration {
-            dataset.insert(Element::new(tags::TAG_PLANAR_CONFIGURATION, dicom_core::Vr::Us, Value::Bytes(planar.to_le_bytes().to_vec()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    tags::TAG_PLANAR_CONFIGURATION,
+                    dicom_core::Vr::Us,
+                    Value::Bytes(planar.to_le_bytes().to_vec()),
+                )
+                .unwrap(),
+            );
         }
-        dataset.insert(Element::new(tags::TAG_PIXEL_DATA, dicom_core::Vr::Ob, Value::Bytes(pixel_data),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_PIXEL_DATA,
+                dicom_core::Vr::Ob,
+                Value::Bytes(pixel_data),
+            )
+            .unwrap(),
+        );
         dataset
     }
 
@@ -2188,8 +2252,14 @@ mod tests {
     fn enhanced_sop_uid_uid_value_is_accepted_in_optional_string_path() {
         // REQ-PIX-245: UID-valued SOP Class tags must be accepted on optional string reads.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(tags::TAG_SOP_CLASS_UID, dicom_core::Vr::Ui, Value::Uid(SOP_CLASS_ENHANCED_CT.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_SOP_CLASS_UID,
+                dicom_core::Vr::Ui,
+                Value::Uid(SOP_CLASS_ENHANCED_CT.to_string()),
+            )
+            .unwrap(),
+        );
         assert!(is_enhanced_sop_class(&dataset, &Limits::default()).expect("enhanced sop"));
     }
 
@@ -2219,10 +2289,22 @@ mod tests {
     fn decode_accepts_padded_rescale_values() {
         // REQ-PIX-245
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 16, 16, 15, 0, None, vec![1, 0]);
-        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("0 ".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1 ".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_INTERCEPT,
+                dicom_core::Vr::Ds,
+                Value::Str("0 ".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_SLOPE,
+                dicom_core::Vr::Ds,
+                Value::Str("1 ".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2258,10 +2340,22 @@ mod tests {
     fn monochrome1_inversion_applied_after_voi() {
         // REQ-PIX-242
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME1", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("128".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("256".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_CENTER,
+                dicom_core::Vr::Ds,
+                Value::Str("128".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_WIDTH,
+                dicom_core::Vr::Ds,
+                Value::Str("256".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2274,14 +2368,38 @@ mod tests {
     fn voi_linear_exact_boundary() {
         // REQ-PIX-265
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![0u8]);
-        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_VOI_LUT_FUNCTION, dicom_core::Vr::Cs, Value::Str("LINEAR_EXACT".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_PIXEL_DATA, dicom_core::Vr::Ob, Value::Bytes(vec![0u8]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_CENTER,
+                dicom_core::Vr::Ds,
+                Value::Str("0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_WIDTH,
+                dicom_core::Vr::Ds,
+                Value::Str("2".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_VOI_LUT_FUNCTION,
+                dicom_core::Vr::Cs,
+                Value::Str("LINEAR_EXACT".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_PIXEL_DATA,
+                dicom_core::Vr::Ob,
+                Value::Bytes(vec![0u8]),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2329,14 +2447,38 @@ mod tests {
             None,
             vec![0x80, 0x00],
         );
-        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("-1024".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("40".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("400".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_INTERCEPT,
+                dicom_core::Vr::Ds,
+                Value::Str("-1024".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_SLOPE,
+                dicom_core::Vr::Ds,
+                Value::Str("1".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_CENTER,
+                dicom_core::Vr::Ds,
+                Value::Str("40".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_WIDTH,
+                dicom_core::Vr::Ds,
+                Value::Str("400".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let baseline = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2372,7 +2514,10 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(
+            err.kind(),
+            ErrorKind::InvalidPixelTransform { .. }
+        ));
     }
 
     #[test]
@@ -2388,7 +2533,10 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(
+            err.kind(),
+            ErrorKind::InvalidPixelTransform { .. }
+        ));
     }
 
     #[test]
@@ -2404,7 +2552,10 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(
+            err.kind(),
+            ErrorKind::InvalidPixelTransform { .. }
+        ));
     }
 
     #[test]
@@ -2429,10 +2580,22 @@ mod tests {
     fn non_finite_rescale_rejected() {
         // REQ-PIX-220
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1e309".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("0".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_SLOPE,
+                dicom_core::Vr::Ds,
+                Value::Str("1e309".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_INTERCEPT,
+                dicom_core::Vr::Ds,
+                Value::Str("0".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2458,10 +2621,22 @@ mod tests {
             None,
             i16::MAX.to_le_bytes().to_vec(),
         );
-        dataset.insert(Element::new(tags::TAG_RESCALE_SLOPE, dicom_core::Vr::Ds, Value::Str("1e308".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_RESCALE_INTERCEPT, dicom_core::Vr::Ds, Value::Str("1e308".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_SLOPE,
+                dicom_core::Vr::Ds,
+                Value::Str("1e308".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_RESCALE_INTERCEPT,
+                dicom_core::Vr::Ds,
+                Value::Str("1e308".to_string()),
+            )
+            .unwrap(),
+        );
         let config = PixelPipelineConfig {
             window_level: WindowLevel::Explicit {
                 center: 0.0,
@@ -2473,7 +2648,10 @@ mod tests {
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
             .expect_err("expected error");
-        assert!(matches!(err.kind(), ErrorKind::InvalidPixelTransform { .. }));
+        assert!(matches!(
+            err.kind(),
+            ErrorKind::InvalidPixelTransform { .. }
+        ));
     }
 
     #[test]
@@ -2631,8 +2809,14 @@ mod tests {
         // when offset-table indexing support is not enabled.
         let dataset = make_dataset(1, 1, 3, "RGB", 8, 8, 7, 0, Some(0), sample_jpeg_rgb());
         let mut dataset = dataset;
-        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_NUMBER_OF_FRAMES,
+                dicom_core::Vr::Is,
+                Value::Str("2".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG_BASELINE, 0)
@@ -2670,10 +2854,22 @@ mod tests {
         let encoded = charls.encode(frame, 0, &[128u8]).expect("encode");
 
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, encoded);
-        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("128".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("256".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_CENTER,
+                dicom_core::Vr::Ds,
+                Value::Str("128".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_WIDTH,
+                dicom_core::Vr::Ds,
+                Value::Str("256".to_string()),
+            )
+            .unwrap(),
+        );
 
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let frame = pipeline
@@ -2717,8 +2913,14 @@ mod tests {
         };
         let encoded = charls.encode(frame, 0, &[42u8]).expect("encode");
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, encoded);
-        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_NUMBER_OF_FRAMES,
+                dicom_core::Vr::Is,
+                Value::Str("2".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEGLS_LOSSLESS, 0)
@@ -2847,8 +3049,14 @@ mod tests {
             if samples_per_pixel > 1 { Some(0) } else { None },
             bytes,
         );
-        dataset.insert(Element::new(tags::TAG_NUMBER_OF_FRAMES, dicom_core::Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_NUMBER_OF_FRAMES,
+                dicom_core::Vr::Is,
+                Value::Str("2".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_JPEG2000_LOSSLESS, 0)
@@ -2876,12 +3084,30 @@ mod tests {
     fn voi_function_rejects_sigmoid() {
         // REQ-PIX-262
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element::new(tags::TAG_WINDOW_CENTER, dicom_core::Vr::Ds, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_WINDOW_WIDTH, dicom_core::Vr::Ds, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_VOI_LUT_FUNCTION, dicom_core::Vr::Cs, Value::Str("SIGMOID".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_CENTER,
+                dicom_core::Vr::Ds,
+                Value::Str("1".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_WINDOW_WIDTH,
+                dicom_core::Vr::Ds,
+                Value::Str("2".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_VOI_LUT_FUNCTION,
+                dicom_core::Vr::Cs,
+                Value::Str("SIGMOID".to_string()),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)
@@ -2893,16 +3119,46 @@ mod tests {
     fn overlay_bounds_rejected() {
         // REQ-PIX-280
         let mut dataset = make_dataset(1, 1, 1, "MONOCHROME2", 8, 8, 7, 0, None, vec![128u8]);
-        dataset.insert(Element::new(tags::TAG_OVERLAY_ROWS, dicom_core::Vr::Us, Value::Bytes(vec![0x02, 0x00]),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_OVERLAY_COLUMNS, dicom_core::Vr::Us, Value::Bytes(vec![0x02, 0x00]),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_OVERLAY_BITS_ALLOCATED, dicom_core::Vr::Us, Value::Bytes(vec![0x01, 0x00]),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_OVERLAY_BIT_POSITION, dicom_core::Vr::Us, Value::Bytes(vec![0x00, 0x00]),
-        ).unwrap());
-        dataset.insert(Element::new(tags::TAG_OVERLAY_DATA, dicom_core::Vr::Ob, Value::Bytes(vec![0xFF]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                tags::TAG_OVERLAY_ROWS,
+                dicom_core::Vr::Us,
+                Value::Bytes(vec![0x02, 0x00]),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_OVERLAY_COLUMNS,
+                dicom_core::Vr::Us,
+                Value::Bytes(vec![0x02, 0x00]),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_OVERLAY_BITS_ALLOCATED,
+                dicom_core::Vr::Us,
+                Value::Bytes(vec![0x01, 0x00]),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_OVERLAY_BIT_POSITION,
+                dicom_core::Vr::Us,
+                Value::Bytes(vec![0x00, 0x00]),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                tags::TAG_OVERLAY_DATA,
+                dicom_core::Vr::Ob,
+                Value::Bytes(vec![0xFF]),
+            )
+            .unwrap(),
+        );
         let pipeline = PixelPipeline::new(PixelPipelineConfig::default());
         let err = pipeline
             .decode_frame(&dataset, TS_IMPLICIT_VR_LE, 0)

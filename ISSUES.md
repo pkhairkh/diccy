@@ -7,6 +7,30 @@
 >
 > **37 issues identified** across Critical (3), High (14), Medium (16), and Low (4) severity levels.
 
+## Sprint Resolution Summary
+
+The following sprints remediated the issues identified in this audit:
+
+| Sprint | Focus | Issues Addressed |
+|---|---|---|
+| S9 (P0) | Critical architecture: bounded contexts, encapsulation, integer safety, rendering decoupling | #1 (partial), #5, #6, #22 |
+| S10 (P1) | Newtypes, DRY elimination, dependency injection, credential security, pack consolidation, validated constructors, error semantics | #1 (phase 1), #3, #4, #7, #8, #9, #16, #18, #19, #26 |
+| S11 (P2) | File decomposition, rich domain model, error unification, BTreeMap Dataset, boolean traps, shared types, audit hash | #2, #6, #12, #13, #17, #23, #35, #37 |
+| S12 (P3-A) | Workspace deps, stub safety, test infra, feature flags, newtypes, monotonic tick | #8, #10, #11, #14, #15, #17 |
+| S13 (P3-B) | Pack trait, FromDataset/OverlayRenderable, named constants, naming consistency, BTreeSet tenants, Arc fixes, route capability | #20, #21, #24, #27, #28, #30, #31, #32, #34, #36 |
+
+### Partially Resolved
+
+- **#1 (Encapsulation):** Core types (`Element`, `Error`, `Limits`, `Capabilities`, `S3Config`, `FusionOverlayState`, `RtDoseOverlayState`, `SessionStatus`) now have private fields with validated constructors and getters. However, many secondary types in `viewer-core` (284 pub fields), `dicom-auth` (145 pub fields), and `dicom-dimse-service` (91 pub fields) still expose public fields. Further encapsulation is needed for these crates.
+- **#2 (Anemic Domain Model):** Key types now have behavioral methods (`Element::as_uid()`, `Dataset::insert_validated()`, `MeasurementRecord::soft_delete()`), but many secondary types remain data-only.
+- **#10 (Stubs):** Marked with doc annotations and runtime assertions, but some stubs (S3Backend, OnnxRuntime, XrRenderer) still need production implementations.
+- **#34 (Inline Tests):** ~1190 `#[test]` functions remain in production source files (S13-T8 in progress).
+
+### Unresolved
+
+- **#33 (Test Data Inline):** S13-T8 not yet complete.
+- **#25 (Type Aliases):** Partially resolved (SessionId, UserId, Tick now newtypes in dicom-collab); other type aliases may remain.
+
 ---
 
 ## Severity Key

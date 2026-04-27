@@ -492,7 +492,8 @@ impl TeleradGateway {
         if self.network_history.is_empty() {
             return 0.0;
         }
-        self.network_history.iter().map(|s| s.rtt_ms).sum::<f64>() / self.network_history.len() as f64
+        self.network_history.iter().map(|s| s.rtt_ms).sum::<f64>()
+            / self.network_history.len() as f64
     }
 
     fn record_audit(&self, operation: &'static str) {
@@ -545,7 +546,10 @@ mod tests_telerad {
         assert_eq!(BandwidthLevel::from_bps(3_000_000), BandwidthLevel::Low);
         assert_eq!(BandwidthLevel::from_bps(10_000_000), BandwidthLevel::Medium);
         assert_eq!(BandwidthLevel::from_bps(30_000_000), BandwidthLevel::High);
-        assert_eq!(BandwidthLevel::from_bps(100_000_000), BandwidthLevel::VeryHigh);
+        assert_eq!(
+            BandwidthLevel::from_bps(100_000_000),
+            BandwidthLevel::VeryHigh
+        );
     }
 
     #[test]
@@ -601,7 +605,10 @@ mod tests_telerad {
     fn interaction_enqueue_dequeue_online() {
         let mut gateway = TeleradGateway::new();
         gateway.enqueue_interaction(InteractionEvent::Pan { dx: 10.0, dy: 20.0 });
-        gateway.enqueue_interaction(InteractionEvent::Zoom { factor: 2.0, center: (100.0, 100.0) });
+        gateway.enqueue_interaction(InteractionEvent::Zoom {
+            factor: 2.0,
+            center: (100.0, 100.0),
+        });
 
         let event1 = gateway.dequeue_interaction().unwrap();
         assert!(matches!(event1, InteractionEvent::Pan { .. }));
@@ -664,7 +671,10 @@ mod tests_telerad {
     #[test]
     fn interaction_event_size_estimates() {
         let pan = InteractionEvent::Pan { dx: 1.0, dy: 1.0 };
-        let wl = InteractionEvent::WindowLevel { center: 0.0, width: 0.0 };
+        let wl = InteractionEvent::WindowLevel {
+            center: 0.0,
+            width: 0.0,
+        };
         assert!(pan.estimated_size() > 0);
         assert!(wl.estimated_size() > 0);
     }

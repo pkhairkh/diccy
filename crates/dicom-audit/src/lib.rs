@@ -75,11 +75,7 @@ impl AuditEvent {
     /// empty key, which would produce an ambiguous audit record.
     pub fn validate(&self) -> Result<()> {
         if self.fields.is_empty() {
-            return Err(limit_error(
-                "audit_event_fields",
-                0,
-                1,
-            ));
+            return Err(limit_error("audit_event_fields", 0, 1));
         }
         for field in &self.fields {
             if field.key.is_empty() {

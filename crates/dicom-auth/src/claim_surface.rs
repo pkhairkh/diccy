@@ -114,10 +114,16 @@ impl UiClaimSurface {
     /// Add a claim to the surface.
     pub fn add_claim(&mut self, claim: ClaimedRect) -> Result<()> {
         if claim.claim_id.trim().is_empty() {
-            return Err(policy_violation("claim_surface", "claim_id must not be empty"));
+            return Err(policy_violation(
+                "claim_surface",
+                "claim_id must not be empty",
+            ));
         }
         if claim.width == 0 || claim.height == 0 {
-            return Err(policy_violation("claim_surface", "claimed rectangle must have non-zero dimensions"));
+            return Err(policy_violation(
+                "claim_surface",
+                "claimed rectangle must have non-zero dimensions",
+            ));
         }
         self.claims.push(claim);
         Ok(())
@@ -137,12 +143,9 @@ impl UiClaimSurface {
 
     /// Check if any claims overlap with the given rectangle.
     pub fn has_conflict(&self, x: u32, y: u32, width: u32, height: u32) -> bool {
-        self.claims.iter().any(|c| {
-            c.x < x + width
-                && x < c.x + c.width
-                && c.y < y + height
-                && y < c.y + c.height
-        })
+        self.claims
+            .iter()
+            .any(|c| c.x < x + width && x < c.x + c.width && c.y < y + height && y < c.y + c.height)
     }
 }
 

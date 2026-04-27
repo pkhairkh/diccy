@@ -22,21 +22,32 @@ fn temp_snapshot_path(name: &str) -> PathBuf {
 
 fn dataset_with_status(status: &str, sop_uid: &str, with_end: bool) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(sop_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP-1".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string()),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_SOP_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(sop_uid.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str(status.to_string())).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_PERFORMED_STEP_ID,
+            Vr::Sh,
+            Value::Str("STEP-1".to_string()),
+        )
+        .unwrap(),
+    );
+    dataset
+        .insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string())).unwrap());
+    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string())).unwrap());
     if with_end {
-        dataset.insert(Element::new(TAG_END_DATE, Vr::Da, Value::Str("20260214".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("103000".to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_END_DATE, Vr::Da, Value::Str("20260214".to_string())).unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_END_TIME, Vr::Tm, Value::Str("103000".to_string())).unwrap());
     }
     dataset
 }

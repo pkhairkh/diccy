@@ -370,18 +370,10 @@ impl Hl7Parser {
 
         self.record_audit("parse_orm", Some(&msh.message_control_id))?;
 
-        Ok(OrmMessage {
-            msh,
-            pid,
-            orc,
-            obr,
-        })
+        Ok(OrmMessage { msh, pid, orc, obr })
     }
 
-    fn parse_msh(
-        &self,
-        segments: &[Hl7Segment],
-    ) -> std::result::Result<MshSegment, Hl7Error> {
+    fn parse_msh(&self, segments: &[Hl7Segment]) -> std::result::Result<MshSegment, Hl7Error> {
         let seg = segments
             .iter()
             .find(|s| s.segment_id() == "MSH")
@@ -408,10 +400,7 @@ impl Hl7Parser {
         })
     }
 
-    fn parse_pid(
-        &self,
-        segments: &[Hl7Segment],
-    ) -> std::result::Result<PidSegment, Hl7Error> {
+    fn parse_pid(&self, segments: &[Hl7Segment]) -> std::result::Result<PidSegment, Hl7Error> {
         let seg = segments
             .iter()
             .find(|s| s.segment_id() == "PID")
@@ -429,10 +418,7 @@ impl Hl7Parser {
         })
     }
 
-    fn parse_pv1(
-        &self,
-        segments: &[Hl7Segment],
-    ) -> std::result::Result<Pv1Segment, Hl7Error> {
+    fn parse_pv1(&self, segments: &[Hl7Segment]) -> std::result::Result<Pv1Segment, Hl7Error> {
         let seg = segments
             .iter()
             .find(|s| s.segment_id() == "PV1")
@@ -449,10 +435,7 @@ impl Hl7Parser {
         })
     }
 
-    fn parse_orc(
-        &self,
-        segments: &[Hl7Segment],
-    ) -> std::result::Result<OrcSegment, Hl7Error> {
+    fn parse_orc(&self, segments: &[Hl7Segment]) -> std::result::Result<OrcSegment, Hl7Error> {
         let seg = segments
             .iter()
             .find(|s| s.segment_id() == "ORC")
@@ -468,10 +451,7 @@ impl Hl7Parser {
         })
     }
 
-    fn parse_obr(
-        &self,
-        segments: &[Hl7Segment],
-    ) -> std::result::Result<ObrSegment, Hl7Error> {
+    fn parse_obr(&self, segments: &[Hl7Segment]) -> std::result::Result<ObrSegment, Hl7Error> {
         let seg = segments
             .iter()
             .find(|s| s.segment_id() == "OBR")
@@ -666,7 +646,11 @@ impl Hl7Encoder {
             si = message.obr.service_identifier.as_deref().unwrap_or(""),
             odt = message.obr.observation_datetime.as_deref().unwrap_or(""),
             op = message.obr.ordering_provider.as_deref().unwrap_or(""),
-            dss = message.obr.diagnostic_service_section.as_deref().unwrap_or(""),
+            dss = message
+                .obr
+                .diagnostic_service_section
+                .as_deref()
+                .unwrap_or(""),
         ));
 
         // OBX segments
@@ -758,12 +742,12 @@ impl MllpFramer {
             });
         }
         // Find end block
-        let eb_pos = data
-            .iter()
-            .position(|&b| b == Self::EB)
-            .ok_or_else(|| Hl7Error::ParseFailed {
-                detail: "MLLP frame missing end block".to_string(),
-            })?;
+        let eb_pos =
+            data.iter()
+                .position(|&b| b == Self::EB)
+                .ok_or_else(|| Hl7Error::ParseFailed {
+                    detail: "MLLP frame missing end block".to_string(),
+                })?;
 
         let message_bytes = &data[1..eb_pos];
         String::from_utf8(message_bytes.to_vec()).map_err(|e| Hl7Error::ParseFailed {
@@ -879,7 +863,8 @@ mod tests {
     #[test]
     fn parse_adt_invalid_event_type() {
         let parser = Hl7Parser::new();
-        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A99|MSG001|P|2.5.1\rPID|||PAT001||Smith".to_string();
+        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A99|MSG001|P|2.5.1\rPID|||PAT001||Smith"
+            .to_string();
         let result = parser.parse_adt(&msg);
         assert!(matches!(result, Err(Hl7Error::InvalidMessageType { .. })));
     }
@@ -887,7 +872,8 @@ mod tests {
     #[test]
     fn parse_adt_a02() {
         let parser = Hl7Parser::new();
-        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A02|MSG002|P|2.5.1\rPID|||PAT001||Smith".to_string();
+        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A02|MSG002|P|2.5.1\rPID|||PAT001||Smith"
+            .to_string();
         let result = parser.parse_adt(&msg).expect("parse A02");
         assert_eq!(result.event_type, AdtMessageType::A02);
     }
@@ -895,7 +881,8 @@ mod tests {
     #[test]
     fn parse_adt_a03() {
         let parser = Hl7Parser::new();
-        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A03|MSG003|P|2.5.1\rPID|||PAT001||Smith".to_string();
+        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A03|MSG003|P|2.5.1\rPID|||PAT001||Smith"
+            .to_string();
         let result = parser.parse_adt(&msg).expect("parse A03");
         assert_eq!(result.event_type, AdtMessageType::A03);
     }
@@ -903,7 +890,8 @@ mod tests {
     #[test]
     fn parse_adt_a08() {
         let parser = Hl7Parser::new();
-        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A08|MSG008|P|2.5.1\rPID|||PAT001||Smith".to_string();
+        let msg = "MSH|^~\\&|APP|FAC|APP|FAC|20240115||ADT^A08|MSG008|P|2.5.1\rPID|||PAT001||Smith"
+            .to_string();
         let result = parser.parse_adt(&msg).expect("parse A08");
         assert_eq!(result.event_type, AdtMessageType::A08);
     }
@@ -1066,10 +1054,8 @@ mod tests {
 
         let events = events.lock().expect("lock");
         assert_eq!(events.len(), 1);
-        assert!(events[0]
-            .fields
-            .iter()
-            .any(|f| f.key == "operation" && matches!(&f.value, AuditValue::Plain(v) if v == "parse_adt")));
+        assert!(events[0].fields.iter().any(|f| f.key == "operation"
+            && matches!(&f.value, AuditValue::Plain(v) if v == "parse_adt")));
     }
 
     #[test]

@@ -219,7 +219,8 @@ impl S3Backend {
     pub fn multipart_upload(&mut self, key: &str, data: Vec<u8>) -> Result<MultipartUploadResult> {
         let total_bytes = data.len() as u64;
         let parts_count = if total_bytes > self.config.multipart_threshold_bytes {
-            ((total_bytes + self.config.multipart_part_size_bytes - 1) / self.config.multipart_part_size_bytes) as usize
+            ((total_bytes + self.config.multipart_part_size_bytes - 1)
+                / self.config.multipart_part_size_bytes) as usize
         } else {
             1
         };

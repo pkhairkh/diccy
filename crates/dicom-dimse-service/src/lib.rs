@@ -106,26 +106,25 @@ pub(crate) fn workstation_default_association_policy() -> AssociationPolicy {
 mod tests {
     use super::*;
     use commitment::{
-        TAG_REFERENCED_SOP_CLASS_UID, TAG_REFERENCED_SOP_INSTANCE_UID,
-        TAG_REFERENCED_SOP_SEQUENCE, TAG_TRANSACTION_UID,
-        parse_storage_commitment_n_action_request,
+        parse_storage_commitment_n_action_request, TAG_REFERENCED_SOP_CLASS_UID,
+        TAG_REFERENCED_SOP_INSTANCE_UID, TAG_REFERENCED_SOP_SEQUENCE, TAG_TRANSACTION_UID,
     };
     use dicom_audit::{AuditConfig, AuditEventKind, AuditLog, AuditRedactor};
     #[cfg(feature = "dimse-c-find")]
     use dicom_core::{Dataset, Element, Value, Vr};
     use dicom_core::{ErrorKind, Result, Tag};
     use dicom_storage::StorageCommitmentReferencedInstance;
-    use middleware::{OperationLimiter, enforce_connection_limit, enforce_query_response_limit};
+    use middleware::{enforce_connection_limit, enforce_query_response_limit, OperationLimiter};
     use protocol::dimse_protocol_violation_status;
     use protocol::{AssociationInfo, DimseStatus, StorageBackedDimseService};
-    use transport::{
-        DimseAuthConfig, DimseClient, DimseClientConfig, DimseServer, DimseServerConfig,
-        TlsPolicy, TransportSecurity, enforce_tls_policy, handle_pdus,
-    };
     use std::collections::HashMap;
     use std::net::Ipv4Addr;
     use std::sync::{Arc, Mutex};
     use std::thread;
+    use transport::{
+        enforce_tls_policy, handle_pdus, DimseAuthConfig, DimseClient, DimseClientConfig,
+        DimseServer, DimseServerConfig, TlsPolicy, TransportSecurity,
+    };
 
     struct EchoService;
 
@@ -287,12 +286,10 @@ mod tests {
         const TAG_SERIES_UID: Tag = Tag(0x0020, 0x000E);
         const TAG_SOP_UID: Tag = Tag(0x0008, 0x0018);
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string())).unwrap());
+        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string())).unwrap());
         dataset
     }
 
@@ -307,10 +304,17 @@ mod tests {
         const TAG_ACCESSION_NUMBER: Tag = Tag(0x0008, 0x0050);
         const TAG_STUDY_DATE: Tag = Tag(0x0008, 0x0020);
         let mut dataset = dataset_with_uids(study, series, sop);
-        dataset.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Lo, Value::Str(accession_number.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str(study_date.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Lo,
+                Value::Str(accession_number.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str(study_date.to_string())).unwrap(),
+        );
         dataset
     }
 
@@ -735,7 +739,10 @@ mod tests {
             .storage()
             .storage_commitment_request("1.2.840.10008.1.20.4")
             .expect("request");
-        assert_eq!(request.state, dicom_storage::StorageCommitmentState::ReportDelivered);
+        assert_eq!(
+            request.state,
+            dicom_storage::StorageCommitmentState::ReportDelivered
+        );
     }
 
     #[test]
@@ -935,9 +942,13 @@ mod tests {
             b"LO",
             "CT HEAD",
         ));
-        let err =
-            query_matches_from_dimse(&identifier, "1.2.840.10008.1.2.1", &[], &dicom_core::Limits::default())
-                .expect_err("expected query error");
+        let err = query_matches_from_dimse(
+            &identifier,
+            "1.2.840.10008.1.2.1",
+            &[],
+            &dicom_core::Limits::default(),
+        )
+        .expect_err("expected query error");
         assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
     }
 
@@ -1116,11 +1127,16 @@ mod tests {
     struct DenyEchoAllowAssociate;
 
     impl dicom_auth::Authorizer for DenyEchoAllowAssociate {
-        fn authorize(&self, request: &dicom_auth::AuthRequest<'_>) -> dicom_core::Result<dicom_auth::AuthDecision> {
+        fn authorize(
+            &self,
+            request: &dicom_auth::AuthRequest<'_>,
+        ) -> dicom_core::Result<dicom_auth::AuthDecision> {
             if request.action == dicom_auth::AuthAction::Associate {
                 return Ok(dicom_auth::AuthDecision::Allow);
             }
-            Ok(dicom_auth::AuthDecision::Deny(dicom_auth::AuthDenyReason::Unauthorized))
+            Ok(dicom_auth::AuthDecision::Deny(
+                dicom_auth::AuthDenyReason::Unauthorized,
+            ))
         }
     }
 

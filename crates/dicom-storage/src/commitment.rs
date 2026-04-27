@@ -163,29 +163,25 @@ impl CommitmentEngine {
             )
             .into());
         }
-        let request = self
-            .requests
-            .get_mut(transaction_uid)
-            .ok_or_else(|| {
-                Error::from_kind(
-                    ErrorKind::MissingRequiredTag {
-                        tag: Tag(0x0008, 0x1195),
-                    },
-                    "missing storage commitment transaction UID",
-                )
-            })?;
+        let request = self.requests.get_mut(transaction_uid).ok_or_else(|| {
+            Error::from_kind(
+                ErrorKind::MissingRequiredTag {
+                    tag: Tag(0x0008, 0x1195),
+                },
+                "missing storage commitment transaction UID",
+            )
+        })?;
         request.state = StorageCommitmentState::EventQueued;
         self.tick = self.tick.saturating_add(1);
         let queued_tick = self.tick;
         let timeout_tick = queued_tick.saturating_add(self.policy.timeout_ticks);
-        self.event_queue
-            .push_back(StorageCommitmentEventJob {
-                transaction_uid: transaction_uid.to_string(),
-                attempt: 0,
-                max_attempts: max_attempts.max(1),
-                queued_tick,
-                timeout_tick,
-            });
+        self.event_queue.push_back(StorageCommitmentEventJob {
+            transaction_uid: transaction_uid.to_string(),
+            attempt: 0,
+            max_attempts: max_attempts.max(1),
+            queued_tick,
+            timeout_tick,
+        });
         Ok(())
     }
 
@@ -200,17 +196,14 @@ impl CommitmentEngine {
         mut job: StorageCommitmentEventJob,
         delivered: bool,
     ) -> Result<()> {
-        let request = self
-            .requests
-            .get_mut(&job.transaction_uid)
-            .ok_or_else(|| {
-                Error::from_kind(
-                    ErrorKind::MissingRequiredTag {
-                        tag: Tag(0x0008, 0x1195),
-                    },
-                    "missing storage commitment transaction UID",
-                )
-            })?;
+        let request = self.requests.get_mut(&job.transaction_uid).ok_or_else(|| {
+            Error::from_kind(
+                ErrorKind::MissingRequiredTag {
+                    tag: Tag(0x0008, 0x1195),
+                },
+                "missing storage commitment transaction UID",
+            )
+        })?;
         if delivered {
             request.state = StorageCommitmentState::ReportDelivered;
             return Ok(());
@@ -223,26 +216,21 @@ impl CommitmentEngine {
         request.state = StorageCommitmentState::EventQueued;
         self.tick = self.tick.saturating_add(1);
         job.queued_tick = self.tick;
-        job.timeout_tick = job
-            .queued_tick
-            .saturating_add(self.policy.timeout_ticks);
+        job.timeout_tick = job.queued_tick.saturating_add(self.policy.timeout_ticks);
         self.event_queue.push_back(job);
         Ok(())
     }
 
     /// Cancel a Storage Commitment request and drop queued jobs for the transaction.
     pub(crate) fn cancel_request(&mut self, transaction_uid: &str) -> Result<()> {
-        let request = self
-            .requests
-            .get_mut(transaction_uid)
-            .ok_or_else(|| {
-                Error::from_kind(
-                    ErrorKind::MissingRequiredTag {
-                        tag: Tag(0x0008, 0x1195),
-                    },
-                    "missing storage commitment transaction UID",
-                )
-            })?;
+        let request = self.requests.get_mut(transaction_uid).ok_or_else(|| {
+            Error::from_kind(
+                ErrorKind::MissingRequiredTag {
+                    tag: Tag(0x0008, 0x1195),
+                },
+                "missing storage commitment transaction UID",
+            )
+        })?;
         request.state = StorageCommitmentState::Canceled;
         self.event_queue
             .retain(|job| job.transaction_uid != transaction_uid);

@@ -333,7 +333,9 @@ fn describe_core_error(err: &CoreError) -> String {
         ErrorKind::InvalidTagValue { tag, detail } => {
             format!(
                 "{} tag=({:04X},{:04X}) detail={detail}",
-                err.code(), tag.0, tag.1
+                err.code(),
+                tag.0,
+                tag.1
             )
         }
         ErrorKind::MissingRequiredTag { tag } => {

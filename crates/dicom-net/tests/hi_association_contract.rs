@@ -31,7 +31,8 @@ fn association_parsing_fails_closed_for_invalid_context_and_presentation_rules()
         1,
         SOP_VERIFICATION.to_string(),
         vec![TS_IMPLICIT_LE.to_string()],
-    ).unwrap()]);
+    )
+    .unwrap()]);
     invalid_app_context.application_context = "1.2.3".to_string();
     let encoded = encode_pdu(&Pdu::AssociateRq(invalid_app_context), &limits).expect("encode");
     let err = parse_pdu(&encoded, &limits).expect_err("invalid app-context must fail");
@@ -48,7 +49,8 @@ fn association_parsing_fails_closed_for_invalid_context_and_presentation_rules()
         2,
         SOP_VERIFICATION.to_string(),
         vec![TS_IMPLICIT_LE.to_string()],
-    ).expect_err("even context IDs must fail");
+    )
+    .expect_err("even context IDs must fail");
     match &err.kind() {
         ErrorKind::DecodeError { detail, .. } => {
             assert!(detail.contains("presentation context ID must be odd"));
@@ -62,9 +64,24 @@ fn association_negotiation_results_are_deterministic_and_explicit() {
     // REQ-HI-347, REQ-HI-390
     let limits = NetworkLimits::default();
     let request = request_with_contexts(vec![
-        PresentationContext::new(1, SOP_VERIFICATION.to_string(), vec![TS_EXPLICIT_LE.to_string(), TS_IMPLICIT_LE.to_string()]).unwrap(),
-        PresentationContext::new(3, "1.2.840.10008.5.1.4.1.2.1.1".to_string(), vec![TS_IMPLICIT_LE.to_string()]).unwrap(),
-        PresentationContext::new(5, SOP_VERIFICATION.to_string(), vec!["1.2.840.10008.1.2.4.70".to_string()]).unwrap(),
+        PresentationContext::new(
+            1,
+            SOP_VERIFICATION.to_string(),
+            vec![TS_EXPLICIT_LE.to_string(), TS_IMPLICIT_LE.to_string()],
+        )
+        .unwrap(),
+        PresentationContext::new(
+            3,
+            "1.2.840.10008.5.1.4.1.2.1.1".to_string(),
+            vec![TS_IMPLICIT_LE.to_string()],
+        )
+        .unwrap(),
+        PresentationContext::new(
+            5,
+            SOP_VERIFICATION.to_string(),
+            vec!["1.2.840.10008.1.2.4.70".to_string()],
+        )
+        .unwrap(),
     ]);
 
     let policy = AssociationPolicy {

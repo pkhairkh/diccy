@@ -479,12 +479,12 @@ mod tests {
 
     fn context_dataset(study: &str, series: &str, instance: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance.to_string())).unwrap(),
+        );
         dataset
     }
 

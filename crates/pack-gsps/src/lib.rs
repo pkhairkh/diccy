@@ -3,8 +3,7 @@
 //! GSPS pack: deterministic shutter and presentation state application.
 
 use dicom_core::{
-    parse_f64_strict, parse_i32_strict, Dataset, Element, Error, ErrorKind, Result, Tag, Value,
-    Vr,
+    parse_f64_strict, parse_i32_strict, Dataset, Element, Error, ErrorKind, Result, Tag, Value, Vr,
 };
 #[cfg(feature = "rendering")]
 use dicom_pixel::{DisplayFrame, DisplayTransform, PixelFormat};
@@ -1186,8 +1185,14 @@ pub fn encode_presentation_state(state: &PresentationState) -> Dataset {
     let mut dataset = Dataset::new();
 
     // SOP Class UID
-    dataset.insert(Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Uid(SOP_CLASS_GSPS.to_string()),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_SOP_CLASS_UID,
+            Vr::Ui,
+            Value::Uid(SOP_CLASS_GSPS.to_string()),
+        )
+        .unwrap(),
+    );
 
     // Shutter
     if let Some(shutter) = &state.shutter {
@@ -1202,10 +1207,12 @@ pub fn encode_presentation_state(state: &PresentationState) -> Dataset {
     // Window center / width
     if let (Some(center), Some(width)) = (state.window_center, state.window_width) {
         if center.is_finite() && width.is_finite() && width > 0.0 {
-            dataset.insert(Element::new(TAG_WINDOW_CENTER, Vr::Ds, Value::Str(format_ds(center)),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_WINDOW_WIDTH, Vr::Ds, Value::Str(format_ds(width)),
-            ).unwrap());
+            dataset.insert(
+                Element::new(TAG_WINDOW_CENTER, Vr::Ds, Value::Str(format_ds(center))).unwrap(),
+            );
+            dataset.insert(
+                Element::new(TAG_WINDOW_WIDTH, Vr::Ds, Value::Str(format_ds(width))).unwrap(),
+            );
         }
     }
 
@@ -1261,15 +1268,33 @@ pub fn encode_viewport_as_gsps(viewport: &ViewportState) -> Dataset {
 
     // Add referenced image sequence pointing to the source instance.
     let mut referenced_image = Dataset::new();
-    referenced_image.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(viewport.referenced_sop_instance_uid.clone()),
-    ).unwrap());
+    referenced_image.insert(
+        Element::new(
+            TAG_REFERENCED_SOP_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(viewport.referenced_sop_instance_uid.clone()),
+        )
+        .unwrap(),
+    );
 
     let mut referenced_series = Dataset::new();
-    referenced_series.insert(Element::new(TAG_REFERENCED_IMAGE_SEQUENCE, Vr::Sq, Value::Sequence(vec![referenced_image]),
-    ).unwrap());
+    referenced_series.insert(
+        Element::new(
+            TAG_REFERENCED_IMAGE_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![referenced_image]),
+        )
+        .unwrap(),
+    );
 
-    dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![referenced_series]),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_REFERENCED_SERIES_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![referenced_series]),
+        )
+        .unwrap(),
+    );
 
     dataset
 }
@@ -1302,18 +1327,54 @@ fn encode_shutter(dataset: &mut Dataset, shutter: &Shutter) {
             lower,
             value,
         } => {
-            dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("RECTANGULAR".to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_LEFT_VERT_EDGE, Vr::Is, Value::Str(left.to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_RIGHT_VERT_EDGE, Vr::Is, Value::Str(right.to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_UPPER_HORIZ_EDGE, Vr::Is, Value::Str(upper.to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_LOWER_HORIZ_EDGE, Vr::Is, Value::Str(lower.to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str((*value).to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_SHAPE,
+                    Vr::Cs,
+                    Value::Str("RECTANGULAR".to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_LEFT_VERT_EDGE,
+                    Vr::Is,
+                    Value::Str(left.to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_RIGHT_VERT_EDGE,
+                    Vr::Is,
+                    Value::Str(right.to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_UPPER_HORIZ_EDGE,
+                    Vr::Is,
+                    Value::Str(upper.to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_LOWER_HORIZ_EDGE,
+                    Vr::Is,
+                    Value::Str(lower.to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_PRESENTATION_VALUE,
+                    Vr::Us,
+                    Value::Str((*value).to_string()),
+                )
+                .unwrap(),
+            );
         }
         Shutter::Circular {
             center_x,
@@ -1321,26 +1382,63 @@ fn encode_shutter(dataset: &mut Dataset, shutter: &Shutter) {
             radius,
             value,
         } => {
-            dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("CIRCULAR".to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_CENTER, Vr::Is, Value::Str(format!("{}\\{}", center_x, center_y)),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_RADIUS, Vr::Is, Value::Str(radius.to_string()),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str((*value).to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_SHAPE,
+                    Vr::Cs,
+                    Value::Str("CIRCULAR".to_string()),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_CENTER,
+                    Vr::Is,
+                    Value::Str(format!("{}\\{}", center_x, center_y)),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(TAG_SHUTTER_RADIUS, Vr::Is, Value::Str(radius.to_string())).unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_PRESENTATION_VALUE,
+                    Vr::Us,
+                    Value::Str((*value).to_string()),
+                )
+                .unwrap(),
+            );
         }
         Shutter::Polygon { points, value } => {
-            dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("POLYGONAL".to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_SHAPE,
+                    Vr::Cs,
+                    Value::Str("POLYGONAL".to_string()),
+                )
+                .unwrap(),
+            );
             let vertices: Vec<String> = points
                 .iter()
                 .flat_map(|(x, y)| [x.to_string(), y.to_string()])
                 .collect();
-            dataset.insert(Element::new(TAG_SHUTTER_VERTICES, Vr::Is, Value::Str(vertices.join("\\")),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str((*value).to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_VERTICES,
+                    Vr::Is,
+                    Value::Str(vertices.join("\\")),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_SHUTTER_PRESENTATION_VALUE,
+                    Vr::Us,
+                    Value::Str((*value).to_string()),
+                )
+                .unwrap(),
+            );
         }
     }
 }
@@ -1352,10 +1450,9 @@ fn encode_graphics_sequence(dataset: &mut Dataset, graphics: &[GraphicObject]) {
         .map(|g| {
             let mut item = Dataset::new();
             let (graphic_type, graphic_data) = match g {
-                GraphicObject::Point { point } => (
-                    "POINT",
-                    format_ds(point.0) + "\\" + &format_ds(point.1),
-                ),
+                GraphicObject::Point { point } => {
+                    ("POINT", format_ds(point.0) + "\\" + &format_ds(point.1))
+                }
                 GraphicObject::Polyline { points } => {
                     let data: Vec<String> = points
                         .iter()
@@ -1404,20 +1501,37 @@ fn encode_graphics_sequence(dataset: &mut Dataset, graphics: &[GraphicObject]) {
                         + &format_ds(minor_end.1),
                 ),
             };
-            item.insert(Element::new(TAG_GRAPHIC_TYPE, Vr::Cs, Value::Str(graphic_type.to_string()),
-            ).unwrap());
-            item.insert(Element::new(TAG_GRAPHIC_DATA, Vr::Ds, Value::Str(graphic_data),
-            ).unwrap());
+            item.insert(
+                Element::new(
+                    TAG_GRAPHIC_TYPE,
+                    Vr::Cs,
+                    Value::Str(graphic_type.to_string()),
+                )
+                .unwrap(),
+            );
+            item.insert(Element::new(TAG_GRAPHIC_DATA, Vr::Ds, Value::Str(graphic_data)).unwrap());
             item
         })
         .collect();
 
     let mut annotation = Dataset::new();
-    annotation.insert(Element::new(TAG_GRAPHIC_OBJECT_SEQUENCE, Vr::Sq, Value::Sequence(graphic_items),
-    ).unwrap());
+    annotation.insert(
+        Element::new(
+            TAG_GRAPHIC_OBJECT_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(graphic_items),
+        )
+        .unwrap(),
+    );
 
-    dataset.insert(Element::new(TAG_GRAPHIC_ANNOTATION_SEQUENCE, Vr::Sq, Value::Sequence(vec![annotation]),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_GRAPHIC_ANNOTATION_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![annotation]),
+        )
+        .unwrap(),
+    );
 }
 
 /// Encode spatial transform attributes (zoom, pan, rotation, flip).
@@ -1448,13 +1562,28 @@ fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
     let effective_rotation = (rotation_q + if flip_y { 2 } else { 0 }) % 4;
 
     // Write Image Horizontal Flip
-    dataset.insert(Element::new(TAG_IMAGE_HORIZONTAL_FLIP, Vr::Cs, Value::Str(
-        if effective_flip_x { "Y".to_string() } else { "N".to_string() }
-    )).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_IMAGE_HORIZONTAL_FLIP,
+            Vr::Cs,
+            Value::Str(if effective_flip_x {
+                "Y".to_string()
+            } else {
+                "N".to_string()
+            }),
+        )
+        .unwrap(),
+    );
 
     // Write Image Rotation (in degrees)
-    dataset.insert(Element::new(TAG_IMAGE_ROTATION, Vr::Is, Value::Str((effective_rotation * 90).to_string()),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_IMAGE_ROTATION,
+            Vr::Is,
+            Value::Str((effective_rotation * 90).to_string()),
+        )
+        .unwrap(),
+    );
 
     // Write zoom and pan in a Displayed Area Selection Sequence
     if has_zoom || has_pan {
@@ -1462,8 +1591,14 @@ fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
 
         if let Some(zoom) = state.zoom {
             if zoom.is_finite() && zoom > 0.0 {
-                area_item.insert(Element::new(TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO, Vr::Ds, Value::Str(format_ds(zoom)),
-                ).unwrap());
+                area_item.insert(
+                    Element::new(
+                        TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO,
+                        Vr::Ds,
+                        Value::Str(format_ds(zoom)),
+                    )
+                    .unwrap(),
+                );
             }
         }
 
@@ -1471,13 +1606,25 @@ fn encode_spatial_transform(dataset: &mut Dataset, state: &PresentationState) {
             let pan_x = state.pan_x.unwrap_or(0.0);
             let pan_y = state.pan_y.unwrap_or(0.0);
             if pan_x.is_finite() && pan_y.is_finite() {
-                area_item.insert(Element::new(TAG_DISPLAYED_AREA_TOP_LEFT, Vr::Ds, Value::Str(format!("{}\\{}", format_ds(pan_y), format_ds(pan_x))),
-                ).unwrap());
+                area_item.insert(
+                    Element::new(
+                        TAG_DISPLAYED_AREA_TOP_LEFT,
+                        Vr::Ds,
+                        Value::Str(format!("{}\\{}", format_ds(pan_y), format_ds(pan_x))),
+                    )
+                    .unwrap(),
+                );
             }
         }
 
-        dataset.insert(Element::new(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE, Vr::Sq, Value::Sequence(vec![area_item]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_DISPLAYED_AREA_SELECTION_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![area_item]),
+            )
+            .unwrap(),
+        );
     }
 }
 
@@ -1527,18 +1674,54 @@ mod tests {
         value: u8,
     ) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("RECTANGULAR".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_LEFT_VERT_EDGE, Vr::Is, Value::Str(left.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_RIGHT_VERT_EDGE, Vr::Is, Value::Str(right.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_UPPER_HORIZ_EDGE, Vr::Is, Value::Str(upper.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_LOWER_HORIZ_EDGE, Vr::Is, Value::Str(lower.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str(value.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_SHAPE,
+                Vr::Cs,
+                Value::Str("RECTANGULAR".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_LEFT_VERT_EDGE,
+                Vr::Is,
+                Value::Str(left.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_RIGHT_VERT_EDGE,
+                Vr::Is,
+                Value::Str(right.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_UPPER_HORIZ_EDGE,
+                Vr::Is,
+                Value::Str(upper.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_LOWER_HORIZ_EDGE,
+                Vr::Is,
+                Value::Str(lower.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_PRESENTATION_VALUE,
+                Vr::Us,
+                Value::Str(value.to_string()),
+            )
+            .unwrap(),
+        );
         dataset
     }
 
@@ -1548,29 +1731,71 @@ mod tests {
 
     fn build_polygon_dataset(vertices: &str, value: u8) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SHUTTER_SHAPE, Vr::Cs, Value::Str("POLYGONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_VERTICES, Vr::Is, Value::Str(vertices.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SHUTTER_PRESENTATION_VALUE, Vr::Us, Value::Str(value.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_SHAPE,
+                Vr::Cs,
+                Value::Str("POLYGONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_VERTICES,
+                Vr::Is,
+                Value::Str(vertices.to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SHUTTER_PRESENTATION_VALUE,
+                Vr::Us,
+                Value::Str(value.to_string()),
+            )
+            .unwrap(),
+        );
         dataset
     }
 
     fn build_graphic_dataset_with_type(graphic_type: &str, graphic_data: &str) -> Dataset {
         let mut graphic = Dataset::new();
-        graphic.insert(Element::new(TAG_GRAPHIC_TYPE, Vr::Cs, Value::Str(graphic_type.to_string()),
-        ).unwrap());
-        graphic.insert(Element::new(TAG_GRAPHIC_DATA, Vr::Ds, Value::Str(graphic_data.to_string()),
-        ).unwrap());
+        graphic.insert(
+            Element::new(
+                TAG_GRAPHIC_TYPE,
+                Vr::Cs,
+                Value::Str(graphic_type.to_string()),
+            )
+            .unwrap(),
+        );
+        graphic.insert(
+            Element::new(
+                TAG_GRAPHIC_DATA,
+                Vr::Ds,
+                Value::Str(graphic_data.to_string()),
+            )
+            .unwrap(),
+        );
 
         let mut annotation = Dataset::new();
-        annotation.insert(Element::new(TAG_GRAPHIC_OBJECT_SEQUENCE, Vr::Sq, Value::Sequence(vec![graphic]),
-        ).unwrap());
+        annotation.insert(
+            Element::new(
+                TAG_GRAPHIC_OBJECT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![graphic]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_GRAPHIC_ANNOTATION_SEQUENCE, Vr::Sq, Value::Sequence(vec![annotation]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_GRAPHIC_ANNOTATION_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![annotation]),
+            )
+            .unwrap(),
+        );
         dataset
     }
 
@@ -1580,38 +1805,103 @@ mod tests {
 
     fn build_image_dataset(rows: u16, cols: u16, pixel_data: Vec<u8>) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Bytes(cols.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SAMPLES_PER_PIXEL, Vr::Us, Value::Bytes(1u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PHOTOMETRIC_INTERPRETATION, Vr::Cs, Value::Str("MONOCHROME2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Bytes(8u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Bytes(8u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Bytes(7u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_REPRESENTATION, Vr::Us, Value::Bytes(0u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_ROWS, Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_COLUMNS,
+                Vr::Us,
+                Value::Bytes(cols.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SAMPLES_PER_PIXEL,
+                Vr::Us,
+                Value::Bytes(1u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_PHOTOMETRIC_INTERPRETATION,
+                Vr::Cs,
+                Value::Str("MONOCHROME2".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_BITS_ALLOCATED,
+                Vr::Us,
+                Value::Bytes(8u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_BITS_STORED,
+                Vr::Us,
+                Value::Bytes(8u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_HIGH_BIT,
+                Vr::Us,
+                Value::Bytes(7u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_PIXEL_REPRESENTATION,
+                Vr::Us,
+                Value::Bytes(0u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data)).unwrap());
         dataset
     }
 
     fn add_overlay(dataset: &mut Dataset, rows: u16, cols: u16, data: Vec<u8>) {
-        dataset.insert(Element::new(TAG_OVERLAY_ROWS, Vr::Us, Value::Bytes(rows.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_OVERLAY_COLUMNS, Vr::Us, Value::Bytes(cols.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_OVERLAY_BITS_ALLOCATED, Vr::Us, Value::Bytes(1u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_OVERLAY_BIT_POSITION, Vr::Us, Value::Bytes(0u16.to_le_bytes().to_vec()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_OVERLAY_DATA, Vr::Ob, Value::Bytes(data),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_OVERLAY_ROWS,
+                Vr::Us,
+                Value::Bytes(rows.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_OVERLAY_COLUMNS,
+                Vr::Us,
+                Value::Bytes(cols.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_OVERLAY_BITS_ALLOCATED,
+                Vr::Us,
+                Value::Bytes(1u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_OVERLAY_BIT_POSITION,
+                Vr::Us,
+                Value::Bytes(0u16.to_le_bytes().to_vec()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(Element::new(TAG_OVERLAY_DATA, Vr::Ob, Value::Bytes(data)).unwrap());
     }
 
     #[test]
@@ -1953,7 +2243,9 @@ mod tests {
     fn encode_point_graphic_roundtrip() {
         // REQ-GSPS-302
         let original = PresentationStateBuilder::new()
-            .with_graphic(GraphicObject::Point { point: (10.5, 20.3) })
+            .with_graphic(GraphicObject::Point {
+                point: (10.5, 20.3),
+            })
             .build();
         let dataset = encode_presentation_state(&original);
         let parsed = PresentationState::from_dataset(&dataset).expect("parse encoded");
@@ -2109,9 +2401,7 @@ mod tests {
     #[test]
     fn encode_zoom_in_displayed_area() {
         // REQ-GSPS-302
-        let state = PresentationStateBuilder::new()
-            .with_zoom(2.5)
-            .build();
+        let state = PresentationStateBuilder::new().with_zoom(2.5).build();
         let dataset = encode_presentation_state(&state);
         let seq = dataset
             .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
@@ -2134,9 +2424,7 @@ mod tests {
     #[test]
     fn encode_pan_in_displayed_area() {
         // REQ-GSPS-302
-        let state = PresentationStateBuilder::new()
-            .with_pan(10.0, -5.0)
-            .build();
+        let state = PresentationStateBuilder::new().with_pan(10.0, -5.0).build();
         let dataset = encode_presentation_state(&state);
         let seq = dataset
             .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
@@ -2205,12 +2493,13 @@ mod tests {
         assert_eq!(center, Some("40"));
 
         // Should have referenced series sequence with the SOP Instance UID
-        let ref_series = dataset
-            .get(TAG_REFERENCED_SERIES_SEQUENCE)
-            .and_then(|e| match &e.value() {
-                Value::Sequence(items) => Some(items.as_slice()),
-                _ => None,
-            });
+        let ref_series =
+            dataset
+                .get(TAG_REFERENCED_SERIES_SEQUENCE)
+                .and_then(|e| match &e.value() {
+                    Value::Sequence(items) => Some(items.as_slice()),
+                    _ => None,
+                });
         assert!(ref_series.is_some());
         let series_items = ref_series.unwrap();
         assert_eq!(series_items.len(), 1);

@@ -26,9 +26,15 @@ use std::sync::mpsc;
 /// Implementations must support `Read`, `Write`, and timeout configuration.
 pub trait TransportStream: Send + Sync + io::Read + io::Write {
     /// Set the read timeout for this stream.
-    fn set_read_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>>;
+    fn set_read_timeout(
+        &self,
+        dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>>;
     /// Set the write timeout for this stream.
-    fn set_write_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>>;
+    fn set_write_timeout(
+        &self,
+        dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>>;
 }
 
 /// Abstract transport for establishing DICOM association streams.
@@ -37,9 +43,14 @@ pub trait TransportStream: Send + Sync + io::Read + io::Write {
 /// to exercise protocol logic without real network I/O.
 pub trait Transport: Send + Sync {
     /// Connect to the given address and return a bidirectional stream.
-    fn connect(&self, addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>>;
+    fn connect(
+        &self,
+        addr: &str,
+    ) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>>;
     /// Accept one incoming connection, returning the stream and peer address.
-    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>>;
+    fn accept(
+        &self,
+    ) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>>;
 }
 
 /// Type-erased transport stream box.
@@ -68,12 +79,17 @@ impl TcpTransport {
 }
 
 impl Transport for TcpTransport {
-    fn connect(&self, addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
+    fn connect(
+        &self,
+        addr: &str,
+    ) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
         let stream = std::net::TcpStream::connect(addr)?;
         Ok(Box::new(TcpStream { inner: stream }))
     }
 
-    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
+    fn accept(
+        &self,
+    ) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
         let (stream, addr) = self.listener.accept()?;
         Ok((Box::new(TcpStream { inner: stream }), addr))
     }
@@ -100,11 +116,17 @@ impl io::Write for TcpStream {
 }
 
 impl TransportStream for TcpStream {
-    fn set_read_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn set_read_timeout(
+        &self,
+        dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(self.inner.set_read_timeout(dur)?)
     }
 
-    fn set_write_timeout(&self, dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn set_write_timeout(
+        &self,
+        dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(self.inner.set_write_timeout(dur)?)
     }
 }
@@ -140,12 +162,17 @@ impl MockTransport {
 }
 
 impl Transport for MockTransport {
-    fn connect(&self, _addr: &str) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
+    fn connect(
+        &self,
+        _addr: &str,
+    ) -> std::result::Result<TransportStreamBox, Box<dyn std::error::Error>> {
         // Mock transport does not support connect; use accept + MockClient
         Err("MockTransport does not support connect; use accept with MockClient".into())
     }
 
-    fn accept(&self) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
+    fn accept(
+        &self,
+    ) -> std::result::Result<(TransportStreamBox, SocketAddr), Box<dyn std::error::Error>> {
         // Take the next pending write from a client and return a paired stream
         let (data, reply_tx) = self.receiver.lock().unwrap().recv()?;
         let stream = MockStream {
@@ -165,7 +192,10 @@ pub struct MockClient {
 
 impl MockClient {
     /// Send data to the server and return the response.
-    pub fn roundtrip(&self, request: &[u8]) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+    pub fn roundtrip(
+        &self,
+        request: &[u8],
+    ) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
         let (reply_tx, reply_rx) = mpsc::channel();
         self.to_server.send((request.to_vec(), reply_tx))?;
         // Also send to the server's response channel
@@ -204,11 +234,17 @@ impl io::Write for MockStream {
 }
 
 impl TransportStream for MockStream {
-    fn set_read_timeout(&self, _dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn set_read_timeout(
+        &self,
+        _dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    fn set_write_timeout(&self, _dur: Option<std::time::Duration>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn set_write_timeout(
+        &self,
+        _dur: Option<std::time::Duration>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
@@ -268,7 +304,11 @@ impl RejectReason {
             (2, 2, 2) => RejectReason::ProviderProtocolVersionNotSupported,
             (2, 3, 1) => RejectReason::ProviderTemporaryCongestion,
             (2, 3, 2) => RejectReason::ProviderLocalLimitExceeded,
-            _ => RejectReason::Other { result, source, reason },
+            _ => RejectReason::Other {
+                result,
+                source,
+                reason,
+            },
         }
     }
 
@@ -283,7 +323,11 @@ impl RejectReason {
             RejectReason::ProviderProtocolVersionNotSupported => (2, 2, 2),
             RejectReason::ProviderTemporaryCongestion => (2, 3, 1),
             RejectReason::ProviderLocalLimitExceeded => (2, 3, 2),
-            RejectReason::Other { result, source, reason } => (result, source, reason),
+            RejectReason::Other {
+                result,
+                source,
+                reason,
+            } => (result, source, reason),
         }
     }
 }
@@ -292,14 +336,30 @@ impl fmt::Display for RejectReason {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RejectReason::UserNoReason => write!(f, "UserNoReason(1/1/1)"),
-            RejectReason::UserApplicationContextNotSupported => write!(f, "UserApplicationContextNotSupported(1/1/2)"),
-            RejectReason::UserCallingAeNotRecognized => write!(f, "UserCallingAeNotRecognized(1/1/3)"),
-            RejectReason::UserCalledAeNotRecognized => write!(f, "UserCalledAeNotRecognized(1/1/7)"),
+            RejectReason::UserApplicationContextNotSupported => {
+                write!(f, "UserApplicationContextNotSupported(1/1/2)")
+            }
+            RejectReason::UserCallingAeNotRecognized => {
+                write!(f, "UserCallingAeNotRecognized(1/1/3)")
+            }
+            RejectReason::UserCalledAeNotRecognized => {
+                write!(f, "UserCalledAeNotRecognized(1/1/7)")
+            }
             RejectReason::ProviderNoReason => write!(f, "ProviderNoReason(1/2/1)"),
-            RejectReason::ProviderProtocolVersionNotSupported => write!(f, "ProviderProtocolVersionNotSupported(2/2/2)"),
-            RejectReason::ProviderTemporaryCongestion => write!(f, "ProviderTemporaryCongestion(2/3/1)"),
-            RejectReason::ProviderLocalLimitExceeded => write!(f, "ProviderLocalLimitExceeded(2/3/2)"),
-            RejectReason::Other { result, source, reason } => write!(f, "Other({result}/{source}/{reason})"),
+            RejectReason::ProviderProtocolVersionNotSupported => {
+                write!(f, "ProviderProtocolVersionNotSupported(2/2/2)")
+            }
+            RejectReason::ProviderTemporaryCongestion => {
+                write!(f, "ProviderTemporaryCongestion(2/3/1)")
+            }
+            RejectReason::ProviderLocalLimitExceeded => {
+                write!(f, "ProviderLocalLimitExceeded(2/3/2)")
+            }
+            RejectReason::Other {
+                result,
+                source,
+                reason,
+            } => write!(f, "Other({result}/{source}/{reason})"),
         }
     }
 }
@@ -348,8 +408,12 @@ impl fmt::Display for AcceptResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AcceptResult::Accepted => write!(f, "Accepted(0x00)"),
-            AcceptResult::AbstractSyntaxNotSupported => write!(f, "AbstractSyntaxNotSupported(0x03)"),
-            AcceptResult::TransferSyntaxNotSupported => write!(f, "TransferSyntaxNotSupported(0x04)"),
+            AcceptResult::AbstractSyntaxNotSupported => {
+                write!(f, "AbstractSyntaxNotSupported(0x03)")
+            }
+            AcceptResult::TransferSyntaxNotSupported => {
+                write!(f, "TransferSyntaxNotSupported(0x04)")
+            }
             AcceptResult::Other(raw) => write!(f, "Other(0x{raw:02X})"),
         }
     }
@@ -428,7 +492,9 @@ impl AssociationRequest {
         validate_ae_title("calling_ae", &self.calling_ae)?;
 
         if self.presentation_contexts.is_empty() {
-            return Err(decode_error("association request requires at least one presentation context"));
+            return Err(decode_error(
+                "association request requires at least one presentation context",
+            ));
         }
 
         for ctx in &self.presentation_contexts {
@@ -821,8 +887,13 @@ pub fn parse_pdu_stream(input: &[u8], limits: &NetworkLimits) -> Result<Vec<Pdu>
         }
         let pdu_type = cursor.read_u8()?;
         let _reserved = cursor.read_u8()?;
-        let length = usize::try_from(cursor.read_u32_be()?).map_err(|_| decode_error("PDU length exceeds usize"))?;
-        enforce_limit("max_pdu_bytes", u64::try_from(length).map_err(|_| decode_error("PDU length exceeds u64"))?, limits.max_pdu_bytes)?;
+        let length = usize::try_from(cursor.read_u32_be()?)
+            .map_err(|_| decode_error("PDU length exceeds usize"))?;
+        enforce_limit(
+            "max_pdu_bytes",
+            u64::try_from(length).map_err(|_| decode_error("PDU length exceeds u64"))?,
+            limits.max_pdu_bytes,
+        )?;
         if cursor.remaining() < length {
             return Err(decode_error("PDU length exceeds buffer"));
         }
@@ -932,11 +1003,19 @@ fn pdu_type(pdu: &Pdu) -> u8 {
 }
 
 fn wrap_pdu(pdu_type: u8, body: &[u8], limits: &NetworkLimits) -> Result<Vec<u8>> {
-    enforce_limit("max_pdu_bytes", u64::try_from(body.len()).map_err(|_| decode_error("PDU body length exceeds u64"))?, limits.max_pdu_bytes)?;
+    enforce_limit(
+        "max_pdu_bytes",
+        u64::try_from(body.len()).map_err(|_| decode_error("PDU body length exceeds u64"))?,
+        limits.max_pdu_bytes,
+    )?;
     let mut out = Vec::with_capacity(body.len() + 6);
     out.push(pdu_type);
     out.push(0x00);
-    out.extend_from_slice(&u32::try_from(body.len()).map_err(|_| decode_error("PDU body length exceeds u32"))?.to_be_bytes());
+    out.extend_from_slice(
+        &u32::try_from(body.len())
+            .map_err(|_| decode_error("PDU body length exceeds u32"))?
+            .to_be_bytes(),
+    );
     out.extend_from_slice(body);
     Ok(out)
 }
@@ -996,9 +1075,21 @@ fn encode_abort(abort: &Abort) -> Vec<u8> {
 fn encode_pdata(pdvs: &[Pdv], limits: &NetworkLimits) -> Result<Vec<u8>> {
     let mut body = Vec::new();
     for pdv in pdvs {
-        let pdv_len = pdv.data.len().checked_add(2).ok_or_else(|| decode_error("PDV length overflow"))?;
-        enforce_limit("max_pdv_bytes", u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?, limits.max_pdv_bytes)?;
-        body.extend_from_slice(&u32::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u32"))?.to_be_bytes());
+        let pdv_len = pdv
+            .data
+            .len()
+            .checked_add(2)
+            .ok_or_else(|| decode_error("PDV length overflow"))?;
+        enforce_limit(
+            "max_pdv_bytes",
+            u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?,
+            limits.max_pdv_bytes,
+        )?;
+        body.extend_from_slice(
+            &u32::try_from(pdv_len)
+                .map_err(|_| decode_error("PDV length exceeds u32"))?
+                .to_be_bytes(),
+        );
         body.push(pdv.presentation_context_id);
         body.push(pdv.message_control_header);
         body.extend_from_slice(&pdv.data);
@@ -1052,7 +1143,11 @@ fn encode_item(item_type: u8, body: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::with_capacity(body.len() + 4);
     out.push(item_type);
     out.push(0x00);
-    out.extend_from_slice(&u16::try_from(body.len()).map_err(|_| decode_error("item length exceeds u16"))?.to_be_bytes());
+    out.extend_from_slice(
+        &u16::try_from(body.len())
+            .map_err(|_| decode_error("item length exceeds u16"))?
+            .to_be_bytes(),
+    );
     out.extend_from_slice(body);
     Ok(out)
 }
@@ -1138,7 +1233,9 @@ fn parse_associate_rq(body: &[u8], limits: &NetworkLimits) -> Result<Association
                 application_context = Some(uid);
             }
             0x20 => {
-                if u64::try_from(contexts.len()).unwrap_or(u64::MAX) >= limits.max_presentation_contexts {
+                if u64::try_from(contexts.len()).unwrap_or(u64::MAX)
+                    >= limits.max_presentation_contexts
+                {
                     return Err(limit_exceeded(
                         "max_presentation_contexts",
                         u64::try_from(contexts.len()).unwrap_or(u64::MAX),
@@ -1203,7 +1300,9 @@ fn parse_associate_ac(body: &[u8], limits: &NetworkLimits) -> Result<Association
                 application_context = Some(uid);
             }
             0x21 => {
-                if u64::try_from(contexts.len()).unwrap_or(u64::MAX) >= limits.max_presentation_contexts {
+                if u64::try_from(contexts.len()).unwrap_or(u64::MAX)
+                    >= limits.max_presentation_contexts
+                {
                     return Err(limit_exceeded(
                         "max_presentation_contexts",
                         u64::try_from(contexts.len()).unwrap_or(u64::MAX),
@@ -1279,8 +1378,13 @@ fn parse_pdata(body: &[u8], limits: &NetworkLimits) -> Result<Vec<Pdv>> {
         if cursor.remaining() < 4 {
             return Err(decode_error("truncated PDV header"));
         }
-        let pdv_len = usize::try_from(cursor.read_u32_be()?).map_err(|_| decode_error("PDV length exceeds usize"))?;
-        enforce_limit("max_pdv_bytes", u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?, limits.max_pdv_bytes)?;
+        let pdv_len = usize::try_from(cursor.read_u32_be()?)
+            .map_err(|_| decode_error("PDV length exceeds usize"))?;
+        enforce_limit(
+            "max_pdv_bytes",
+            u64::try_from(pdv_len).map_err(|_| decode_error("PDV length exceeds u64"))?,
+            limits.max_pdv_bytes,
+        )?;
         if pdv_len < 2 {
             return Err(decode_error("invalid PDV length"));
         }
@@ -1359,7 +1463,11 @@ fn parse_presentation_context_rq(item_body: &[u8]) -> Result<PresentationContext
     if transfer_syntaxes.is_empty() {
         return Err(decode_error("missing transfer syntax"));
     }
-    Ok(PresentationContext::new(id, abstract_syntax, transfer_syntaxes)?)
+    Ok(PresentationContext::new(
+        id,
+        abstract_syntax,
+        transfer_syntaxes,
+    )?)
 }
 
 fn parse_presentation_context_ac(item_body: &[u8]) -> Result<PresentationContextAccept> {
@@ -1516,14 +1624,22 @@ mod tests {
 
     fn build_uid_item(item_type: u8, uid: &str) -> Vec<u8> {
         let mut out = vec![item_type, 0x00];
-        out.extend_from_slice(&u16::try_from(uid.len()).unwrap_or_else(|_| panic!("UID item too long")).to_be_bytes());
+        out.extend_from_slice(
+            &u16::try_from(uid.len())
+                .unwrap_or_else(|_| panic!("UID item too long"))
+                .to_be_bytes(),
+        );
         out.extend_from_slice(uid.as_bytes());
         out
     }
 
     fn build_item(item_type: u8, body: &[u8]) -> Vec<u8> {
         let mut out = vec![item_type, 0x00];
-        out.extend_from_slice(&u16::try_from(body.len()).unwrap_or_else(|_| panic!("item body too long")).to_be_bytes());
+        out.extend_from_slice(
+            &u16::try_from(body.len())
+                .unwrap_or_else(|_| panic!("item body too long"))
+                .to_be_bytes(),
+        );
         out.extend_from_slice(body);
         out
     }
@@ -1559,7 +1675,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
+        pdu.extend_from_slice(
+            &u32::try_from(body.len())
+                .unwrap_or_else(|_| panic!("PDU body too long"))
+                .to_be_bytes(),
+        );
         pdu.extend_from_slice(&body);
         pdu
     }
@@ -1591,7 +1711,8 @@ mod tests {
                 0x01,
                 "1.2.840.10008.1.1".to_string(),
                 vec!["1.2.840.10008.1.2".to_string()],
-            ).unwrap()],
+            )
+            .unwrap()],
             max_pdu_length: 16_384,
             implementation_class_uid: None,
             implementation_version_name: None,
@@ -1641,17 +1762,20 @@ mod tests {
                     0x01,
                     "1.2.3".to_string(),
                     vec!["1.2.840.10008.1.2".to_string()],
-                ).unwrap(),
+                )
+                .unwrap(),
                 PresentationContext::new(
                     0x03,
                     "1.2.3".to_string(),
                     vec!["1.2.840.10008.1.2.1".to_string()],
-                ).unwrap(),
+                )
+                .unwrap(),
                 PresentationContext::new(
                     0x05,
                     "9.9.9".to_string(),
                     vec!["1.2.840.10008.1.2".to_string()],
-                ).unwrap(),
+                )
+                .unwrap(),
             ],
             max_pdu_length: 32_768,
             implementation_class_uid: None,
@@ -1750,7 +1874,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
+        pdu.extend_from_slice(
+            &u32::try_from(body.len())
+                .unwrap_or_else(|_| panic!("PDU body too long"))
+                .to_be_bytes(),
+        );
         pdu.extend_from_slice(&body);
 
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
@@ -1771,7 +1899,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
+        pdu.extend_from_slice(
+            &u32::try_from(body.len())
+                .unwrap_or_else(|_| panic!("PDU body too long"))
+                .to_be_bytes(),
+        );
         pdu.extend_from_slice(&body);
 
         let err = parse_pdu(&pdu, &NetworkLimits::default()).expect_err("error");
@@ -1823,7 +1955,11 @@ mod tests {
         body.extend_from_slice(&build_user_info());
 
         let mut pdu = vec![0x01, 0x00];
-        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
+        pdu.extend_from_slice(
+            &u32::try_from(body.len())
+                .unwrap_or_else(|_| panic!("PDU body too long"))
+                .to_be_bytes(),
+        );
         pdu.extend_from_slice(&body);
 
         let limits = NetworkLimits {
@@ -1849,7 +1985,11 @@ mod tests {
         body.push(0x03);
         body.extend_from_slice(&vec![0u8; usize::try_from(pdv_len - 2).unwrap_or(0)]);
         let mut pdu = vec![0x04, 0x00];
-        pdu.extend_from_slice(&u32::try_from(body.len()).unwrap_or_else(|_| panic!("PDU body too long")).to_be_bytes());
+        pdu.extend_from_slice(
+            &u32::try_from(body.len())
+                .unwrap_or_else(|_| panic!("PDU body too long"))
+                .to_be_bytes(),
+        );
         pdu.extend_from_slice(&body);
         let limits = NetworkLimits {
             max_pdv_bytes: 128,
@@ -1864,4 +2004,3 @@ mod tests {
         }
     }
 }
-

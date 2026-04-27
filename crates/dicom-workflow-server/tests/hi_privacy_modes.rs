@@ -18,35 +18,45 @@ const TAG_PATIENT_ID: Tag = Tag(0x0010, 0x0020);
 
 fn mpps_in_progress(uid: &str) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str("IN PROGRESS".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PERFORMED_STEP_ID, Vr::Sh, Value::Str("STEP-PRIV".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string()),
-    ).unwrap());
+    dataset
+        .insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(uid.to_string())).unwrap());
+    dataset
+        .insert(Element::new(TAG_STATUS, Vr::Cs, Value::Str("IN PROGRESS".to_string())).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_PERFORMED_STEP_ID,
+            Vr::Sh,
+            Value::Str("STEP-PRIV".to_string()),
+        )
+        .unwrap(),
+    );
+    dataset
+        .insert(Element::new(TAG_START_DATE, Vr::Da, Value::Str("20260214".to_string())).unwrap());
+    dataset.insert(Element::new(TAG_START_TIME, Vr::Tm, Value::Str("101500".to_string())).unwrap());
     dataset
 }
 
 fn worklist_entry(step_id: &str, patient_id: &str) -> Dataset {
     let mut sps_item = Dataset::new();
-    sps_item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string()),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_SPS_START_DATE, Vr::Da, Value::Str("20260214".to_string()),
-    ).unwrap());
-    sps_item.insert(Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str("102000".to_string()),
-    ).unwrap());
+    sps_item.insert(Element::new(TAG_SPS_ID, Vr::Sh, Value::Str(step_id.to_string())).unwrap());
+    sps_item.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
+    sps_item.insert(
+        Element::new(
+            TAG_SPS_START_DATE,
+            Vr::Da,
+            Value::Str("20260214".to_string()),
+        )
+        .unwrap(),
+    );
+    sps_item.insert(
+        Element::new(TAG_SPS_START_TIME, Vr::Tm, Value::Str("102000".to_string())).unwrap(),
+    );
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![sps_item]),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id.to_string()),
-    ).unwrap());
+    dataset
+        .insert(Element::new(TAG_SPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![sps_item])).unwrap());
+    dataset
+        .insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str(patient_id.to_string())).unwrap());
     dataset
 }
 

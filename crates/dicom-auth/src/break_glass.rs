@@ -90,7 +90,10 @@ pub fn activate_break_glass_access(
         ));
     }
     if request.expires_epoch_secs - request.now_epoch_secs > max_duration_secs.max(1) {
-        return Err(policy_violation("break_glass_duration", "break-glass duration exceeds policy bound"));
+        return Err(policy_violation(
+            "break_glass_duration",
+            "break-glass duration exceeds policy bound",
+        ));
     }
     Ok(BreakGlassGrant {
         principal: request.principal.clone(),

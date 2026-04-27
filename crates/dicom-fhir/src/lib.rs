@@ -329,22 +329,20 @@ impl FhirAdapter {
             .or_else(|| dataset.get_str(TAG_STUDY_INSTANCE_UID))
             .ok_or_else(|| missing_tag_error(TAG_STUDY_INSTANCE_UID))?;
 
-        let patient_id = dataset
-            .get_str(TAG_PATIENT_ID)
-            .unwrap_or("UNKNOWN");
+        let patient_id = dataset.get_str(TAG_PATIENT_ID).unwrap_or("UNKNOWN");
 
         let started = dataset
             .get_str(TAG_STUDY_DATE)
             .map(|d| dicom_date_to_fhir(d));
 
-        let description = dataset.get_str(TAG_STUDY_DESCRIPTION).map(|s| s.to_string());
+        let description = dataset
+            .get_str(TAG_STUDY_DESCRIPTION)
+            .map(|s| s.to_string());
 
-        let accession = dataset
-            .get_str(TAG_ACCESSION_NUMBER)
-            .map(|acc| Identifier {
-                system: Some("urn:dicom:accession".to_string()),
-                value: acc.to_string(),
-            });
+        let accession = dataset.get_str(TAG_ACCESSION_NUMBER).map(|acc| Identifier {
+            system: Some("urn:dicom:accession".to_string()),
+            value: acc.to_string(),
+        });
 
         let modality_codes = extract_modalities(dataset);
 
@@ -387,11 +385,11 @@ impl FhirAdapter {
             .or_else(|| dataset.get_str(TAG_SERIES_INSTANCE_UID))
             .ok_or_else(|| missing_tag_error(TAG_SERIES_INSTANCE_UID))?;
 
-        let modality_code = dataset
-            .get_str(TAG_MODALITY)
-            .unwrap_or("UNKNOWN");
+        let modality_code = dataset.get_str(TAG_MODALITY).unwrap_or("UNKNOWN");
 
-        let description = dataset.get_str(TAG_SERIES_DESCRIPTION).map(|s| s.to_string());
+        let description = dataset
+            .get_str(TAG_SERIES_DESCRIPTION)
+            .map(|s| s.to_string());
 
         let num_instances = dataset
             .get_i32(TAG_NUMBER_OF_SERIES_RELATED_INSTANCES)
@@ -488,13 +486,11 @@ impl FhirAdapter {
                 text: Some("Imaging".to_string()),
             }],
             code: CodeableConcept {
-                coding: vec![
-                    Coding {
-                        system: Some("http://snomed.info/sct".to_string()),
-                        code: measurement_code.to_string(),
-                        display: Some(measurement_display.to_string()),
-                    },
-                ],
+                coding: vec![Coding {
+                    system: Some("http://snomed.info/sct".to_string()),
+                    code: measurement_code.to_string(),
+                    display: Some(measurement_display.to_string()),
+                }],
                 text: Some(measurement_display.to_string()),
             },
             subject: Reference {
@@ -533,7 +529,8 @@ impl FhirAdapter {
                     detail: format!("JSON serialization failed: {e}"),
                 },
                 "serialization failed",
-            ).into()
+            )
+            .into()
         })
     }
 
@@ -546,7 +543,8 @@ impl FhirAdapter {
                     detail: format!("JSON serialization failed: {e}"),
                 },
                 "serialization failed",
-            ).into()
+            )
+            .into()
         })
     }
 
@@ -688,31 +686,58 @@ mod tests {
 
     fn patient_dataset() -> Dataset {
         let mut ds = Dataset::new();
-        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Smith^John^M".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_PATIENT_BIRTH_DATE, Vr::Da, Value::Str("19800101".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string()),
-        ).unwrap());
+        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string())).unwrap());
+        ds.insert(
+            Element::new(
+                TAG_PATIENT_NAME,
+                Vr::Pn,
+                Value::Str("Smith^John^M".to_string()),
+            )
+            .unwrap(),
+        );
+        ds.insert(
+            Element::new(
+                TAG_PATIENT_BIRTH_DATE,
+                Vr::Da,
+                Value::Str("19800101".to_string()),
+            )
+            .unwrap(),
+        );
+        ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string())).unwrap());
         ds
     }
 
     fn study_dataset() -> Dataset {
         let mut ds = Dataset::new();
-        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_STUDY_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.840.113619.2.55.3".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20240115".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_STUDY_DESCRIPTION, Vr::Lo, Value::Str("CT Chest with Contrast".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_ACCESSION_NUMBER, Vr::Sh, Value::Str("ACC12345".to_string()),
-        ).unwrap());
-        ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-        ).unwrap());
+        ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string())).unwrap());
+        ds.insert(
+            Element::new(
+                TAG_STUDY_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.840.113619.2.55.3".to_string()),
+            )
+            .unwrap(),
+        );
+        ds.insert(
+            Element::new(TAG_STUDY_DATE, Vr::Da, Value::Str("20240115".to_string())).unwrap(),
+        );
+        ds.insert(
+            Element::new(
+                TAG_STUDY_DESCRIPTION,
+                Vr::Lo,
+                Value::Str("CT Chest with Contrast".to_string()),
+            )
+            .unwrap(),
+        );
+        ds.insert(
+            Element::new(
+                TAG_ACCESSION_NUMBER,
+                Vr::Sh,
+                Value::Str("ACC12345".to_string()),
+            )
+            .unwrap(),
+        );
+        ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
         ds
     }
 
@@ -750,10 +775,7 @@ mod tests {
         assert_eq!(study.resource_type, "ImagingStudy");
         assert_eq!(study.study_uid, "1.2.840.113619.2.55.3");
         assert_eq!(study.started.as_deref(), Some("2024-01-15"));
-        assert_eq!(
-            study.description.as_deref(),
-            Some("CT Chest with Contrast")
-        );
+        assert_eq!(study.description.as_deref(), Some("CT Chest with Contrast"));
         assert!(study.accession.is_some());
         assert_eq!(study.modality.len(), 1);
         assert_eq!(study.modality[0].code, "CT");
@@ -774,12 +796,23 @@ mod tests {
         let mut study = adapter.map_imaging_study(&ds).expect("study");
 
         let mut series_ds = Dataset::new();
-        series_ds.insert(Element::new(TAG_SERIES_INSTANCE_UID, Vr::Ui, Value::Str("1.2.840.113619.2.55.3.1".to_string()),
-        ).unwrap());
-        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-        ).unwrap());
-        series_ds.insert(Element::new(TAG_SERIES_DESCRIPTION, Vr::Lo, Value::Str("Axial 5mm".to_string()),
-        ).unwrap());
+        series_ds.insert(
+            Element::new(
+                TAG_SERIES_INSTANCE_UID,
+                Vr::Ui,
+                Value::Str("1.2.840.113619.2.55.3.1".to_string()),
+            )
+            .unwrap(),
+        );
+        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
+        series_ds.insert(
+            Element::new(
+                TAG_SERIES_DESCRIPTION,
+                Vr::Lo,
+                Value::Str("Axial 5mm".to_string()),
+            )
+            .unwrap(),
+        );
 
         adapter
             .add_series_to_study(&mut study, &series_ds)
@@ -797,20 +830,37 @@ mod tests {
 
         // Add series first
         let mut series_ds = Dataset::new();
-        series_ds.insert(Element::new(TAG_SERIES_INSTANCE_UID, Vr::Ui, Value::Str("1.2.3.4.5".to_string()),
-        ).unwrap());
-        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string()),
-        ).unwrap());
+        series_ds.insert(
+            Element::new(
+                TAG_SERIES_INSTANCE_UID,
+                Vr::Ui,
+                Value::Str("1.2.3.4.5".to_string()),
+            )
+            .unwrap(),
+        );
+        series_ds.insert(Element::new(TAG_MODALITY, Vr::Cs, Value::Str("CT".to_string())).unwrap());
         adapter
             .add_series_to_study(&mut study, &series_ds)
             .expect("add series");
 
         // Add instance
         let mut instance_ds = Dataset::new();
-        instance_ds.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Str("1.2.3.4.5.6".to_string()),
-        ).unwrap());
-        instance_ds.insert(Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Str("1.2.840.10008.5.1.4.1.1.2".to_string()),
-        ).unwrap());
+        instance_ds.insert(
+            Element::new(
+                TAG_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Str("1.2.3.4.5.6".to_string()),
+            )
+            .unwrap(),
+        );
+        instance_ds.insert(
+            Element::new(
+                TAG_SOP_CLASS_UID,
+                Vr::Ui,
+                Value::Str("1.2.840.10008.5.1.4.1.1.2".to_string()),
+            )
+            .unwrap(),
+        );
 
         adapter
             .add_instance_to_series(&mut study, "1.2.3.4.5", &instance_ds)
@@ -913,7 +963,10 @@ mod tests {
     #[test]
     fn sanitize_fhir_id_replaces_invalid_chars() {
         assert_eq!(sanitize_fhir_id("1.2.840.113619"), "1.2.840.113619");
-        assert_eq!(sanitize_fhir_id("patient id with spaces"), "patient_id_with_spaces");
+        assert_eq!(
+            sanitize_fhir_id("patient id with spaces"),
+            "patient_id_with_spaces"
+        );
     }
 
     #[test]
@@ -930,22 +983,30 @@ mod tests {
         let adapter = FhirAdapter::new("https://fhir.example.com");
 
         let mut male_ds = Dataset::new();
-        male_ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string()),
-        ).unwrap());
-        male_ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Smith^John".to_string()),
-        ).unwrap());
-        male_ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string()),
-        ).unwrap());
+        male_ds.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT001".to_string())).unwrap(),
+        );
+        male_ds.insert(
+            Element::new(
+                TAG_PATIENT_NAME,
+                Vr::Pn,
+                Value::Str("Smith^John".to_string()),
+            )
+            .unwrap(),
+        );
+        male_ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("M".to_string())).unwrap());
         let male = adapter.map_patient(&male_ds).expect("male");
         assert_eq!(male.gender.as_deref(), Some("male"));
 
         let mut female_ds = Dataset::new();
-        female_ds.insert(Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT002".to_string()),
-        ).unwrap());
-        female_ds.insert(Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Doe^Jane".to_string()),
-        ).unwrap());
-        female_ds.insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("F".to_string()),
-        ).unwrap());
+        female_ds.insert(
+            Element::new(TAG_PATIENT_ID, Vr::Lo, Value::Str("PAT002".to_string())).unwrap(),
+        );
+        female_ds.insert(
+            Element::new(TAG_PATIENT_NAME, Vr::Pn, Value::Str("Doe^Jane".to_string())).unwrap(),
+        );
+        female_ds
+            .insert(Element::new(TAG_PATIENT_SEX, Vr::Cs, Value::Str("F".to_string())).unwrap());
         let female = adapter.map_patient(&female_ds).expect("female");
         assert_eq!(female.gender.as_deref(), Some("female"));
     }
@@ -967,10 +1028,8 @@ mod tests {
 
         let events = events.lock().expect("lock");
         assert_eq!(events.len(), 1);
-        assert!(events[0]
-            .fields
-            .iter()
-            .any(|f| f.key == "operation" && matches!(&f.value, AuditValue::Plain(v) if v == "map_patient")));
+        assert!(events[0].fields.iter().any(|f| f.key == "operation"
+            && matches!(&f.value, AuditValue::Plain(v) if v == "map_patient")));
     }
 
     #[test]
@@ -981,8 +1040,7 @@ mod tests {
         let json = adapter.to_json_pretty(&patient).expect("json pretty");
 
         // Verify it can be deserialized back
-        let restored: FhirPatient =
-            serde_json::from_str(&json).expect("deserialize");
+        let restored: FhirPatient = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(restored.id, patient.id);
         assert_eq!(restored.name.len(), patient.name.len());
     }

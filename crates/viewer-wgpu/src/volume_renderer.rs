@@ -659,11 +659,7 @@ impl ArcballCamera {
             volume_dims[2] as f32 / 2.0,
         ];
         Self {
-            eye: [
-                center[0],
-                center[1],
-                center[2] + max_dim * 1.5,
-            ],
+            eye: [center[0], center[1], center[2] + max_dim * 1.5],
             target: center,
             up: [0.0, 1.0, 0.0],
             fov_y: std::f32::consts::FRAC_PI_4,
@@ -1158,10 +1154,7 @@ impl VolumeRenderer {
         }
 
         // Convert f32 to bytes
-        let byte_data: Vec<u8> = float_data
-            .iter()
-            .flat_map(|f| f.to_le_bytes())
-            .collect();
+        let byte_data: Vec<u8> = float_data.iter().flat_map(|f| f.to_le_bytes()).collect();
 
         // Create 3D texture
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -1308,11 +1301,7 @@ impl VolumeRenderer {
     /// # Errors
     ///
     /// Returns `DVF.VOLUME.EMPTY_INPUT` if no volume has been uploaded.
-    pub fn render_mpr(
-        &self,
-        target: &wgpu::TextureView,
-        request: &GpuMprRequest,
-    ) -> Result<()> {
+    pub fn render_mpr(&self, target: &wgpu::TextureView, request: &GpuMprRequest) -> Result<()> {
         let volume_view = self.volume_view.as_ref().ok_or_else(|| {
             Error::new(
                 "DVF.VOLUME.EMPTY_INPUT",
@@ -1400,11 +1389,7 @@ impl VolumeRenderer {
     /// # Errors
     ///
     /// Returns `DVF.VOLUME.EMPTY_INPUT` if no volume has been uploaded.
-    pub fn render_mip(
-        &self,
-        target: &wgpu::TextureView,
-        request: &GpuMipRequest,
-    ) -> Result<()> {
+    pub fn render_mip(&self, target: &wgpu::TextureView, request: &GpuMipRequest) -> Result<()> {
         let volume_view = self.volume_view.as_ref().ok_or_else(|| {
             Error::new(
                 "DVF.VOLUME.EMPTY_INPUT",
@@ -1500,11 +1485,7 @@ impl VolumeRenderer {
     ///
     /// Returns `DVF.VOLUME.EMPTY_INPUT` if no volume has been uploaded.
     /// Returns `DVF.VOLUME.INVALID_REQUEST` if no transfer function has been uploaded.
-    pub fn render_vr(
-        &self,
-        target: &wgpu::TextureView,
-        request: &GpuVrRequest,
-    ) -> Result<()> {
+    pub fn render_vr(&self, target: &wgpu::TextureView, request: &GpuVrRequest) -> Result<()> {
         let volume_view = self.volume_view.as_ref().ok_or_else(|| {
             Error::new(
                 "DVF.VOLUME.EMPTY_INPUT",
@@ -1531,7 +1512,12 @@ impl VolumeRenderer {
         let mut clip_planes = [[0.0f32; 4]; 6];
         let enabled = request.clip_planes.len().min(6);
         for (i, plane) in request.clip_planes.iter().enumerate().take(enabled) {
-            clip_planes[i] = [plane.normal[0], plane.normal[1], plane.normal[2], plane.distance];
+            clip_planes[i] = [
+                plane.normal[0],
+                plane.normal[1],
+                plane.normal[2],
+                plane.distance,
+            ];
         }
 
         let uniforms = VrUniforms {
@@ -1673,7 +1659,10 @@ fn create_volume_pipeline(
 fn texture_size_bytes(texture: &wgpu::Texture) -> u64 {
     let size = texture.size();
     let bytes_per_pixel = 4u64; // R32Sfloat or Rgba8UnormSrgb
-    (size.width as u64) * (size.height as u64) * (size.depth_or_array_layers as u64) * bytes_per_pixel
+    (size.width as u64)
+        * (size.height as u64)
+        * (size.depth_or_array_layers as u64)
+        * bytes_per_pixel
 }
 
 // ---------------------------------------------------------------------------
@@ -1720,125 +1709,114 @@ fn invert_mat4(m: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
     // Cofactor-based 4x4 matrix inversion
     let mut inv = [[0.0f32; 4]; 4];
 
-    inv[0][0] = m[1][1] * m[2][2] * m[3][3]
-        - m[1][1] * m[2][3] * m[3][2]
-        - m[2][1] * m[1][2] * m[3][3]
-        + m[2][1] * m[1][3] * m[3][2]
-        + m[3][1] * m[1][2] * m[2][3]
-        - m[3][1] * m[1][3] * m[2][2];
+    inv[0][0] =
+        m[1][1] * m[2][2] * m[3][3] - m[1][1] * m[2][3] * m[3][2] - m[2][1] * m[1][2] * m[3][3]
+            + m[2][1] * m[1][3] * m[3][2]
+            + m[3][1] * m[1][2] * m[2][3]
+            - m[3][1] * m[1][3] * m[2][2];
 
-    inv[1][0] = -m[1][0] * m[2][2] * m[3][3]
-        + m[1][0] * m[2][3] * m[3][2]
-        + m[2][0] * m[1][2] * m[3][3]
-        - m[2][0] * m[1][3] * m[3][2]
-        - m[3][0] * m[1][2] * m[2][3]
-        + m[3][0] * m[1][3] * m[2][2];
+    inv[1][0] =
+        -m[1][0] * m[2][2] * m[3][3] + m[1][0] * m[2][3] * m[3][2] + m[2][0] * m[1][2] * m[3][3]
+            - m[2][0] * m[1][3] * m[3][2]
+            - m[3][0] * m[1][2] * m[2][3]
+            + m[3][0] * m[1][3] * m[2][2];
 
-    inv[2][0] = m[1][0] * m[2][1] * m[3][3]
-        - m[1][0] * m[2][3] * m[3][1]
-        - m[2][0] * m[1][1] * m[3][3]
-        + m[2][0] * m[1][3] * m[3][1]
-        + m[3][0] * m[1][1] * m[2][3]
-        - m[3][0] * m[1][3] * m[2][1];
+    inv[2][0] =
+        m[1][0] * m[2][1] * m[3][3] - m[1][0] * m[2][3] * m[3][1] - m[2][0] * m[1][1] * m[3][3]
+            + m[2][0] * m[1][3] * m[3][1]
+            + m[3][0] * m[1][1] * m[2][3]
+            - m[3][0] * m[1][3] * m[2][1];
 
-    inv[3][0] = -m[1][0] * m[2][1] * m[3][2]
-        + m[1][0] * m[2][2] * m[3][1]
-        + m[2][0] * m[1][1] * m[3][2]
-        - m[2][0] * m[1][2] * m[3][1]
-        - m[3][0] * m[1][1] * m[2][2]
-        + m[3][0] * m[1][2] * m[2][1];
+    inv[3][0] =
+        -m[1][0] * m[2][1] * m[3][2] + m[1][0] * m[2][2] * m[3][1] + m[2][0] * m[1][1] * m[3][2]
+            - m[2][0] * m[1][2] * m[3][1]
+            - m[3][0] * m[1][1] * m[2][2]
+            + m[3][0] * m[1][2] * m[2][1];
 
     let det = m[0][0] * inv[0][0] + m[0][1] * inv[1][0] + m[0][2] * inv[2][0] + m[0][3] * inv[3][0];
 
     if det.abs() < f32::EPSILON {
-        return [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]];
+        return [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ];
     }
 
     let inv_det = 1.0 / det;
 
-    inv[0][1] = -m[0][1] * m[2][2] * m[3][3]
-        + m[0][1] * m[2][3] * m[3][2]
-        + m[2][1] * m[0][2] * m[3][3]
-        - m[2][1] * m[0][3] * m[3][2]
-        - m[3][1] * m[0][2] * m[2][3]
-        + m[3][1] * m[0][3] * m[2][2];
+    inv[0][1] =
+        -m[0][1] * m[2][2] * m[3][3] + m[0][1] * m[2][3] * m[3][2] + m[2][1] * m[0][2] * m[3][3]
+            - m[2][1] * m[0][3] * m[3][2]
+            - m[3][1] * m[0][2] * m[2][3]
+            + m[3][1] * m[0][3] * m[2][2];
 
-    inv[1][1] = m[0][0] * m[2][2] * m[3][3]
-        - m[0][0] * m[2][3] * m[3][2]
-        - m[2][0] * m[0][2] * m[3][3]
-        + m[2][0] * m[0][3] * m[3][2]
-        + m[3][0] * m[0][2] * m[2][3]
-        - m[3][0] * m[0][3] * m[2][2];
+    inv[1][1] =
+        m[0][0] * m[2][2] * m[3][3] - m[0][0] * m[2][3] * m[3][2] - m[2][0] * m[0][2] * m[3][3]
+            + m[2][0] * m[0][3] * m[3][2]
+            + m[3][0] * m[0][2] * m[2][3]
+            - m[3][0] * m[0][3] * m[2][2];
 
-    inv[2][1] = -m[0][0] * m[2][1] * m[3][3]
-        + m[0][0] * m[2][3] * m[3][1]
-        + m[2][0] * m[0][1] * m[3][3]
-        - m[2][0] * m[0][3] * m[3][1]
-        - m[3][0] * m[0][1] * m[2][3]
-        + m[3][0] * m[0][3] * m[2][1];
+    inv[2][1] =
+        -m[0][0] * m[2][1] * m[3][3] + m[0][0] * m[2][3] * m[3][1] + m[2][0] * m[0][1] * m[3][3]
+            - m[2][0] * m[0][3] * m[3][1]
+            - m[3][0] * m[0][1] * m[2][3]
+            + m[3][0] * m[0][3] * m[2][1];
 
-    inv[3][1] = m[0][0] * m[2][1] * m[3][2]
-        - m[0][0] * m[2][2] * m[3][1]
-        - m[2][0] * m[0][1] * m[3][2]
-        + m[2][0] * m[0][2] * m[3][1]
-        + m[3][0] * m[0][1] * m[2][2]
-        - m[3][0] * m[0][2] * m[2][1];
+    inv[3][1] =
+        m[0][0] * m[2][1] * m[3][2] - m[0][0] * m[2][2] * m[3][1] - m[2][0] * m[0][1] * m[3][2]
+            + m[2][0] * m[0][2] * m[3][1]
+            + m[3][0] * m[0][1] * m[2][2]
+            - m[3][0] * m[0][2] * m[2][1];
 
-    inv[0][2] = m[0][1] * m[1][2] * m[3][3]
-        - m[0][1] * m[1][3] * m[3][2]
-        - m[1][1] * m[0][2] * m[3][3]
-        + m[1][1] * m[0][3] * m[3][2]
-        + m[3][1] * m[0][2] * m[1][3]
-        - m[3][1] * m[0][3] * m[1][2];
+    inv[0][2] =
+        m[0][1] * m[1][2] * m[3][3] - m[0][1] * m[1][3] * m[3][2] - m[1][1] * m[0][2] * m[3][3]
+            + m[1][1] * m[0][3] * m[3][2]
+            + m[3][1] * m[0][2] * m[1][3]
+            - m[3][1] * m[0][3] * m[1][2];
 
-    inv[1][2] = -m[0][0] * m[1][2] * m[3][3]
-        + m[0][0] * m[1][3] * m[3][2]
-        + m[1][0] * m[0][2] * m[3][3]
-        - m[1][0] * m[0][3] * m[3][2]
-        - m[3][0] * m[0][2] * m[1][3]
-        + m[3][0] * m[0][3] * m[1][2];
+    inv[1][2] =
+        -m[0][0] * m[1][2] * m[3][3] + m[0][0] * m[1][3] * m[3][2] + m[1][0] * m[0][2] * m[3][3]
+            - m[1][0] * m[0][3] * m[3][2]
+            - m[3][0] * m[0][2] * m[1][3]
+            + m[3][0] * m[0][3] * m[1][2];
 
-    inv[2][2] = m[0][0] * m[1][1] * m[3][3]
-        - m[0][0] * m[1][3] * m[3][1]
-        - m[1][0] * m[0][1] * m[3][3]
-        + m[1][0] * m[0][3] * m[3][1]
-        + m[3][0] * m[0][1] * m[1][3]
-        - m[3][0] * m[0][3] * m[1][1];
+    inv[2][2] =
+        m[0][0] * m[1][1] * m[3][3] - m[0][0] * m[1][3] * m[3][1] - m[1][0] * m[0][1] * m[3][3]
+            + m[1][0] * m[0][3] * m[3][1]
+            + m[3][0] * m[0][1] * m[1][3]
+            - m[3][0] * m[0][3] * m[1][1];
 
-    inv[3][2] = -m[0][0] * m[1][1] * m[3][2]
-        + m[0][0] * m[1][2] * m[3][1]
-        + m[1][0] * m[0][1] * m[3][2]
-        - m[1][0] * m[0][2] * m[3][1]
-        - m[3][0] * m[0][1] * m[1][2]
-        + m[3][0] * m[0][2] * m[1][1];
+    inv[3][2] =
+        -m[0][0] * m[1][1] * m[3][2] + m[0][0] * m[1][2] * m[3][1] + m[1][0] * m[0][1] * m[3][2]
+            - m[1][0] * m[0][2] * m[3][1]
+            - m[3][0] * m[0][1] * m[1][2]
+            + m[3][0] * m[0][2] * m[1][1];
 
-    inv[0][3] = -m[0][1] * m[1][2] * m[2][3]
-        + m[0][1] * m[1][3] * m[2][2]
-        + m[1][1] * m[0][2] * m[2][3]
-        - m[1][1] * m[0][3] * m[2][2]
-        - m[2][1] * m[0][2] * m[1][3]
-        + m[2][1] * m[0][3] * m[1][2];
+    inv[0][3] =
+        -m[0][1] * m[1][2] * m[2][3] + m[0][1] * m[1][3] * m[2][2] + m[1][1] * m[0][2] * m[2][3]
+            - m[1][1] * m[0][3] * m[2][2]
+            - m[2][1] * m[0][2] * m[1][3]
+            + m[2][1] * m[0][3] * m[1][2];
 
-    inv[1][3] = m[0][0] * m[1][2] * m[2][3]
-        - m[0][0] * m[1][3] * m[2][2]
-        - m[1][0] * m[0][2] * m[2][3]
-        + m[1][0] * m[0][3] * m[2][2]
-        + m[2][0] * m[0][2] * m[1][3]
-        - m[2][0] * m[0][3] * m[1][2];
+    inv[1][3] =
+        m[0][0] * m[1][2] * m[2][3] - m[0][0] * m[1][3] * m[2][2] - m[1][0] * m[0][2] * m[2][3]
+            + m[1][0] * m[0][3] * m[2][2]
+            + m[2][0] * m[0][2] * m[1][3]
+            - m[2][0] * m[0][3] * m[1][2];
 
-    inv[2][3] = -m[0][0] * m[1][1] * m[2][3]
-        + m[0][0] * m[1][3] * m[2][1]
-        + m[1][0] * m[0][1] * m[2][3]
-        - m[1][0] * m[0][3] * m[2][1]
-        - m[2][0] * m[0][1] * m[1][3]
-        + m[2][0] * m[0][3] * m[1][1];
+    inv[2][3] =
+        -m[0][0] * m[1][1] * m[2][3] + m[0][0] * m[1][3] * m[2][1] + m[1][0] * m[0][1] * m[2][3]
+            - m[1][0] * m[0][3] * m[2][1]
+            - m[2][0] * m[0][1] * m[1][3]
+            + m[2][0] * m[0][3] * m[1][1];
 
-    inv[3][3] = m[0][0] * m[1][1] * m[2][2]
-        - m[0][0] * m[1][2] * m[2][1]
-        - m[1][0] * m[0][1] * m[2][2]
-        + m[1][0] * m[0][2] * m[2][1]
-        + m[2][0] * m[0][1] * m[1][2]
-        - m[2][0] * m[0][2] * m[1][1];
+    inv[3][3] =
+        m[0][0] * m[1][1] * m[2][2] - m[0][0] * m[1][2] * m[2][1] - m[1][0] * m[0][1] * m[2][2]
+            + m[1][0] * m[0][2] * m[2][1]
+            + m[2][0] * m[0][1] * m[1][2]
+            - m[2][0] * m[0][2] * m[1][1];
 
     for i in 0..4 {
         for j in 0..4 {
@@ -2006,7 +1984,11 @@ mod tests {
         for i in 0..4 {
             for j in 0..4 {
                 let expected = if i == j { 1.0 } else { 0.0 };
-                assert!((inv[i][j] - expected).abs() < 0.0001, "inv[{i}][{j}] = {} expected {expected}", inv[i][j]);
+                assert!(
+                    (inv[i][j] - expected).abs() < 0.0001,
+                    "inv[{i}][{j}] = {} expected {expected}",
+                    inv[i][j]
+                );
             }
         }
     }

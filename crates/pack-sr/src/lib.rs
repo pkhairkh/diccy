@@ -330,18 +330,54 @@ pub fn apply_sr_update(
 /// Serialize an authored SR document into a deterministic dataset representation.
 pub fn serialize_authored_document(document: &SrAuthoredDocument) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_STUDY_INSTANCE_UID, Vr::Ui, Value::Uid(document.provenance.study_instance_uid.clone()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SERIES_INSTANCE_UID, Vr::Ui, Value::Uid(document.provenance.series_instance_uid.clone()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(document.provenance.sop_instance_uid.clone()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PRIVATE_OBSERVER, Vr::Lo, Value::Str(document.provenance.observer.clone()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PRIVATE_AUTHORED_EPOCH_MS, Vr::Sl, Value::I32(document.provenance.authored_epoch_ms.min(i32::MAX as u64) as i32),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PRIVATE_DOCUMENT_VERSION, Vr::Sl, Value::I32(document.version.min(i32::MAX as u64) as i32),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_STUDY_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(document.provenance.study_instance_uid.clone()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SERIES_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(document.provenance.series_instance_uid.clone()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SOP_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(document.provenance.sop_instance_uid.clone()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PRIVATE_OBSERVER,
+            Vr::Lo,
+            Value::Str(document.provenance.observer.clone()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PRIVATE_AUTHORED_EPOCH_MS,
+            Vr::Sl,
+            Value::I32(document.provenance.authored_epoch_ms.min(i32::MAX as u64) as i32),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PRIVATE_DOCUMENT_VERSION,
+            Vr::Sl,
+            Value::I32(document.version.min(i32::MAX as u64) as i32),
+        )
+        .unwrap(),
+    );
 
     let mut items = document.items.clone();
     items.sort_by(|lhs, rhs| lhs.sort_key().cmp(&rhs.sort_key()));
@@ -349,8 +385,14 @@ pub fn serialize_authored_document(document: &SrAuthoredDocument) -> Dataset {
         .into_iter()
         .map(serialize_content_item)
         .collect::<Vec<_>>();
-    dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(serialized_items),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_CONTENT_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(serialized_items),
+        )
+        .unwrap(),
+    );
     dataset
 }
 
@@ -427,21 +469,29 @@ fn serialize_content_item(item: SrAuthoringContentItem) -> Dataset {
             units,
             referenced_sop_instance_uid,
         } => {
-            dataset.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("NUM".to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("NUM".to_string())).unwrap(),
+            );
             dataset.insert(code_sequence_element(
                 TAG_CONCEPT_NAME_CODE_SEQUENCE,
                 concept,
             ));
             let mut measured = Dataset::new();
-            measured.insert(Element::new(TAG_NUMERIC_VALUE, Vr::Ds, Value::Str(value.to_string()),
-            ).unwrap());
+            measured.insert(
+                Element::new(TAG_NUMERIC_VALUE, Vr::Ds, Value::Str(value.to_string())).unwrap(),
+            );
             measured.insert(code_sequence_element(
                 TAG_MEASUREMENT_UNITS_CODE_SEQUENCE,
                 units,
             ));
-            dataset.insert(Element::new(TAG_MEASURED_VALUE_SEQUENCE, Vr::Sq, Value::Sequence(vec![measured]),
-            ).unwrap());
+            dataset.insert(
+                Element::new(
+                    TAG_MEASURED_VALUE_SEQUENCE,
+                    Vr::Sq,
+                    Value::Sequence(vec![measured]),
+                )
+                .unwrap(),
+            );
             insert_referenced_uid(&mut dataset, referenced_sop_instance_uid);
         }
         SrAuthoringContentItem::Text {
@@ -449,14 +499,14 @@ fn serialize_content_item(item: SrAuthoringContentItem) -> Dataset {
             text,
             referenced_sop_instance_uid,
         } => {
-            dataset.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("TEXT".to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("TEXT".to_string())).unwrap(),
+            );
             dataset.insert(code_sequence_element(
                 TAG_CONCEPT_NAME_CODE_SEQUENCE,
                 concept,
             ));
-            dataset.insert(Element::new(TAG_TEXT_VALUE, Vr::Ut, Value::Str(text),
-            ).unwrap());
+            dataset.insert(Element::new(TAG_TEXT_VALUE, Vr::Ut, Value::Str(text)).unwrap());
             insert_referenced_uid(&mut dataset, referenced_sop_instance_uid);
         }
         SrAuthoringContentItem::Code {
@@ -464,8 +514,9 @@ fn serialize_content_item(item: SrAuthoringContentItem) -> Dataset {
             value,
             referenced_sop_instance_uid,
         } => {
-            dataset.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CODE".to_string()),
-            ).unwrap());
+            dataset.insert(
+                Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CODE".to_string())).unwrap(),
+            );
             dataset.insert(code_sequence_element(
                 TAG_CONCEPT_NAME_CODE_SEQUENCE,
                 concept,
@@ -479,23 +530,33 @@ fn serialize_content_item(item: SrAuthoringContentItem) -> Dataset {
 
 fn code_sequence_element(tag: Tag, code: Code) -> Element {
     let mut code_item = Dataset::new();
-    code_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str(code.code_value),
-    ).unwrap());
-    code_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str(code.scheme),
-    ).unwrap());
-    code_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str(code.meaning),
-    ).unwrap());
-    Element::new(tag, Vr::Sq, Value::Sequence(vec![code_item]),
-    ).unwrap()
+    code_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str(code.code_value)).unwrap());
+    code_item.insert(
+        Element::new(
+            TAG_CODING_SCHEME_DESIGNATOR,
+            Vr::Sh,
+            Value::Str(code.scheme),
+        )
+        .unwrap(),
+    );
+    code_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str(code.meaning)).unwrap());
+    Element::new(tag, Vr::Sq, Value::Sequence(vec![code_item])).unwrap()
 }
 
 fn insert_referenced_uid(dataset: &mut Dataset, referenced_uid: Option<String>) {
     if let Some(uid) = referenced_uid {
         let mut reference = Dataset::new();
-        reference.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(uid),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SOP_SEQUENCE, Vr::Sq, Value::Sequence(vec![reference]),
-        ).unwrap());
+        reference.insert(
+            Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(uid)).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![reference]),
+            )
+            .unwrap(),
+        );
     }
 }
 
@@ -876,74 +937,153 @@ mod tests {
 
     fn build_num_item() -> Dataset {
         let mut item = Dataset::new();
-        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("NUM".to_string()),
-        ).unwrap());
+        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("NUM".to_string())).unwrap());
         let mut concept_item = Dataset::new();
-        concept_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("123".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str("99TEST".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Length".to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_CONCEPT_NAME_CODE_SEQUENCE, Vr::Sq, Value::Sequence(vec![concept_item]),
-        ).unwrap());
+        concept_item
+            .insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("123".to_string())).unwrap());
+        concept_item.insert(
+            Element::new(
+                TAG_CODING_SCHEME_DESIGNATOR,
+                Vr::Sh,
+                Value::Str("99TEST".to_string()),
+            )
+            .unwrap(),
+        );
+        concept_item.insert(
+            Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Length".to_string())).unwrap(),
+        );
+        item.insert(
+            Element::new(
+                TAG_CONCEPT_NAME_CODE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![concept_item]),
+            )
+            .unwrap(),
+        );
         let mut units_item = Dataset::new();
-        units_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("mm".to_string()),
-        ).unwrap());
-        units_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str("UCUM".to_string()),
-        ).unwrap());
-        units_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("millimeter".to_string()),
-        ).unwrap());
+        units_item
+            .insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("mm".to_string())).unwrap());
+        units_item.insert(
+            Element::new(
+                TAG_CODING_SCHEME_DESIGNATOR,
+                Vr::Sh,
+                Value::Str("UCUM".to_string()),
+            )
+            .unwrap(),
+        );
+        units_item.insert(
+            Element::new(
+                TAG_CODE_MEANING,
+                Vr::Lo,
+                Value::Str("millimeter".to_string()),
+            )
+            .unwrap(),
+        );
         let mut measured = Dataset::new();
-        measured.insert(Element::new(TAG_NUMERIC_VALUE, Vr::Ds, Value::Str("12.5".to_string()),
-        ).unwrap());
-        measured.insert(Element::new(TAG_MEASUREMENT_UNITS_CODE_SEQUENCE, Vr::Sq, Value::Sequence(vec![units_item]),
-        ).unwrap());
-        item.insert(Element::new(TAG_MEASURED_VALUE_SEQUENCE, Vr::Sq, Value::Sequence(vec![measured]),
-        ).unwrap());
+        measured.insert(
+            Element::new(TAG_NUMERIC_VALUE, Vr::Ds, Value::Str("12.5".to_string())).unwrap(),
+        );
+        measured.insert(
+            Element::new(
+                TAG_MEASUREMENT_UNITS_CODE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![units_item]),
+            )
+            .unwrap(),
+        );
+        item.insert(
+            Element::new(
+                TAG_MEASURED_VALUE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![measured]),
+            )
+            .unwrap(),
+        );
         item
     }
 
     fn build_text_item(text: &str) -> Dataset {
         let mut item = Dataset::new();
-        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("TEXT".to_string()),
-        ).unwrap());
+        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("TEXT".to_string())).unwrap());
         let mut concept_item = Dataset::new();
-        concept_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("TXT".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str("99TEST".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Comment".to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_CONCEPT_NAME_CODE_SEQUENCE, Vr::Sq, Value::Sequence(vec![concept_item]),
-        ).unwrap());
-        item.insert(Element::new(TAG_TEXT_VALUE, Vr::Ut, Value::Str(text.to_string()),
-        ).unwrap());
+        concept_item
+            .insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("TXT".to_string())).unwrap());
+        concept_item.insert(
+            Element::new(
+                TAG_CODING_SCHEME_DESIGNATOR,
+                Vr::Sh,
+                Value::Str("99TEST".to_string()),
+            )
+            .unwrap(),
+        );
+        concept_item.insert(
+            Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Comment".to_string())).unwrap(),
+        );
+        item.insert(
+            Element::new(
+                TAG_CONCEPT_NAME_CODE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![concept_item]),
+            )
+            .unwrap(),
+        );
+        item.insert(Element::new(TAG_TEXT_VALUE, Vr::Ut, Value::Str(text.to_string())).unwrap());
         item
     }
 
     fn build_code_item() -> Dataset {
         let mut item = Dataset::new();
-        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CODE".to_string()),
-        ).unwrap());
+        item.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CODE".to_string())).unwrap());
         let mut concept_item = Dataset::new();
-        concept_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("OBS".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str("99TEST".to_string()),
-        ).unwrap());
-        concept_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Observation".to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_CONCEPT_NAME_CODE_SEQUENCE, Vr::Sq, Value::Sequence(vec![concept_item]),
-        ).unwrap());
+        concept_item
+            .insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("OBS".to_string())).unwrap());
+        concept_item.insert(
+            Element::new(
+                TAG_CODING_SCHEME_DESIGNATOR,
+                Vr::Sh,
+                Value::Str("99TEST".to_string()),
+            )
+            .unwrap(),
+        );
+        concept_item.insert(
+            Element::new(
+                TAG_CODE_MEANING,
+                Vr::Lo,
+                Value::Str("Observation".to_string()),
+            )
+            .unwrap(),
+        );
+        item.insert(
+            Element::new(
+                TAG_CONCEPT_NAME_CODE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![concept_item]),
+            )
+            .unwrap(),
+        );
         let mut value_item = Dataset::new();
-        value_item.insert(Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("R-404FB".to_string()),
-        ).unwrap());
-        value_item.insert(Element::new(TAG_CODING_SCHEME_DESIGNATOR, Vr::Sh, Value::Str("SRT".to_string()),
-        ).unwrap());
-        value_item.insert(Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Normal".to_string()),
-        ).unwrap());
-        item.insert(Element::new(TAG_CONCEPT_CODE_SEQUENCE, Vr::Sq, Value::Sequence(vec![value_item]),
-        ).unwrap());
+        value_item.insert(
+            Element::new(TAG_CODE_VALUE, Vr::Sh, Value::Str("R-404FB".to_string())).unwrap(),
+        );
+        value_item.insert(
+            Element::new(
+                TAG_CODING_SCHEME_DESIGNATOR,
+                Vr::Sh,
+                Value::Str("SRT".to_string()),
+            )
+            .unwrap(),
+        );
+        value_item.insert(
+            Element::new(TAG_CODE_MEANING, Vr::Lo, Value::Str("Normal".to_string())).unwrap(),
+        );
+        item.insert(
+            Element::new(
+                TAG_CONCEPT_CODE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![value_item]),
+            )
+            .unwrap(),
+        );
         item
     }
 
@@ -978,8 +1118,14 @@ mod tests {
     fn extract_numeric_measurement() {
         // REQ-MEAS-081, REQ-SR-300
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_num_item()]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_num_item()]),
+            )
+            .unwrap(),
+        );
         let measurements = extract_measurements(&dataset).expect("extract");
         assert_eq!(measurements.len(), 1);
         assert_eq!(measurements[0].value, 12.5);
@@ -989,14 +1135,32 @@ mod tests {
     fn sr_referenced_uid_is_captured() {
         // REQ-MEAS-082, REQ-SR-300
         let mut ref_item = Dataset::new();
-        ref_item.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_item.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut dataset = Dataset::new();
         let mut num_item = build_num_item();
-        num_item.insert(Element::new(TAG_REFERENCED_SOP_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_item]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![num_item]),
-        ).unwrap());
+        num_item.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_item]),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![num_item]),
+            )
+            .unwrap(),
+        );
         let measurements = extract_measurements(&dataset).expect("extract");
         assert_eq!(
             measurements[0].referenced_sop_instance_uid.as_deref(),
@@ -1008,8 +1172,14 @@ mod tests {
     fn extract_text_observation() {
         // REQ-MEAS-082, REQ-SR-300
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_text_item("Finding present")]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_text_item("Finding present")]),
+            )
+            .unwrap(),
+        );
         let observations = extract_text_observations(&dataset).expect("extract");
         assert_eq!(observations.len(), 1);
         assert_eq!(observations[0].text, "Finding present");
@@ -1019,14 +1189,27 @@ mod tests {
     fn extract_nested_num_and_text_items() {
         // REQ-MEAS-081, REQ-MEAS-082, REQ-SR-300
         let mut container = Dataset::new();
-        container.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CONTAINER".to_string()),
-        ).unwrap());
-        container.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_num_item(), build_text_item("Nested note")]),
-        ).unwrap());
+        container.insert(
+            Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CONTAINER".to_string())).unwrap(),
+        );
+        container.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_num_item(), build_text_item("Nested note")]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![container]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![container]),
+            )
+            .unwrap(),
+        );
 
         let measurements = extract_measurements(&dataset).expect("extract measurements");
         let observations = extract_text_observations(&dataset).expect("extract text");
@@ -1039,8 +1222,14 @@ mod tests {
     fn extract_code_observation() {
         // REQ-MEAS-082, REQ-SR-300
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_code_item()]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_code_item()]),
+            )
+            .unwrap(),
+        );
         let observations = extract_code_observations(&dataset).expect("extract");
         assert_eq!(observations.len(), 1);
         assert_eq!(observations[0].value.code_value, "R-404FB");
@@ -1050,13 +1239,26 @@ mod tests {
     fn extract_nested_code_item() {
         // REQ-MEAS-082, REQ-SR-300
         let mut container = Dataset::new();
-        container.insert(Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CONTAINER".to_string()),
-        ).unwrap());
-        container.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_code_item()]),
-        ).unwrap());
+        container.insert(
+            Element::new(TAG_VALUE_TYPE, Vr::Cs, Value::Str("CONTAINER".to_string())).unwrap(),
+        );
+        container.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_code_item()]),
+            )
+            .unwrap(),
+        );
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![container]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![container]),
+            )
+            .unwrap(),
+        );
         let observations = extract_code_observations(&dataset).expect("extract");
         assert_eq!(observations.len(), 1);
         assert_eq!(observations[0].value.meaning, "Normal");
@@ -1066,8 +1268,14 @@ mod tests {
     fn empty_text_observation_fails() {
         // REQ-UI-065, REQ-SR-300
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![build_text_item("   ")]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_CONTENT_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![build_text_item("   ")]),
+            )
+            .unwrap(),
+        );
         let err = extract_text_observations(&dataset).expect_err("expected error");
         assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
     }
@@ -1295,13 +1503,7 @@ mod tests {
     #[test]
     fn build_measurement_report_with_empty_measurements() {
         // REQ-SR-1500
-        let doc = build_measurement_report(
-            "1.2.3",
-            "1.2.3.4",
-            "1.2.3.4.5",
-            "test-observer",
-            &[],
-        );
+        let doc = build_measurement_report("1.2.3", "1.2.3.4", "1.2.3.4.5", "test-observer", &[]);
         assert_eq!(doc.provenance.study_instance_uid, "1.2.3");
         assert_eq!(doc.provenance.series_instance_uid, "1.2.3.4");
         assert_eq!(doc.provenance.sop_instance_uid, "1.2.3.4.5");
@@ -1373,13 +1575,8 @@ mod tests {
             units: coded_concepts::millimeter(),
             referenced_sop_instance_uid: Some("1.2.999".to_string()),
         }];
-        let doc = build_measurement_report(
-            "1.2.3",
-            "1.2.3.4",
-            "1.2.3.4.5",
-            "observer",
-            &measurements,
-        );
+        let doc =
+            build_measurement_report("1.2.3", "1.2.3.4", "1.2.3.4.5", "observer", &measurements);
         let num_items: Vec<_> = doc
             .items
             .iter()
@@ -1395,21 +1592,14 @@ mod tests {
     #[test]
     fn build_measurement_report_serializable_and_parseable() {
         // REQ-SR-1500
-        let measurements = vec![
-            SrMeasurement {
-                concept: coded_concepts::distance(),
-                value: 50.0,
-                units: coded_concepts::millimeter(),
-                referenced_sop_instance_uid: None,
-            },
-        ];
-        let doc = build_measurement_report(
-            "1.2.3",
-            "1.2.3.4",
-            "1.2.3.4.5",
-            "observer",
-            &measurements,
-        );
+        let measurements = vec![SrMeasurement {
+            concept: coded_concepts::distance(),
+            value: 50.0,
+            units: coded_concepts::millimeter(),
+            referenced_sop_instance_uid: None,
+        }];
+        let doc =
+            build_measurement_report("1.2.3", "1.2.3.4", "1.2.3.4.5", "observer", &measurements);
         let serialized = serialize_authored_document(&doc);
         let parsed = parse_authored_document(&serialized).expect("parse");
         assert_eq!(parsed, doc);
@@ -1434,10 +1624,7 @@ mod tests {
                 assert_eq!(concept.code_value, "121206");
                 assert!((*value - 99.9).abs() < f64::EPSILON);
                 assert_eq!(units.code_value, "mm");
-                assert_eq!(
-                    referenced_sop_instance_uid.as_deref(),
-                    Some("1.2.3.4.5")
-                );
+                assert_eq!(referenced_sop_instance_uid.as_deref(), Some("1.2.3.4.5"));
             }
             _ => panic!("expected NUM item"),
         }
@@ -1505,13 +1692,8 @@ mod tests {
                 referenced_sop_instance_uid: None,
             },
         ];
-        let doc = build_measurement_report(
-            "1.2.3",
-            "1.2.3.4",
-            "1.2.3.4.5",
-            "observer",
-            &measurements,
-        );
+        let doc =
+            build_measurement_report("1.2.3", "1.2.3.4", "1.2.3.4.5", "observer", &measurements);
         let serialized = serialize_authored_document(&doc);
         let extracted = extract_measurements(&serialized).expect("extract");
         assert_eq!(extracted.len(), 2);

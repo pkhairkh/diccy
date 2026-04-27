@@ -23,9 +23,7 @@ pub use commitment::{
 pub use s3_backend::{MultipartUploadResult, S3Backend, S3Config};
 
 // Re-export all VNA types for backward compatibility.
-pub use vna::{
-    LifecyclePolicy, RetentionPolicy, StudyLifecycleState, VnaEngine, VnaStudyRecord,
-};
+pub use vna::{LifecyclePolicy, RetentionPolicy, StudyLifecycleState, VnaEngine, VnaStudyRecord};
 
 // ===========================================================================
 // S10-T3: BlobStore trait for dependency injection
@@ -66,7 +64,10 @@ impl InMemoryBlobStore {
 
 impl BlobStore for InMemoryBlobStore {
     fn put(&self, key: &str, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>> {
-        self.data.lock().unwrap().insert(key.to_string(), data.to_vec());
+        self.data
+            .lock()
+            .unwrap()
+            .insert(key.to_string(), data.to_vec());
         Ok(())
     }
 
@@ -507,7 +508,8 @@ impl Storage {
         transaction_uid: &str,
         max_attempts: u32,
     ) -> Result<()> {
-        self.commitment.queue_event_report(transaction_uid, max_attempts)
+        self.commitment
+            .queue_event_report(transaction_uid, max_attempts)
     }
 
     /// Pop next event delivery job in FIFO order.

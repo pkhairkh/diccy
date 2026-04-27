@@ -101,9 +101,8 @@ pub fn read_u16(dataset: &Dataset, tag: Tag) -> Result<Option<u16>> {
     match dataset.get(tag) {
         Some(element) => match element.value() {
             Value::I32(v) => {
-                let v = u16::try_from(*v).map_err(|_| {
-                    invalid_tag_value(tag, "u16 value out of range")
-                })?;
+                let v = u16::try_from(*v)
+                    .map_err(|_| invalid_tag_value(tag, "u16 value out of range"))?;
                 Ok(Some(v))
             }
             Value::Str(s) => s
@@ -123,7 +122,11 @@ pub fn read_bytes<'a>(dataset: &'a Dataset, tag: Tag, limits: &Limits) -> Result
     match dataset.get(tag) {
         Some(element) => match element.value() {
             Value::Bytes(bytes) => {
-                enforce_limit("max_string_bytes", bytes.len() as u64, limits.max_string_bytes())?;
+                enforce_limit(
+                    "max_string_bytes",
+                    bytes.len() as u64,
+                    limits.max_string_bytes(),
+                )?;
                 Ok(Some(bytes.as_slice()))
             }
             _ => Err(invalid_tag_value(tag, "expected bytes")),
@@ -313,8 +316,7 @@ mod tests {
     #[test]
     fn parse_spacing_pair_rejects_non_utf8_bytes() {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_TEST, Vr::Ds, Value::Bytes(vec![0xff, 0xfe]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_TEST, Vr::Ds, Value::Bytes(vec![0xff, 0xfe])).unwrap());
         let err = parse_spacing_pair(&dataset, TAG_TEST, &Limits::default())
             .expect_err("expected invalid utf8");
         assert!(matches!(err.kind(), ErrorKind::InvalidTagValue { .. }));
@@ -323,8 +325,8 @@ mod tests {
     #[test]
     fn parse_uniform_time_vector_accepts_uniform_values() {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_VEC, Vr::Ds, Value::Str("40\\40\\40".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_VEC, Vr::Ds, Value::Str("40\\40\\40".to_string())).unwrap());
         let value = parse_uniform_time_vector(&dataset, TAG_VEC, 1e-6, &Limits::default())
             .expect("parse")
             .expect("value");
@@ -348,9 +350,7 @@ mod tests {
     #[test]
     fn read_bytes_parses_ow_value() {
         let mut dataset = Dataset::new();
-        dataset.insert(
-            Element::new(TAG_BYTES, Vr::Ow, Value::Bytes(vec![1, 2, 3])).unwrap(),
-        );
+        dataset.insert(Element::new(TAG_BYTES, Vr::Ow, Value::Bytes(vec![1, 2, 3])).unwrap());
         let v = read_bytes(&dataset, TAG_BYTES, &Limits::default())
             .expect("parse")
             .expect("value");

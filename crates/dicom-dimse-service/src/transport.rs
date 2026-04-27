@@ -1,25 +1,31 @@
 //! DIMSE server (TCP listener), client, TLS configuration, and network transport code.
 
 use crate::commitment::parse_storage_commitment_n_action_request;
-use crate::middleware::{
-    enforce_connection_limit,
-    message_is_enabled, message_needs_data, validate_data_set_size, DimseOperationResourceLimits,
-    DimseOperationSizeConfig, OperationLimiter,
-};
-#[cfg(any(feature = "dimse-c-find", feature = "dimse-c-move", feature = "dimse-c-get"))]
+#[cfg(any(
+    feature = "dimse-c-find",
+    feature = "dimse-c-move",
+    feature = "dimse-c-get"
+))]
 use crate::middleware::enforce_query_response_limit;
-use crate::protocol::{
-    dimse_protocol_violation_status,
-    AssociationInfo, CEchoRequest, CStoreRequest,
-    DimseRoleConfig, DimseService, DimseStatus,
+use crate::middleware::{
+    enforce_connection_limit, message_is_enabled, message_needs_data, validate_data_set_size,
+    DimseOperationResourceLimits, DimseOperationSizeConfig, OperationLimiter,
 };
 #[cfg(feature = "dimse-c-find")]
 use crate::protocol::CFindRequest;
-#[cfg(feature = "dimse-c-move")]
-use crate::protocol::CMoveRequest;
 #[cfg(feature = "dimse-c-get")]
 use crate::protocol::CGetRequest;
-#[cfg(any(feature = "dimse-c-find", feature = "dimse-c-move", feature = "dimse-c-get"))]
+#[cfg(feature = "dimse-c-move")]
+use crate::protocol::CMoveRequest;
+use crate::protocol::{
+    dimse_protocol_violation_status, AssociationInfo, CEchoRequest, CStoreRequest, DimseRoleConfig,
+    DimseService, DimseStatus,
+};
+#[cfg(any(
+    feature = "dimse-c-find",
+    feature = "dimse-c-move",
+    feature = "dimse-c-get"
+))]
 use crate::protocol::{is_pending_status, validate_query_status_sequence};
 use crate::{
     decode_error, io_error, limit_exceeded, workstation_default_association_policy,
@@ -484,7 +490,10 @@ impl DimseClient {
                     ..
                 } => {
                     responses_seen = responses_seen.saturating_add(1);
-                    enforce_query_response_limit(responses_seen, crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT)?;
+                    enforce_query_response_limit(
+                        responses_seen,
+                        crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT,
+                    )?;
                     if command_data_set_type != 0x0101 {
                         return Err(decode_error("unexpected data set in C-FIND response"));
                     }
@@ -530,7 +539,10 @@ impl DimseClient {
                     ..
                 } => {
                     responses_seen = responses_seen.saturating_add(1);
-                    enforce_query_response_limit(responses_seen, crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT)?;
+                    enforce_query_response_limit(
+                        responses_seen,
+                        crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT,
+                    )?;
                     if command_data_set_type != 0x0101 {
                         return Err(decode_error("unexpected data set in C-MOVE response"));
                     }
@@ -575,7 +587,10 @@ impl DimseClient {
                     ..
                 } => {
                     responses_seen = responses_seen.saturating_add(1);
-                    enforce_query_response_limit(responses_seen, crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT)?;
+                    enforce_query_response_limit(
+                        responses_seen,
+                        crate::middleware::DEFAULT_MAX_QUERY_RESPONSE_COUNT,
+                    )?;
                     if command_data_set_type != 0x0101 {
                         return Err(decode_error("unexpected data set in C-GET response"));
                     }
@@ -1875,7 +1890,10 @@ fn build_server_context_map(
             .iter()
             .find(|ctx| ctx.id() == accepted.id)
         {
-            map.insert(accepted.id, (req.abstract_syntax().to_string(), transfer_syntax));
+            map.insert(
+                accepted.id,
+                (req.abstract_syntax().to_string(), transfer_syntax),
+            );
         }
     }
     map

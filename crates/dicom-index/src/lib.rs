@@ -287,14 +287,13 @@ mod tests {
 
     fn dataset_with_uids(study: &str, series: &str, sop: &str, sop_class: &str) -> Dataset {
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Uid(sop_class.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string())).unwrap());
+        dataset.insert(Element::new(TAG_SOP_UID, Vr::Ui, Value::Uid(sop.to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_SOP_CLASS_UID, Vr::Ui, Value::Uid(sop_class.to_string())).unwrap(),
+        );
         dataset
     }
 
@@ -302,8 +301,8 @@ mod tests {
     fn extract_requires_required_uids() {
         // REQ-META-300: required UIDs must be present and valid.
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid("1.2.3".to_string())).unwrap());
         let err = extract_indexed_instance(&dataset, &limits(), "hash".to_string(), 10)
             .expect_err("expected error");
         assert!(matches!(err.kind(), ErrorKind::MissingRequiredTag { .. }));

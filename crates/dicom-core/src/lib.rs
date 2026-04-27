@@ -1421,7 +1421,8 @@ impl Error {
     /// Chain with `.with_context()` and `.with_source()` for rich errors.
     pub fn new(code: &'static str, kind: ErrorKind, message: impl Into<String>) -> Self {
         debug_assert_eq!(
-            code, kind.code(),
+            code,
+            kind.code(),
             "Error::new code/kind mismatch: code={code}, expected={}",
             kind.code()
         );
@@ -1986,7 +1987,10 @@ impl MeasurementId {
             )
             .into());
         }
-        if !s.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')) {
+        if !s
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        {
             return Err(Error::from_kind(
                 ErrorKind::InvalidTagValue {
                     tag: Tag(0x0000, 0x0000),
@@ -2060,17 +2064,15 @@ impl FromStr for Timestamp {
     type Err = Box<Error>;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let epoch_secs: u64 = s
-            .parse()
-            .map_err(|_| {
-                Error::from_kind(
-                    ErrorKind::InvalidTagValue {
-                        tag: Tag(0x0000, 0x0000),
-                        detail: "timestamp must be a valid u64".to_string(),
-                    },
-                    "invalid timestamp",
-                )
-            })?;
+        let epoch_secs: u64 = s.parse().map_err(|_| {
+            Error::from_kind(
+                ErrorKind::InvalidTagValue {
+                    tag: Tag(0x0000, 0x0000),
+                    detail: "timestamp must be a valid u64".to_string(),
+                },
+                "invalid timestamp",
+            )
+        })?;
         Timestamp::new(epoch_secs)
     }
 }

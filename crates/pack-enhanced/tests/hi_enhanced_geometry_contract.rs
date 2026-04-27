@@ -17,49 +17,121 @@ fn build_enhanced_dataset_with_values(
     let mut shared = Dataset::new();
 
     let mut pixel_measures = Dataset::new();
-    pixel_measures.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str(pixel_spacing.to_string()),
-    ).unwrap());
+    pixel_measures.insert(
+        Element::new(
+            TAG_PIXEL_SPACING,
+            Vr::Ds,
+            Value::Str(pixel_spacing.to_string()),
+        )
+        .unwrap(),
+    );
     if let Some(value) = slice_thickness {
-        pixel_measures.insert(Element::new(TAG_SLICE_THICKNESS, Vr::Ds, Value::Str(value.to_string()),
-        ).unwrap());
+        pixel_measures.insert(
+            Element::new(TAG_SLICE_THICKNESS, Vr::Ds, Value::Str(value.to_string())).unwrap(),
+        );
     }
-    shared.insert(Element::new(TAG_PIXEL_MEASURES_SEQUENCE, Vr::Sq, Value::Sequence(vec![pixel_measures]),
-    ).unwrap());
+    shared.insert(
+        Element::new(
+            TAG_PIXEL_MEASURES_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![pixel_measures]),
+        )
+        .unwrap(),
+    );
 
     let mut transform = Dataset::new();
-    transform.insert(Element::new(TAG_RESCALE_SLOPE, Vr::Ds, Value::Str("2".to_string()),
-    ).unwrap());
-    transform.insert(Element::new(TAG_RESCALE_INTERCEPT, Vr::Ds, Value::Str("5".to_string()),
-    ).unwrap());
-    shared.insert(Element::new(TAG_PIXEL_VALUE_TRANSFORM_SEQUENCE, Vr::Sq, Value::Sequence(vec![transform]),
-    ).unwrap());
+    transform.insert(Element::new(TAG_RESCALE_SLOPE, Vr::Ds, Value::Str("2".to_string())).unwrap());
+    transform
+        .insert(Element::new(TAG_RESCALE_INTERCEPT, Vr::Ds, Value::Str("5".to_string())).unwrap());
+    shared.insert(
+        Element::new(
+            TAG_PIXEL_VALUE_TRANSFORM_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![transform]),
+        )
+        .unwrap(),
+    );
 
     let mut per_frame = Dataset::new();
     let mut plane_position = Dataset::new();
-    plane_position.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
-    ).unwrap());
-    per_frame.insert(Element::new(TAG_PLANE_POSITION_SEQUENCE, Vr::Sq, Value::Sequence(vec![plane_position]),
-    ).unwrap());
+    plane_position.insert(
+        Element::new(
+            TAG_IMAGE_POSITION,
+            Vr::Ds,
+            Value::Str("0\\0\\0".to_string()),
+        )
+        .unwrap(),
+    );
+    per_frame.insert(
+        Element::new(
+            TAG_PLANE_POSITION_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![plane_position]),
+        )
+        .unwrap(),
+    );
 
     let mut plane_orientation = Dataset::new();
-    plane_orientation.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-    ).unwrap());
-    per_frame.insert(Element::new(TAG_PLANE_ORIENTATION_SEQUENCE, Vr::Sq, Value::Sequence(vec![plane_orientation]),
-    ).unwrap());
+    plane_orientation.insert(
+        Element::new(
+            TAG_IMAGE_ORIENTATION,
+            Vr::Ds,
+            Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+        )
+        .unwrap(),
+    );
+    per_frame.insert(
+        Element::new(
+            TAG_PLANE_ORIENTATION_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![plane_orientation]),
+        )
+        .unwrap(),
+    );
 
     let mut frame_content = Dataset::new();
-    frame_content.insert(Element::new(TAG_IN_STACK_POSITION_NUMBER, Vr::Is, Value::Str(in_stack_position.to_string()),
-    ).unwrap());
-    per_frame.insert(Element::new(TAG_FRAME_CONTENT_SEQUENCE, Vr::Sq, Value::Sequence(vec![frame_content]),
-    ).unwrap());
+    frame_content.insert(
+        Element::new(
+            TAG_IN_STACK_POSITION_NUMBER,
+            Vr::Is,
+            Value::Str(in_stack_position.to_string()),
+        )
+        .unwrap(),
+    );
+    per_frame.insert(
+        Element::new(
+            TAG_FRAME_CONTENT_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![frame_content]),
+        )
+        .unwrap(),
+    );
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(number_of_frames.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SHARED_FUNCTIONAL_GROUPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![shared]),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PER_FRAME_FUNCTIONAL_GROUPS_SEQUENCE, Vr::Sq, Value::Sequence(vec![per_frame]),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_NUMBER_OF_FRAMES,
+            Vr::Is,
+            Value::Str(number_of_frames.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SHARED_FUNCTIONAL_GROUPS_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![shared]),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PER_FRAME_FUNCTIONAL_GROUPS_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![per_frame]),
+        )
+        .unwrap(),
+    );
     dataset
 }
 

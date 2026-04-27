@@ -123,7 +123,10 @@ pub(crate) fn enforce_operation_limit(observed: usize, allowed: usize) -> Result
     Ok(())
 }
 
-pub(crate) fn enforce_query_response_limit(observed: usize, max_query_responses: usize) -> Result<()> {
+pub(crate) fn enforce_query_response_limit(
+    observed: usize,
+    max_query_responses: usize,
+) -> Result<()> {
     if observed > max_query_responses {
         return Err(decode_error(format!(
             "query/retrieve response sequence exceeded {max_query_responses} responses",

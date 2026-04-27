@@ -23,10 +23,10 @@ pub const CALCIUM_HU_THRESHOLD: f64 = 130.0;
 
 /// Standard Agatston weighting factors by peak HU in a lesion.
 pub const AGATSTON_WEIGHTS: [(f64, f64); 4] = [
-    (130.0, 1.0),   // 130-199 HU: weight 1
-    (200.0, 2.0),   // 200-299 HU: weight 2
-    (300.0, 3.0),   // 300-399 HU: weight 3
-    (400.0, 4.0),   // >= 400 HU: weight 4
+    (130.0, 1.0), // 130-199 HU: weight 1
+    (200.0, 2.0), // 200-299 HU: weight 2
+    (300.0, 3.0), // 300-399 HU: weight 3
+    (400.0, 4.0), // >= 400 HU: weight 4
 ];
 
 /// Coronary artery label for calcium scoring.
@@ -203,22 +203,64 @@ impl CalciumScoreResult {
         let mut ds = Dataset::new();
 
         // SOP Class UID (Enhanced SR)
-        ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0008, 0x0016),
+                Vr::Ui,
+                Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()),
+            )
+            .unwrap(),
+        );
 
         // Study Instance UID
-        ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0020, 0x000D),
+                Vr::Ui,
+                Value::Uid(study_uid.to_string()),
+            )
+            .unwrap(),
+        );
 
         // Series Instance UID
-        ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0020, 0x000E),
+                Vr::Ui,
+                Value::Uid(series_uid.to_string()),
+            )
+            .unwrap(),
+        );
 
         // Total Agatston Score
-        ds.insert(Element::new(Tag(0x0040, 0xA300), Vr::Ds, Value::Str(format!("{:.2}", self.total_agatston))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA300),
+                Vr::Ds,
+                Value::Str(format!("{:.2}", self.total_agatston)),
+            )
+            .unwrap(),
+        );
 
         // Total Volume
-        ds.insert(Element::new(Tag(0x0040, 0xA301), Vr::Ds, Value::Str(format!("{:.2}", self.total_volume_mm3))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA301),
+                Vr::Ds,
+                Value::Str(format!("{:.2}", self.total_volume_mm3)),
+            )
+            .unwrap(),
+        );
 
         // Total Mass
-        ds.insert(Element::new(Tag(0x0040, 0xA302), Vr::Ds, Value::Str(format!("{:.2}", self.total_mass_mg))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA302),
+                Vr::Ds,
+                Value::Str(format!("{:.2}", self.total_mass_mg)),
+            )
+            .unwrap(),
+        );
 
         ds
     }
@@ -250,9 +292,8 @@ pub fn detect_calcium_lesions(
                 }
 
                 // Flood-fill connected component
-                let (component, peak_hu, mean_hu) = flood_fill_calcium(
-                    volume, &mut visited, x, y, z, width, height, depth,
-                );
+                let (component, peak_hu, mean_hu) =
+                    flood_fill_calcium(volume, &mut visited, x, y, z, width, height, depth);
 
                 if component.is_empty() {
                     continue;
@@ -269,10 +310,7 @@ pub fn detect_calcium_lesions(
 
                 let artery = artery_map.get(z).copied().unwrap_or(CoronaryArtery::Lad);
 
-                let mut lesion = CalcifiedLesion::new(
-                    format!("lesion-{}", lesion_counter),
-                    artery,
-                );
+                let mut lesion = CalcifiedLesion::new(format!("lesion-{}", lesion_counter), artery);
                 lesion.area_mm2 = area_mm2;
                 lesion.peak_hu = peak_hu;
                 lesion.mean_hu = mean_hu;
@@ -323,15 +361,31 @@ fn flood_fill_calcium(
         sum_hu += hu;
 
         // 6-connected neighbors
-        if x > 0 { stack.push((x - 1, y, z)); }
-        if x + 1 < width { stack.push((x + 1, y, z)); }
-        if y > 0 { stack.push((x, y - 1, z)); }
-        if y + 1 < height { stack.push((x, y + 1, z)); }
-        if z > 0 { stack.push((x, y, z - 1)); }
-        if z + 1 < depth { stack.push((x, y, z + 1)); }
+        if x > 0 {
+            stack.push((x - 1, y, z));
+        }
+        if x + 1 < width {
+            stack.push((x + 1, y, z));
+        }
+        if y > 0 {
+            stack.push((x, y - 1, z));
+        }
+        if y + 1 < height {
+            stack.push((x, y + 1, z));
+        }
+        if z > 0 {
+            stack.push((x, y, z - 1));
+        }
+        if z + 1 < depth {
+            stack.push((x, y, z + 1));
+        }
     }
 
-    let mean_hu = if component.is_empty() { 0.0 } else { sum_hu / component.len() as f64 };
+    let mean_hu = if component.is_empty() {
+        0.0
+    } else {
+        sum_hu / component.len() as f64
+    };
     (component, peak_hu, mean_hu)
 }
 
@@ -388,7 +442,11 @@ impl VesselCenterline {
 
         self.total_length = distance;
         self.points.push(CenterlinePoint {
-            x, y, z, diameter, distance_from_ostium: distance,
+            x,
+            y,
+            z,
+            diameter,
+            distance_from_ostium: distance,
         });
     }
 
@@ -427,9 +485,10 @@ impl VesselCenterline {
         for i in 0..num_slices {
             let target_dist = step * i as f64;
             // Find the closest point
-            let closest = self.points.iter().min_by_key(|p| {
-                ((p.distance_from_ostium - target_dist).abs() * 1000.0) as u64
-            });
+            let closest = self
+                .points
+                .iter()
+                .min_by_key(|p| ((p.distance_from_ostium - target_dist).abs() * 1000.0) as u64);
             if let Some(p) = closest {
                 slices.push((p.x, p.y, p.z));
             }
@@ -525,7 +584,11 @@ impl EjectionFractionResult {
     /// Compute ejection fraction from EDV and ESV.
     pub fn from_volumes(edv_ml: f64, esv_ml: f64, heart_rate: Option<f64>) -> Self {
         let sv_ml = edv_ml - esv_ml;
-        let ef_pct = if edv_ml > 0.0 { (sv_ml / edv_ml) * 100.0 } else { 0.0 };
+        let ef_pct = if edv_ml > 0.0 {
+            (sv_ml / edv_ml) * 100.0
+        } else {
+            0.0
+        };
 
         // Uncertainty estimation: ±5% for manual contouring, ±3% for semi-automatic
         let ef_uncertainty = 5.0;
@@ -557,7 +620,11 @@ impl EjectionFractionResult {
         let esv_ml = simpson_volume(es_contours, slice_thickness_cm) * 1000.0;
 
         let mut result = Self::from_volumes(edv_ml, esv_ml, heart_rate);
-        result.contours = ed_contours.iter().chain(es_contours.iter()).cloned().collect();
+        result.contours = ed_contours
+            .iter()
+            .chain(es_contours.iter())
+            .cloned()
+            .collect();
         result
     }
 }
@@ -755,10 +822,10 @@ mod tests_vessel_analysis {
     #[test]
     fn stenosis_detection() {
         let mut cl = VesselCenterline::new(CoronaryArtery::Lad);
-        cl.add_point(0.0, 0.0, 0.0, 3.5);   // Normal
-        cl.add_point(10.0, 0.0, 0.0, 3.5);  // Normal
-        cl.add_point(20.0, 0.0, 0.0, 1.5);  // 57% stenosis
-        cl.add_point(30.0, 0.0, 0.0, 3.5);  // Normal
+        cl.add_point(0.0, 0.0, 0.0, 3.5); // Normal
+        cl.add_point(10.0, 0.0, 0.0, 3.5); // Normal
+        cl.add_point(20.0, 0.0, 0.0, 1.5); // 57% stenosis
+        cl.add_point(30.0, 0.0, 0.0, 3.5); // Normal
 
         let stenoses = cl.find_stenoses(3.5);
         assert_eq!(stenoses.len(), 1);
@@ -799,8 +866,12 @@ mod tests_vessel_analysis {
     #[test]
     fn vessel_tapering() {
         let cl = extract_centerline(
-            &vec![0.0; 1000], 10, 10, 10,
-            (5, 5, 5), CoronaryArtery::LeftMain,
+            &vec![0.0; 1000],
+            10,
+            10,
+            10,
+            (5, 5, 5),
+            CoronaryArtery::LeftMain,
         );
         // First point should have larger diameter than last
         let first_d = cl.points.first().map(|p| p.diameter).unwrap_or(0.0);
@@ -865,9 +936,8 @@ mod tests_ejection_fraction {
             },
         ];
 
-        let result = EjectionFractionResult::from_simpson_discs(
-            &ed_contours, &es_contours, 1.0, None,
-        );
+        let result =
+            EjectionFractionResult::from_simpson_discs(&ed_contours, &es_contours, 1.0, None);
 
         assert!(result.edv_ml > 0.0);
         assert!(result.esv_ml > 0.0);
@@ -878,7 +948,7 @@ mod tests_ejection_fraction {
     fn detect_ed_es_frames_test() {
         let areas = vec![10.0, 12.0, 15.0, 14.0, 8.0, 6.0, 7.0, 11.0];
         let (ed_idx, es_idx) = detect_ed_es_frames(&areas);
-        assert_eq!(ed_idx, 2);  // Max area at index 2
+        assert_eq!(ed_idx, 2); // Max area at index 2
         assert!(es_idx > ed_idx);
     }
 

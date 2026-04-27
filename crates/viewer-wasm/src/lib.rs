@@ -725,9 +725,7 @@ impl WasmViewer {
         let complete = self.streaming_volume_chunks >= self.streaming_volume_total_chunks;
         format!(
             "{{\"ok\":true,\"chunk\":{},\"total\":{},\"complete\":{}}}",
-            chunk_index,
-            self.streaming_volume_total_chunks,
-            complete
+            chunk_index, self.streaming_volume_total_chunks, complete
         )
     }
 
@@ -750,7 +748,10 @@ impl WasmViewer {
     /// Supported `mode` values: `"mpr"`, `"mip"`, `"minip"`, `"vr"`.
     /// Returns a JSON string with `ok`, `mode`, `width`, `height`, and optional `error` fields.
     pub fn gpu_volume_render_json(&self, mode: &str, width: u32, height: u32) -> String {
-        let valid_mode = matches!(mode.to_ascii_lowercase().as_str(), "mpr" | "mip" | "minip" | "vr");
+        let valid_mode = matches!(
+            mode.to_ascii_lowercase().as_str(),
+            "mpr" | "mip" | "minip" | "vr"
+        );
         if !valid_mode {
             return format!(
                 "{{\"ok\":false,\"mode\":\"{}\",\"width\":{},\"height\":{},\"error\":\"invalid_mode\"}}",
@@ -779,7 +780,13 @@ impl WasmViewer {
     ///
     /// The caller must ensure `voxels_ptr` points to at least `dims_x * dims_y * dims_z`
     /// contiguous `i32` values.
-    pub fn upload_volume_grid(&mut self, voxels_ptr: usize, dims_x: u32, dims_y: u32, dims_z: u32) -> bool {
+    pub fn upload_volume_grid(
+        &mut self,
+        voxels_ptr: usize,
+        dims_x: u32,
+        dims_y: u32,
+        dims_z: u32,
+    ) -> bool {
         if dims_x == 0 || dims_y == 0 || dims_z == 0 {
             return false;
         }
@@ -845,7 +852,8 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VsOut {
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }
 

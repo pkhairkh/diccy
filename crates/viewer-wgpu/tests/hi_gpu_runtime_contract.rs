@@ -4,7 +4,10 @@ use viewer_core::Viewport2D;
 use viewer_wgpu::{GpuBudget, GpuCapabilities, Renderer, WgpuRenderer};
 
 fn renderer(max_texture_bytes: u64, max_dimension: u32) -> WgpuRenderer {
-    let limits = Limits::builder().max_gpu_texture_bytes(max_texture_bytes).build().unwrap();
+    let limits = Limits::builder()
+        .max_gpu_texture_bytes(max_texture_bytes)
+        .build()
+        .unwrap();
     WgpuRenderer::from_capabilities(
         GpuCapabilities {
             max_texture_dimension_2d: max_dimension,

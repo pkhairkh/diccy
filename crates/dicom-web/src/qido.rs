@@ -26,7 +26,7 @@ pub fn qido_query_matches(
     datasets: &[Dataset],
     limits: &Limits,
 ) -> Result<Vec<QueryMatch>> {
-    use super::{TAG_SERIES_UID, TAG_INSTANCE_UID, TAG_STUDY_UID};
+    use super::{TAG_INSTANCE_UID, TAG_SERIES_UID, TAG_STUDY_UID};
 
     let (level, params, path_keys): (QueryLevel, &[QueryParam], Vec<(Tag, String)>) = match request
     {
@@ -194,7 +194,7 @@ fn parse_qido_pagination_value(key: &'static str, value: &str, limits: &Limits) 
 
 #[cfg(feature = "qido")]
 fn normalize_qido_param_key(key: &str) -> Result<Tag> {
-    use super::{TAG_SERIES_UID, TAG_INSTANCE_UID, TAG_STUDY_UID};
+    use super::{TAG_INSTANCE_UID, TAG_SERIES_UID, TAG_STUDY_UID};
 
     let normalized = key
         .trim()

@@ -1354,7 +1354,10 @@ mod tests {
         std::env::remove_var("DICOM_DIMSE_MAX_INPUT_BYTES");
 
         let limits = parse_limits().expect("production limits defaults");
-        assert_eq!(limits.max_input_bytes(), Limits::default().max_input_bytes());
+        assert_eq!(
+            limits.max_input_bytes(),
+            Limits::default().max_input_bytes()
+        );
 
         match prev_test_max {
             Some(value) => std::env::set_var("DICOM_DIMSE_TEST_MAX_BYTES", value),

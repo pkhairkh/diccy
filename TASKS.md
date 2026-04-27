@@ -1172,7 +1172,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** Production source files contain no `#[test]` functions (except short doctests); `cargo test --workspace` passes
   - **Estimated effort:** 3 days
 
-- [ ] **S13-T9** Replace fixed-size route capability array in `dicom-web`
+- [x] **S13-T9** Replace fixed-size route capability array in `dicom-web`
   - Replace `ROUTE_CAPABILITIES: [bool; 34]` with `BTreeMap<String, bool>` or `EnumMap<Route, bool>`
   - Add `Route` enum with named variants for each DICOMweb endpoint
   - Add `RouteCapability::is_enabled(&self, route: Route) -> bool` method

@@ -15,12 +15,17 @@ const TAG_INSTANCE_UID: Tag = Tag(0x0008, 0x0018);
 
 fn dataset_with_context(study_uid: &str, series_uid: &str, instance_uid: &str) -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance_uid.to_string()),
-    ).unwrap());
+    dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study_uid.to_string())).unwrap());
+    dataset
+        .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series_uid.to_string())).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(instance_uid.to_string()),
+        )
+        .unwrap(),
+    );
     dataset
 }
 

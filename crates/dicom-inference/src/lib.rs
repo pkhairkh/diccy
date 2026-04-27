@@ -247,7 +247,12 @@ impl PreprocessingPipeline {
     ///
     /// For simplified synthetic data, this linearly interpolates voxel values
     /// to the target grid. Returns the resampled data as a flat f32 array.
-    pub fn resample(&self, data: &[f64], source_spacing: (f64, f64, f64), dims: (usize, usize, usize)) -> Vec<f32> {
+    pub fn resample(
+        &self,
+        data: &[f64],
+        source_spacing: (f64, f64, f64),
+        dims: (usize, usize, usize),
+    ) -> Vec<f32> {
         let (sx, sy, sz) = source_spacing;
         let (tx, ty, tz) = self.target_spacing;
 
@@ -335,7 +340,10 @@ pub struct Postprocessing;
 impl Postprocessing {
     /// Apply threshold to convert probability map to binary mask.
     pub fn threshold_to_binary(prob_map: &[f32], threshold: f32) -> Vec<u8> {
-        prob_map.iter().map(|&p| if p >= threshold { 1 } else { 0 }).collect()
+        prob_map
+            .iter()
+            .map(|&p| if p >= threshold { 1 } else { 0 })
+            .collect()
     }
 
     /// Extract 2D contour from a binary mask using marching squares (simplified).
@@ -363,7 +371,11 @@ impl Postprocessing {
         }
 
         // Sort for deterministic output
-        contour.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap().then(a.1.partial_cmp(&b.1).unwrap()));
+        contour.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0)
+                .unwrap()
+                .then(a.1.partial_cmp(&b.1).unwrap())
+        });
         contour
     }
 
@@ -571,25 +583,76 @@ impl AirIodEncoder {
         let mut ds = Dataset::new();
 
         // Finding UID
-        ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(finding.finding_uid.clone())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0008, 0x0018),
+                Vr::Ui,
+                Value::Uid(finding.finding_uid.clone()),
+            )
+            .unwrap(),
+        );
 
         // Finding type code sequence
         let mut type_item = Dataset::new();
-        type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(finding.finding_type_code.clone())).unwrap());
-        type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str(finding.coding_scheme.clone())).unwrap());
-        type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str(finding.finding_type_display.clone())).unwrap());
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0100),
+                Vr::Sh,
+                Value::Str(finding.finding_type_code.clone()),
+            )
+            .unwrap(),
+        );
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0102),
+                Vr::Sh,
+                Value::Str(finding.coding_scheme.clone()),
+            )
+            .unwrap(),
+        );
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0104),
+                Vr::Lo,
+                Value::Str(finding.finding_type_display.clone()),
+            )
+            .unwrap(),
+        );
 
-        ds.insert(Element::new(Tag(0x0008, 0x0104), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0008, 0x0104),
+                Vr::Sq,
+                Value::Sequence(vec![type_item]),
+            )
+            .unwrap(),
+        );
 
         // Bounding box (as measured value)
-        ds.insert(Element::new(Tag(0x0040, 0xA300), Vr::Ds, Value::Str(format!(
-            "{:.6}\\\\{:.6}\\\\{:.6}\\\\{:.6}",
-            finding.bounding_box.0, finding.bounding_box.1,
-            finding.bounding_box.2, finding.bounding_box.3
-        ))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA300),
+                Vr::Ds,
+                Value::Str(format!(
+                    "{:.6}\\\\{:.6}\\\\{:.6}\\\\{:.6}",
+                    finding.bounding_box.0,
+                    finding.bounding_box.1,
+                    finding.bounding_box.2,
+                    finding.bounding_box.3
+                )),
+            )
+            .unwrap(),
+        );
 
         // Probability
-        ds.insert(Element::new(Tag(0x0040, 0xA353), Vr::Ds, Value::Str(format!("{:.6}", finding.probability))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA353),
+                Vr::Ds,
+                Value::Str(format!("{:.6}", finding.probability)),
+            )
+            .unwrap(),
+        );
 
         ds
     }
@@ -599,29 +662,106 @@ impl AirIodEncoder {
         let mut ds = Dataset::new();
 
         // Finding UID
-        ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(finding.finding_uid.clone())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0008, 0x0018),
+                Vr::Ui,
+                Value::Uid(finding.finding_uid.clone()),
+            )
+            .unwrap(),
+        );
 
         // Finding type code sequence
         let mut type_item = Dataset::new();
-        type_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(finding.finding_type_code.clone())).unwrap());
-        type_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str(finding.coding_scheme.clone())).unwrap());
-        type_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str(finding.finding_type_display.clone())).unwrap());
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0100),
+                Vr::Sh,
+                Value::Str(finding.finding_type_code.clone()),
+            )
+            .unwrap(),
+        );
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0102),
+                Vr::Sh,
+                Value::Str(finding.coding_scheme.clone()),
+            )
+            .unwrap(),
+        );
+        type_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0104),
+                Vr::Lo,
+                Value::Str(finding.finding_type_display.clone()),
+            )
+            .unwrap(),
+        );
 
-        ds.insert(Element::new(Tag(0x0008, 0x0104), Vr::Sq, Value::Sequence(vec![type_item])).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0008, 0x0104),
+                Vr::Sq,
+                Value::Sequence(vec![type_item]),
+            )
+            .unwrap(),
+        );
 
         // Classification
-        ds.insert(Element::new(Tag(0x0040, 0xA043), Vr::Cs, Value::Str(finding.classification.clone())).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA043),
+                Vr::Cs,
+                Value::Str(finding.classification.clone()),
+            )
+            .unwrap(),
+        );
 
         // Probability
-        ds.insert(Element::new(Tag(0x0040, 0xA353), Vr::Ds, Value::Str(format!("{:.6}", finding.probability))).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA353),
+                Vr::Ds,
+                Value::Str(format!("{:.6}", finding.probability)),
+            )
+            .unwrap(),
+        );
 
         // Algorithm Identification
         let mut algo_item = Dataset::new();
-        algo_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str(self.algorithm.name.clone())).unwrap());
-        algo_item.insert(Element::new(Tag(0x0008, 0x0110), Vr::Lo, Value::Str(self.algorithm.version.clone())).unwrap());
-        algo_item.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(self.algorithm.uid.clone())).unwrap());
+        algo_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0100),
+                Vr::Sh,
+                Value::Str(self.algorithm.name.clone()),
+            )
+            .unwrap(),
+        );
+        algo_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0110),
+                Vr::Lo,
+                Value::Str(self.algorithm.version.clone()),
+            )
+            .unwrap(),
+        );
+        algo_item.insert(
+            Element::new(
+                Tag(0x0008, 0x0018),
+                Vr::Ui,
+                Value::Uid(self.algorithm.uid.clone()),
+            )
+            .unwrap(),
+        );
 
-        ds.insert(Element::new(Tag(0x0040, 0xA354), Vr::Sq, Value::Sequence(vec![algo_item])).unwrap());
+        ds.insert(
+            Element::new(
+                Tag(0x0040, 0xA354),
+                Vr::Sq,
+                Value::Sequence(vec![algo_item]),
+            )
+            .unwrap(),
+        );
 
         ds
     }
@@ -639,7 +779,11 @@ pub fn encode_air_iod(
     let mut ds = Dataset::new();
 
     // SOP Class UID for Enhanced SR (AI Results use TID 1500 in an Enhanced SR)
-    ds.insert(Element::new(Tag(0x0008, 0x0016), Vr::Ui, Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0016),
+        Vr::Ui,
+        Value::Uid("1.2.840.10008.5.1.4.1.1.88.22".to_string()),
+    )?);
 
     // SOP Instance UID
     let sop_uid = format!(
@@ -648,19 +792,39 @@ pub fn encode_air_iod(
         series_uid.len(),
         encoder.algorithm.uid.len(),
     );
-    ds.insert(Element::new(Tag(0x0008, 0x0018), Vr::Ui, Value::Uid(sop_uid))?);
+    ds.insert(Element::new(
+        Tag(0x0008, 0x0018),
+        Vr::Ui,
+        Value::Uid(sop_uid),
+    )?);
 
     // Study Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000D), Vr::Ui, Value::Uid(study_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000D),
+        Vr::Ui,
+        Value::Uid(study_uid.to_string()),
+    )?);
 
     // Series Instance UID
-    ds.insert(Element::new(Tag(0x0020, 0x000E), Vr::Ui, Value::Uid(series_uid.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x000E),
+        Vr::Ui,
+        Value::Uid(series_uid.to_string()),
+    )?);
 
     // Series Number
-    ds.insert(Element::new(Tag(0x0020, 0x0011), Vr::Is, Value::Str(encoder.series_number.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x0011),
+        Vr::Is,
+        Value::Str(encoder.series_number.to_string()),
+    )?);
 
     // Instance Number
-    ds.insert(Element::new(Tag(0x0020, 0x0013), Vr::Is, Value::Str(encoder.instance_number.to_string()))?);
+    ds.insert(Element::new(
+        Tag(0x0020, 0x0013),
+        Vr::Is,
+        Value::Str(encoder.instance_number.to_string()),
+    )?);
 
     // Content Sequence with findings
     let mut content_items = Vec::new();
@@ -697,14 +861,34 @@ pub fn encode_air_iod(
             // Segmentation results use Segmentation IOD, not AIR IOD directly
             // Encode a reference finding
             let mut seg_item = Dataset::new();
-            seg_item.insert(Element::new(Tag(0x0008, 0x0100), Vr::Sh, Value::Str("126000".to_string())).unwrap());
-            seg_item.insert(Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("DCM".to_string())).unwrap());
-            seg_item.insert(Element::new(Tag(0x0008, 0x0104), Vr::Lo, Value::Str("Segmentation".to_string())).unwrap());
+            seg_item.insert(
+                Element::new(
+                    Tag(0x0008, 0x0100),
+                    Vr::Sh,
+                    Value::Str("126000".to_string()),
+                )
+                .unwrap(),
+            );
+            seg_item.insert(
+                Element::new(Tag(0x0008, 0x0102), Vr::Sh, Value::Str("DCM".to_string())).unwrap(),
+            );
+            seg_item.insert(
+                Element::new(
+                    Tag(0x0008, 0x0104),
+                    Vr::Lo,
+                    Value::Str("Segmentation".to_string()),
+                )
+                .unwrap(),
+            );
             content_items.push(seg_item);
         }
     }
 
-    ds.insert(Element::new(Tag(0x0040, 0xA730), Vr::Sq, Value::Sequence(content_items))?);
+    ds.insert(Element::new(
+        Tag(0x0040, 0xA730),
+        Vr::Sq,
+        Value::Sequence(content_items),
+    )?);
 
     Ok(ds)
 }
@@ -877,7 +1061,10 @@ impl fmt::Debug for AiTriageEngine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AiTriageEngine")
             .field("rules", &self.rules)
-            .field("notification_callback", &self.notification_callback.is_some())
+            .field(
+                "notification_callback",
+                &self.notification_callback.is_some(),
+            )
             .field("audit", &self.audit.is_some())
             .finish()
     }
@@ -1154,12 +1341,8 @@ mod tests_inference {
 
     #[test]
     fn preprocessing_resampling() {
-        let pipeline = PreprocessingPipeline::new(
-            (1.0, 1.0, 1.0),
-            -1000.0,
-            1000.0,
-            NormalizationMethod::None,
-        );
+        let pipeline =
+            PreprocessingPipeline::new((1.0, 1.0, 1.0), -1000.0, 1000.0, NormalizationMethod::None);
         let data = vec![100.0; 8 * 8 * 8];
         let result = pipeline.resample(&data, (1.0, 1.0, 1.0), (8, 8, 8));
         assert!(!result.is_empty());
@@ -1169,12 +1352,8 @@ mod tests_inference {
 
     #[test]
     fn preprocessing_windowing() {
-        let pipeline = PreprocessingPipeline::new(
-            (1.0, 1.0, 1.0),
-            -100.0,
-            100.0,
-            NormalizationMethod::None,
-        );
+        let pipeline =
+            PreprocessingPipeline::new((1.0, 1.0, 1.0), -100.0, 100.0, NormalizationMethod::None);
         let mut data = vec![-500.0f32, 0.0f32, 500.0f32];
         pipeline.window(&mut data);
         assert_eq!(data[0], -100.0); // clamped to min
@@ -1230,10 +1409,7 @@ mod tests_inference {
         }
         let contour = Postprocessing::extract_contour_2d(&mask, 5, 5);
         // Should have contour points for the boundary of the 3x3 square
-        assert!(
-            !contour.is_empty(),
-            "contour should have boundary points"
-        );
+        assert!(!contour.is_empty(), "contour should have boundary points");
     }
 
     #[test]
@@ -1267,10 +1443,7 @@ mod tests_inference {
 
         let result = Postprocessing::nms(&boxes, 0.5);
         // The second box overlaps heavily with the first and should be suppressed
-        assert!(
-            result.len() <= 3,
-            "NMS should reduce overlapping boxes"
-        );
+        assert!(result.len() <= 3, "NMS should reduce overlapping boxes");
         // The highest-confidence box should be kept
         assert!(result.iter().any(|b| (b.probability - 0.9).abs() < 0.01));
     }
@@ -1321,7 +1494,10 @@ mod tests_inference {
         let mut runtime = OnnxRuntime::new();
         let manifest = runtime.load_model("/models/test.onnx").expect("load");
         // STUB: the UID contains ".stub" marker
-        assert!(manifest.model_uid.contains(".stub"), "stub manifest should contain .stub in UID");
+        assert!(
+            manifest.model_uid.contains(".stub"),
+            "stub manifest should contain .stub in UID"
+        );
     }
 
     #[test]
@@ -1332,7 +1508,13 @@ mod tests_inference {
             height: 2,
             depth: 1,
         };
-        if let InferenceResult::Segmentation { labels, width, height, depth } = result {
+        if let InferenceResult::Segmentation {
+            labels,
+            width,
+            height,
+            depth,
+        } = result
+        {
             assert_eq!(labels, vec![0u16, 1, 1, 0]);
             assert_eq!(width, 2);
             assert_eq!(height, 2);
@@ -1364,7 +1546,7 @@ mod tests_air_iod {
             finding_uid: "1.2.840.113619.6.5.f.0".to_string(),
             bounding_box: (10.0, 20.0, 50.0, 60.0),
             probability: 0.95,
-            finding_type_code: "9540000".to_string(),  // SNOMED CT: Pneumothorax
+            finding_type_code: "9540000".to_string(), // SNOMED CT: Pneumothorax
             finding_type_display: "Pneumothorax".to_string(),
             coding_scheme: "SCT".to_string(),
         };
@@ -1531,10 +1713,11 @@ mod tests_triage {
 
     impl NotificationCallback for RecordingNotificationCallback {
         fn notify(&self, flag: TriageFlag, message: &str, study_uid: &str) {
-            self.notifications
-                .lock()
-                .expect("lock")
-                .push((flag, message.to_string(), study_uid.to_string()));
+            self.notifications.lock().expect("lock").push((
+                flag,
+                message.to_string(),
+                study_uid.to_string(),
+            ));
         }
     }
 
@@ -1550,7 +1733,10 @@ mod tests_triage {
     #[test]
     fn triage_engine_creation_with_rules() {
         let engine = AiTriageEngine::new();
-        assert!(!engine.rules().is_empty(), "built-in rules should be present");
+        assert!(
+            !engine.rules().is_empty(),
+            "built-in rules should be present"
+        );
     }
 
     #[test]
@@ -1668,7 +1854,10 @@ mod tests_triage {
         assert!(rules.len() >= 3, "should have at least 3 built-in rules");
 
         // Pneumothorax rule
-        let pneumo_rule = rules.iter().find(|r| r.finding_pattern == "pneumothorax").expect("rule");
+        let pneumo_rule = rules
+            .iter()
+            .find(|r| r.finding_pattern == "pneumothorax")
+            .expect("rule");
         assert!(pneumo_rule.matches("pneumothorax", 0.9));
         assert!(!pneumo_rule.matches("pneumothorax", 0.3)); // Below threshold
         assert!(!pneumo_rule.matches("nodule", 0.9)); // Wrong pattern

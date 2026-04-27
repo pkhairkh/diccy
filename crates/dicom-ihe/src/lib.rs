@@ -187,7 +187,12 @@ impl SwfEngine {
     }
 
     /// Schedule a workitem for an order.
-    pub fn schedule_workitem(&mut self, accession_number: &str, performer: &str, scheduled_start: u64) -> Result<String> {
+    pub fn schedule_workitem(
+        &mut self,
+        accession_number: &str,
+        performer: &str,
+        scheduled_start: u64,
+    ) -> Result<String> {
         if !self.orders.contains_key(accession_number) {
             return Err(ihe_error("order not found for accession number"));
         }
@@ -210,7 +215,9 @@ impl SwfEngine {
 
     /// Start a workitem (transition to InProgress).
     pub fn start_workitem(&mut self, workitem_uid: &str, actual_start: u64) -> Result<()> {
-        let workitem = self.workitems.get_mut(workitem_uid)
+        let workitem = self
+            .workitems
+            .get_mut(workitem_uid)
             .ok_or_else(|| ihe_error("workitem not found"))?;
 
         if !matches!(workitem.state, SwfWorkitemState::Scheduled) {
@@ -225,11 +232,15 @@ impl SwfEngine {
 
     /// Complete a workitem (transition to Completed).
     pub fn complete_workitem(&mut self, workitem_uid: &str, actual_end: u64) -> Result<()> {
-        let workitem = self.workitems.get_mut(workitem_uid)
+        let workitem = self
+            .workitems
+            .get_mut(workitem_uid)
             .ok_or_else(|| ihe_error("workitem not found"))?;
 
         if !matches!(workitem.state, SwfWorkitemState::InProgress) {
-            return Err(ihe_error("workitem must be in InProgress state to complete"));
+            return Err(ihe_error(
+                "workitem must be in InProgress state to complete",
+            ));
         }
 
         workitem.state = SwfWorkitemState::Completed;
@@ -240,7 +251,9 @@ impl SwfEngine {
 
     /// Cancel a workitem.
     pub fn cancel_workitem(&mut self, workitem_uid: &str) -> Result<()> {
-        let workitem = self.workitems.get_mut(workitem_uid)
+        let workitem = self
+            .workitems
+            .get_mut(workitem_uid)
             .ok_or_else(|| ihe_error("workitem not found"))?;
 
         workitem.state = SwfWorkitemState::Canceled;
@@ -354,13 +367,23 @@ impl PirEngine {
         if patient.temporary_id.is_empty() {
             return Err(ihe_error("temporary patient ID must not be empty"));
         }
-        self.unidentified.insert(patient.temporary_id.clone(), patient);
+        self.unidentified
+            .insert(patient.temporary_id.clone(), patient);
         Ok(())
     }
 
     /// Reconcile an unidentified patient with a known identity.
-    pub fn reconcile(&mut self, temporary_id: &str, patient_id: &str, patient_name: &str, birth_date: &str, sex: &str) -> Result<()> {
-        let unidentified = self.unidentified.remove(temporary_id)
+    pub fn reconcile(
+        &mut self,
+        temporary_id: &str,
+        patient_id: &str,
+        patient_name: &str,
+        birth_date: &str,
+        sex: &str,
+    ) -> Result<()> {
+        let unidentified = self
+            .unidentified
+            .remove(temporary_id)
             .ok_or_else(|| ihe_error("unidentified patient not found"))?;
 
         let reconciled = ReconciledPatient {
@@ -601,8 +624,12 @@ mod tests_ihe {
     #[test]
     fn swf_schedule_workitem() {
         let mut engine = SwfEngine::new();
-        engine.submit_order(SwfOrder::new("ACC-002", "P002", "MR-BRAIN")).unwrap();
-        let uid = engine.schedule_workitem("ACC-002", "Dr. Smith", 1000).unwrap();
+        engine
+            .submit_order(SwfOrder::new("ACC-002", "P002", "MR-BRAIN"))
+            .unwrap();
+        let uid = engine
+            .schedule_workitem("ACC-002", "Dr. Smith", 1000)
+            .unwrap();
         assert!(!uid.is_empty());
         let wi = engine.get_workitem(&uid).unwrap();
         assert!(matches!(wi.state, SwfWorkitemState::Scheduled));
@@ -611,8 +638,12 @@ mod tests_ihe {
     #[test]
     fn swf_complete_workflow() {
         let mut engine = SwfEngine::new();
-        engine.submit_order(SwfOrder::new("ACC-003", "P003", "CT-ABD")).unwrap();
-        let uid = engine.schedule_workitem("ACC-003", "Dr. Jones", 2000).unwrap();
+        engine
+            .submit_order(SwfOrder::new("ACC-003", "P003", "CT-ABD"))
+            .unwrap();
+        let uid = engine
+            .schedule_workitem("ACC-003", "Dr. Jones", 2000)
+            .unwrap();
 
         engine.start_workitem(&uid, 2100).unwrap();
         let wi = engine.get_workitem(&uid).unwrap();
@@ -627,8 +658,12 @@ mod tests_ihe {
     #[test]
     fn swf_cancel_workitem() {
         let mut engine = SwfEngine::new();
-        engine.submit_order(SwfOrder::new("ACC-004", "P004", "XR-CHEST")).unwrap();
-        let uid = engine.schedule_workitem("ACC-004", "Dr. Lee", 4000).unwrap();
+        engine
+            .submit_order(SwfOrder::new("ACC-004", "P004", "XR-CHEST"))
+            .unwrap();
+        let uid = engine
+            .schedule_workitem("ACC-004", "Dr. Lee", 4000)
+            .unwrap();
 
         engine.cancel_workitem(&uid).unwrap();
         let wi = engine.get_workitem(&uid).unwrap();
@@ -638,8 +673,12 @@ mod tests_ihe {
     #[test]
     fn swf_cannot_start_completed_workitem() {
         let mut engine = SwfEngine::new();
-        engine.submit_order(SwfOrder::new("ACC-005", "P005", "US-ABD")).unwrap();
-        let uid = engine.schedule_workitem("ACC-005", "Dr. Kim", 5000).unwrap();
+        engine
+            .submit_order(SwfOrder::new("ACC-005", "P005", "US-ABD"))
+            .unwrap();
+        let uid = engine
+            .schedule_workitem("ACC-005", "Dr. Kim", 5000)
+            .unwrap();
         engine.start_workitem(&uid, 5100).unwrap();
         engine.complete_workitem(&uid, 6000).unwrap();
 
@@ -652,28 +691,34 @@ mod tests_ihe {
     #[test]
     fn pir_register_unidentified() {
         let mut engine = PirEngine::new();
-        engine.register_unidentified(UnidentifiedPatient {
-            temporary_id: "TEMP-001".to_string(),
-            study_uid: "1.2.3.4".to_string(),
-            study_description: "CT Chest".to_string(),
-            study_date: "2024-01-15".to_string(),
-            confidence: 0.0,
-        }).unwrap();
+        engine
+            .register_unidentified(UnidentifiedPatient {
+                temporary_id: "TEMP-001".to_string(),
+                study_uid: "1.2.3.4".to_string(),
+                study_description: "CT Chest".to_string(),
+                study_date: "2024-01-15".to_string(),
+                confidence: 0.0,
+            })
+            .unwrap();
         assert_eq!(engine.unidentified_count(), 1);
     }
 
     #[test]
     fn pir_reconcile_patient() {
         let mut engine = PirEngine::new();
-        engine.register_unidentified(UnidentifiedPatient {
-            temporary_id: "TEMP-002".to_string(),
-            study_uid: "1.2.3.5".to_string(),
-            study_description: "MR Brain".to_string(),
-            study_date: "2024-02-20".to_string(),
-            confidence: 0.0,
-        }).unwrap();
+        engine
+            .register_unidentified(UnidentifiedPatient {
+                temporary_id: "TEMP-002".to_string(),
+                study_uid: "1.2.3.5".to_string(),
+                study_description: "MR Brain".to_string(),
+                study_date: "2024-02-20".to_string(),
+                confidence: 0.0,
+            })
+            .unwrap();
 
-        engine.reconcile("TEMP-002", "P12345", "Doe^John", "19800101", "M").unwrap();
+        engine
+            .reconcile("TEMP-002", "P12345", "Doe^John", "19800101", "M")
+            .unwrap();
         assert_eq!(engine.unidentified_count(), 0);
         assert_eq!(engine.reconciled_count(), 1);
     }
@@ -690,45 +735,51 @@ mod tests_ihe {
     #[test]
     fn xds_register_document() {
         let mut registry = XdsRegistry::new();
-        registry.register(XdsDocumentEntry {
-            entry_uuid: "urn:uuid:12345".to_string(),
-            unique_id: "1.2.3.4.5".to_string(),
-            patient_id: "P001".to_string(),
-            class_code: "DICOM".to_string(),
-            type_code: "Imaging".to_string(),
-            facility_code: "Hospital".to_string(),
-            practice_setting: "Radiology".to_string(),
-            repository_uid: "1.2.3.repo".to_string(),
-            available: true,
-        }).unwrap();
+        registry
+            .register(XdsDocumentEntry {
+                entry_uuid: "urn:uuid:12345".to_string(),
+                unique_id: "1.2.3.4.5".to_string(),
+                patient_id: "P001".to_string(),
+                class_code: "DICOM".to_string(),
+                type_code: "Imaging".to_string(),
+                facility_code: "Hospital".to_string(),
+                practice_setting: "Radiology".to_string(),
+                repository_uid: "1.2.3.repo".to_string(),
+                available: true,
+            })
+            .unwrap();
         assert_eq!(registry.document_count(), 1);
     }
 
     #[test]
     fn xds_query_by_patient() {
         let mut registry = XdsRegistry::new();
-        registry.register(XdsDocumentEntry {
-            entry_uuid: "urn:uuid:aaa".to_string(),
-            unique_id: "1.2.3.4".to_string(),
-            patient_id: "P001".to_string(),
-            class_code: "DICOM".to_string(),
-            type_code: "Imaging".to_string(),
-            facility_code: "H".to_string(),
-            practice_setting: "R".to_string(),
-            repository_uid: "repo".to_string(),
-            available: true,
-        }).unwrap();
-        registry.register(XdsDocumentEntry {
-            entry_uuid: "urn:uuid:bbb".to_string(),
-            unique_id: "1.2.3.5".to_string(),
-            patient_id: "P001".to_string(),
-            class_code: "DICOM".to_string(),
-            type_code: "Imaging".to_string(),
-            facility_code: "H".to_string(),
-            practice_setting: "R".to_string(),
-            repository_uid: "repo".to_string(),
-            available: true,
-        }).unwrap();
+        registry
+            .register(XdsDocumentEntry {
+                entry_uuid: "urn:uuid:aaa".to_string(),
+                unique_id: "1.2.3.4".to_string(),
+                patient_id: "P001".to_string(),
+                class_code: "DICOM".to_string(),
+                type_code: "Imaging".to_string(),
+                facility_code: "H".to_string(),
+                practice_setting: "R".to_string(),
+                repository_uid: "repo".to_string(),
+                available: true,
+            })
+            .unwrap();
+        registry
+            .register(XdsDocumentEntry {
+                entry_uuid: "urn:uuid:bbb".to_string(),
+                unique_id: "1.2.3.5".to_string(),
+                patient_id: "P001".to_string(),
+                class_code: "DICOM".to_string(),
+                type_code: "Imaging".to_string(),
+                facility_code: "H".to_string(),
+                practice_setting: "R".to_string(),
+                repository_uid: "repo".to_string(),
+                available: true,
+            })
+            .unwrap();
 
         let results = registry.query_by_patient("P001");
         assert_eq!(results.len(), 2);
@@ -737,17 +788,19 @@ mod tests_ihe {
     #[test]
     fn xds_remove_document() {
         let mut registry = XdsRegistry::new();
-        registry.register(XdsDocumentEntry {
-            entry_uuid: "urn:uuid:del".to_string(),
-            unique_id: "1.2.3.6".to_string(),
-            patient_id: "P002".to_string(),
-            class_code: "DICOM".to_string(),
-            type_code: "Imaging".to_string(),
-            facility_code: "H".to_string(),
-            practice_setting: "R".to_string(),
-            repository_uid: "repo".to_string(),
-            available: true,
-        }).unwrap();
+        registry
+            .register(XdsDocumentEntry {
+                entry_uuid: "urn:uuid:del".to_string(),
+                unique_id: "1.2.3.6".to_string(),
+                patient_id: "P002".to_string(),
+                class_code: "DICOM".to_string(),
+                type_code: "Imaging".to_string(),
+                facility_code: "H".to_string(),
+                practice_setting: "R".to_string(),
+                repository_uid: "repo".to_string(),
+                available: true,
+            })
+            .unwrap();
 
         let removed = registry.remove("urn:uuid:del").unwrap();
         assert_eq!(removed.unique_id, "1.2.3.6");
@@ -759,30 +812,34 @@ mod tests_ihe {
     #[test]
     fn air_submit_finding() {
         let mut exchange = AirExchange::new();
-        exchange.submit_finding(AirFinding {
-            finding_uid: "1.2.3.f1".to_string(),
-            study_uid: "1.2.3.s1".to_string(),
-            finding_type_code: "76581006".to_string(),
-            confidence: 0.85,
-            algorithm_name: "LungNoduleAI".to_string(),
-            algorithm_version: "1.0.0".to_string(),
-            algorithm_uid: "1.2.3.ai1".to_string(),
-        }).unwrap();
+        exchange
+            .submit_finding(AirFinding {
+                finding_uid: "1.2.3.f1".to_string(),
+                study_uid: "1.2.3.s1".to_string(),
+                finding_type_code: "76581006".to_string(),
+                confidence: 0.85,
+                algorithm_name: "LungNoduleAI".to_string(),
+                algorithm_version: "1.0.0".to_string(),
+                algorithm_uid: "1.2.3.ai1".to_string(),
+            })
+            .unwrap();
         assert_eq!(exchange.finding_count(), 1);
     }
 
     #[test]
     fn air_query_by_study() {
         let mut exchange = AirExchange::new();
-        exchange.submit_finding(AirFinding {
-            finding_uid: "1.2.3.f2".to_string(),
-            study_uid: "1.2.3.study1".to_string(),
-            finding_type_code: "76581006".to_string(),
-            confidence: 0.9,
-            algorithm_name: "LungAI".to_string(),
-            algorithm_version: "2.0".to_string(),
-            algorithm_uid: "1.2.3.ai2".to_string(),
-        }).unwrap();
+        exchange
+            .submit_finding(AirFinding {
+                finding_uid: "1.2.3.f2".to_string(),
+                study_uid: "1.2.3.study1".to_string(),
+                finding_type_code: "76581006".to_string(),
+                confidence: 0.9,
+                algorithm_name: "LungAI".to_string(),
+                algorithm_version: "2.0".to_string(),
+                algorithm_uid: "1.2.3.ai2".to_string(),
+            })
+            .unwrap();
 
         let results = exchange.query_by_study("1.2.3.study1");
         assert_eq!(results.len(), 1);

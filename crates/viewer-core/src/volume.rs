@@ -3,12 +3,16 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// Deterministic volume assembly options.
+/// Deterministic volume assembly configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct VolumeAssemblyOptions {
+pub struct VolumeAssemblyConfig {
     /// Allow non-uniform slice spacing.
     pub allow_non_uniform_spacing: bool,
 }
+
+/// Backward-compatible alias for [`VolumeAssemblyConfig`].
+#[deprecated(since = "0.14.0", note = "Use VolumeAssemblyConfig instead")]
+pub type VolumeAssemblyOptions = VolumeAssemblyConfig;
 
 /// A source slice used to assemble a volume.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,7 +170,7 @@ impl VolumeGrid {
     /// Slices are sorted by `(position_mm, instance_uid)` and then stacked as `z`.
     pub fn from_slices(
         slices: &[SlicePlane],
-        options: VolumeAssemblyOptions,
+        options: VolumeAssemblyConfig,
     ) -> Result<Self, VolumeError> {
         // Stage 1+2: validate input and build deterministic ordering plan.
         let plan = plan_volume_assembly(slices, options)?;
@@ -325,7 +329,7 @@ struct VolumeAssemblyPlan {
 
 fn plan_volume_assembly(
     slices: &[SlicePlane],
-    options: VolumeAssemblyOptions,
+    options: VolumeAssemblyConfig,
 ) -> Result<VolumeAssemblyPlan, VolumeError> {
     if slices.is_empty() {
         return Err(VolumeError::EmptyInput);
@@ -482,7 +486,7 @@ fn mul_3x3_vec(matrix: [[f64; 3]; 3], rhs: [f64; 3]) -> [f64; 3] {
 
 #[cfg(test)]
 mod tests {
-    use super::{LegacyVolumeGrid, SlicePlane, VolumeAssemblyOptions, VolumeError, VolumeGrid};
+    use super::{LegacyVolumeGrid, SlicePlane, VolumeAssemblyConfig, VolumeError, VolumeGrid};
 
     fn slice(uid: &str, position_mm: i64, spacing_um: u64, pixels: [i32; 4]) -> SlicePlane {
         SlicePlane {
@@ -503,7 +507,7 @@ mod tests {
             slice("1.2.3.c", 20, 1_000, [9, 10, 11, 12]),
         ];
         let volume =
-            VolumeGrid::from_slices(&slices, VolumeAssemblyOptions::default()).expect("volume");
+            VolumeGrid::from_slices(&slices, VolumeAssemblyConfig::default()).expect("volume");
         assert_eq!(
             volume.source_instance_uids(),
             &[
@@ -522,7 +526,7 @@ mod tests {
             slice("1.2.3.a", 0, 1_000, [1, 2, 3, 4]),
             slice("1.2.3.b", 1, 1_500, [5, 6, 7, 8]),
         ];
-        let err = VolumeGrid::from_slices(&slices, VolumeAssemblyOptions::default())
+        let err = VolumeGrid::from_slices(&slices, VolumeAssemblyConfig::default())
             .expect_err("must fail");
         assert_eq!(err, VolumeError::NonUniformSpacing);
         assert_eq!(err.code(), "DVF.VOLUME.NON_UNIFORM_SPACING");

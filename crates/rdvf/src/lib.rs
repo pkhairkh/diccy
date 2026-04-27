@@ -53,19 +53,23 @@ pub use pack_xa::{
 pub use viewer_core::{
     reslice_volume, CacheMetrics, DeterministicCache, InteractionState, Measurement, MprError,
     MprFrame, MprLimits, MprRequest, ResampleKernel, SlicePlane, ToolState, TriPlanarPlane,
-    TriPlanarState, ViewerModel, Viewport2D, VolumeAssemblyOptions, VolumeError, VolumeGrid,
+    TriPlanarState, ViewerModel, Viewport2D, VolumeAssemblyConfig, VolumeError, VolumeGrid,
 };
 
 /// Top-level RDVF configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Config {
+pub struct RdvfConfig {
     /// Resource limits.
     pub limits: Limits,
     /// Build-time feature capabilities.
     pub capabilities: Capabilities,
 }
 
-impl Config {
+/// Backward-compatible alias for [`RdvfConfig`].
+#[deprecated(since = "0.14.0", note = "Use RdvfConfig instead")]
+pub type Config = RdvfConfig;
+
+impl RdvfConfig {
     /// Create a new config with explicit limits.
     pub fn new(limits: Limits) -> Self {
         Self {
@@ -214,9 +218,8 @@ impl Config {
 
         let mut limits = Limits::default();
         let mut caps = Capabilities::new(
-            false, false, false, false, false,
-            false, false, false, false, false,
-            false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false,
         );
 
         let mut seen = SeenFields::default();
@@ -361,7 +364,7 @@ impl Config {
 /// Assemble a volume from deterministic slice metadata.
 pub fn assemble_volume_from_slices(
     slices: &[SlicePlane],
-    options: VolumeAssemblyOptions,
+    options: VolumeAssemblyConfig,
 ) -> std::result::Result<VolumeGrid, VolumeError> {
     VolumeGrid::from_slices(slices, options)
 }
@@ -375,20 +378,24 @@ pub fn request_mpr_frame(
     reslice_volume(volume, request, limits)
 }
 
-impl Default for Config {
+impl Default for RdvfConfig {
     fn default() -> Self {
         Self::new(Limits::default())
     }
 }
 
-/// Builder for `Config`.
+/// Builder for [`RdvfConfig`].
 #[derive(Debug, Clone, Default)]
-pub struct ConfigBuilder {
+pub struct RdvfConfigBuilder {
     limits: Option<Limits>,
     capabilities: Option<Capabilities>,
 }
 
-impl ConfigBuilder {
+/// Backward-compatible alias for [`RdvfConfigBuilder`].
+#[deprecated(since = "0.14.0", note = "Use RdvfConfigBuilder instead")]
+pub type ConfigBuilder = RdvfConfigBuilder;
+
+impl RdvfConfigBuilder {
     /// Create a new builder.
     pub fn new() -> Self {
         Self::default()
@@ -407,8 +414,8 @@ impl ConfigBuilder {
     }
 
     /// Build a config using defaults where not explicitly provided.
-    pub fn build(self) -> Config {
-        Config {
+    pub fn build(self) -> RdvfConfig {
+        RdvfConfig {
             limits: self.limits.unwrap_or_default(),
             capabilities: self.capabilities.unwrap_or_else(capabilities),
         }

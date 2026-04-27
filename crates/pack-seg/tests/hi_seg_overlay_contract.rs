@@ -34,35 +34,93 @@ struct SegFixture<'a> {
 
 fn build_seg_dataset(fixture: SegFixture<'_>) -> Dataset {
     let mut ref_instance = Dataset::new();
-    ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(fixture.referenced_uid.to_string()),
-    ).unwrap());
+    ref_instance.insert(
+        Element::new(
+            TAG_REFERENCED_SOP_INSTANCE_UID,
+            Vr::Ui,
+            Value::Uid(fixture.referenced_uid.to_string()),
+        )
+        .unwrap(),
+    );
     let mut ref_series = Dataset::new();
-    ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-    ).unwrap());
+    ref_series.insert(
+        Element::new(
+            TAG_REFERENCED_INSTANCE_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![ref_instance]),
+        )
+        .unwrap(),
+    );
 
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str(fixture.rows.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str(fixture.cols.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(fixture.frames.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid(fixture.frame_of_reference_uid.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str(fixture.seg_type.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str(fixture.segment_number.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str(fixture.bits_allocated.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str(fixture.bits_stored.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str(fixture.high_bit.to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(fixture.pixel_data),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-    ).unwrap());
+    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str(fixture.rows.to_string())).unwrap());
+    dataset
+        .insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str(fixture.cols.to_string())).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_NUMBER_OF_FRAMES,
+            Vr::Is,
+            Value::Str(fixture.frames.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_FRAME_OF_REFERENCE_UID,
+            Vr::Ui,
+            Value::Uid(fixture.frame_of_reference_uid.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SEGMENTATION_TYPE,
+            Vr::Cs,
+            Value::Str(fixture.seg_type.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SEGMENT_NUMBER,
+            Vr::Us,
+            Value::Str(fixture.segment_number.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_ALLOCATED,
+            Vr::Us,
+            Value::Str(fixture.bits_allocated.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_STORED,
+            Vr::Us,
+            Value::Str(fixture.bits_stored.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_HIGH_BIT,
+            Vr::Us,
+            Value::Str(fixture.high_bit.to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(fixture.pixel_data)).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_REFERENCED_SERIES_SEQUENCE,
+            Vr::Sq,
+            Value::Sequence(vec![ref_series]),
+        )
+        .unwrap(),
+    );
     dataset
 }
 
@@ -159,7 +217,10 @@ fn seg_overlay_alignment_and_frame_bounds_fail_closed() {
     let frame_err = seg
         .overlay_on_frame(&frame, valid_ref, 2)
         .expect_err("frame out of range");
-    assert!(matches!(frame_err.kind(), ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(
+        frame_err.kind(),
+        ErrorKind::InvalidTagValue { .. }
+    ));
 }
 
 #[test]
@@ -205,5 +266,8 @@ fn seg_overlay_color_and_mask_processing_are_deterministic() {
         segment_number: 7,
     });
     let short_err = Segmentation::from_dataset(&too_short).expect_err("pixel data too short");
-    assert!(matches!(short_err.kind(), ErrorKind::InvalidTagValue { .. }));
+    assert!(matches!(
+        short_err.kind(),
+        ErrorKind::InvalidTagValue { .. }
+    ));
 }

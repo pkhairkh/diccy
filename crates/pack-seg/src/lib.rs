@@ -69,9 +69,9 @@ impl SegmentationType {
             "BINARY" => Ok(SegmentationType::Binary),
             "FRACTIONAL" => Ok(SegmentationType::Fractional),
             _ => Err(invalid_tag_value(
-        TAG_SEGMENTATION_TYPE,
-        "expected BINARY or FRACTIONAL",
-    )),
+                TAG_SEGMENTATION_TYPE,
+                "expected BINARY or FRACTIONAL",
+            )),
         }
     }
 }
@@ -517,46 +517,82 @@ impl SegmentationEncoder {
         let mut dataset = Dataset::new();
 
         // Rows
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str(rows.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str(rows.to_string())).unwrap());
         // Columns
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str(cols.to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str(cols.to_string())).unwrap());
         // NumberOfFrames
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(frames.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str(frames.to_string())).unwrap(),
+        );
         // FrameOfReferenceUID
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid(frame_of_reference_uid),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid(frame_of_reference_uid),
+            )
+            .unwrap(),
+        );
         // SegmentationType
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str(self.seg_type.to_cs_string().to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str(self.seg_type.to_cs_string().to_string()),
+            )
+            .unwrap(),
+        );
         // SegmentNumber
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str(segment_number.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENT_NUMBER,
+                Vr::Us,
+                Value::Str(segment_number.to_string()),
+            )
+            .unwrap(),
+        );
         // BitsAllocated
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str(bits_allocated.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_BITS_ALLOCATED,
+                Vr::Us,
+                Value::Str(bits_allocated.to_string()),
+            )
+            .unwrap(),
+        );
         // BitsStored
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str(bits_stored.to_string()),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_BITS_STORED, Vr::Us, Value::Str(bits_stored.to_string())).unwrap(),
+        );
         // HighBit
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str(high_bit.to_string()),
-        ).unwrap());
+        dataset
+            .insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str(high_bit.to_string())).unwrap());
         // PixelData
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(pixel_data)).unwrap());
 
         // ReferencedSeriesSequence (optional)
         if let Some(ref_uid) = self.referenced_sop_instance_uid {
             let mut ref_instance = Dataset::new();
-            ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(ref_uid),
-            ).unwrap());
+            ref_instance.insert(
+                Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid(ref_uid)).unwrap(),
+            );
             let mut ref_series = Dataset::new();
-            ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-            ).unwrap());
-            dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-            ).unwrap());
+            ref_series.insert(
+                Element::new(
+                    TAG_REFERENCED_INSTANCE_SEQUENCE,
+                    Vr::Sq,
+                    Value::Sequence(vec![ref_instance]),
+                )
+                .unwrap(),
+            );
+            dataset.insert(
+                Element::new(
+                    TAG_REFERENCED_SERIES_SEQUENCE,
+                    Vr::Sq,
+                    Value::Sequence(vec![ref_series]),
+                )
+                .unwrap(),
+            );
         }
 
         Ok(dataset)
@@ -742,33 +778,59 @@ mod tests {
     fn binary_seg_overlay_is_deterministic() {
         // REQ-UI-063, REQ-VOL-923, REQ-VOL-927, REQ-SEG-300, REQ-SEG-303
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0011]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0011])).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -794,33 +856,60 @@ mod tests {
     fn seg_reference_uid_mismatch_fails() {
         // REQ-CONF-086, REQ-SEG-300
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_00001]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_00001])).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -843,33 +932,59 @@ mod tests {
     fn seg_frame_of_reference_mismatch_fails() {
         // REQ-CONF-086, REQ-SEG-300
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001])).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -892,35 +1007,62 @@ mod tests {
     fn seg_multiframe_overlay_is_deterministic() {
         // REQ-CONF-086, REQ-SEG-301, REQ-SEG-303
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string())).unwrap(),
+        );
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001])).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         assert_eq!(seg.frames, 2);
@@ -958,35 +1100,62 @@ mod tests {
     fn seg_multiframe_frame_index_out_of_range_fails_closed() {
         // REQ-CONF-086, REQ-SEG-301
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string())).unwrap(),
+        );
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001])).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -1009,33 +1178,59 @@ mod tests {
     fn seg_grid_mismatch_fails_closed_without_resampling() {
         // REQ-VOL-924, REQ-SEG-302
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("BINARY".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("BINARY".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0b0000_0001])).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -1062,34 +1257,61 @@ mod tests {
     fn fractional_seg_parses_correctly() {
         // REQ-SEG-301
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("FRACTIONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string()),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("FRACTIONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string())).unwrap());
         // 4 pixels: 0, 128, 255, 0
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 128, 255, 0]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 128, 255, 0])).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         assert_eq!(seg.seg_type, SegmentationType::Fractional);
@@ -1108,24 +1330,31 @@ mod tests {
     fn fractional_seg_rejects_wrong_bits_allocated() {
         // REQ-SEG-301
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("FRACTIONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("FRACTIONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1])).unwrap());
 
         let err = Segmentation::from_dataset(&dataset).unwrap_err();
         assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
@@ -1135,24 +1364,31 @@ mod tests {
     fn fractional_seg_rejects_wrong_bits_stored() {
         // REQ-SEG-301
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("FRACTIONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("FRACTIONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1])).unwrap());
 
         let err = Segmentation::from_dataset(&dataset).unwrap_err();
         assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
@@ -1162,24 +1398,31 @@ mod tests {
     fn fractional_seg_rejects_wrong_high_bit() {
         // REQ-SEG-301
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("FRACTIONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("FRACTIONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("0".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![1])).unwrap());
 
         let err = Segmentation::from_dataset(&dataset).unwrap_err();
         assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
@@ -1189,33 +1432,60 @@ mod tests {
     fn fractional_seg_overlay_is_deterministic() {
         // REQ-SEG-301, REQ-SEG-303
         let mut ref_instance = Dataset::new();
-        ref_instance.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
+        ref_instance.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
         let mut ref_series = Dataset::new();
-        ref_series.insert(Element::new(TAG_REFERENCED_INSTANCE_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_instance]),
-        ).unwrap());
+        ref_series.insert(
+            Element::new(
+                TAG_REFERENCED_INSTANCE_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_instance]),
+            )
+            .unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENTATION_TYPE, Vr::Cs, Value::Str("FRACTIONAL".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 200, 0, 0]),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_REFERENCED_SERIES_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_series]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("2".to_string())).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_SEGMENTATION_TYPE,
+                Vr::Cs,
+                Value::Str("FRACTIONAL".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_SEGMENT_NUMBER, Vr::Us, Value::Str("3".to_string())).unwrap());
+        dataset
+            .insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Str("8".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Str("7".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 200, 0, 0])).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_REFERENCED_SERIES_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_series]),
+            )
+            .unwrap(),
+        );
 
         let seg = Segmentation::from_dataset(&dataset).expect("seg parse");
         let base = DisplayFrame {
@@ -1397,7 +1667,10 @@ mod tests {
             Some("1.2.3.4.5".to_string())
         );
         // Compare mask (0xFF -> 0xFF, 0 -> 0x00)
-        let expected_mask: Vec<u8> = mask.iter().map(|&b| if b != 0 { 0xFF } else { 0x00 }).collect();
+        let expected_mask: Vec<u8> = mask
+            .iter()
+            .map(|&b| if b != 0 { 0xFF } else { 0x00 })
+            .collect();
         assert_eq!(parsed.mask, expected_mask);
         assert!(parsed.fractional_probability.is_empty());
     }

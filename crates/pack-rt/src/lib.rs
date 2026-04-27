@@ -847,28 +847,53 @@ mod tests {
     fn dose_grid_scaling_applied() {
         // REQ-VOL-925, REQ-RT-350, REQ-RT-352
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("0.5".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![2, 0]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_POSITION,
+                Vr::Ds,
+                Value::Str("0\\0\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_ORIENTATION,
+                Vr::Ds,
+                Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_GRID_FRAME_OFFSET_VECTOR,
+                Vr::Ds,
+                Value::Str("0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("0.5".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string())).unwrap(),
+        );
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![2, 0])).unwrap());
         let dose = RtDoseGrid::from_dataset(&dataset).expect("dose parse");
         assert_eq!(dose.values, vec![1.0]);
         let reference = RtReferenceGeometry {
@@ -889,28 +914,54 @@ mod tests {
     fn grid_frame_offset_vector_mismatch_fails() {
         // REQ-VOL-926, REQ-RT-351
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0, 0, 0]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("2".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_POSITION,
+                Vr::Ds,
+                Value::Str("0\\0\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_ORIENTATION,
+                Vr::Ds,
+                Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_GRID_FRAME_OFFSET_VECTOR,
+                Vr::Ds,
+                Value::Str("0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string())).unwrap(),
+        );
+        dataset
+            .insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0, 0, 0])).unwrap());
         let err = RtDoseGrid::from_dataset(&dataset).unwrap_err();
         assert_eq!(err.code(), "DVF.DICOM.INVALID_TAG_VALUE");
     }
@@ -919,28 +970,53 @@ mod tests {
     fn rt_alignment_mismatch_fails() {
         // REQ-VOL-926, REQ-RT-351
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_POSITION, Vr::Ds, Value::Str("0\\0\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_IMAGE_ORIENTATION, Vr::Ds, Value::Str("1\\0\\0\\0\\1\\0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("1.2.3".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_GRID_FRAME_OFFSET_VECTOR, Vr::Ds, Value::Str("0".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0]),
-        ).unwrap());
+        dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Str("1".to_string())).unwrap());
+        dataset.insert(
+            Element::new(TAG_NUMBER_OF_FRAMES, Vr::Is, Value::Str("1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_PIXEL_SPACING, Vr::Ds, Value::Str("1\\1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_POSITION,
+                Vr::Ds,
+                Value::Str("0\\0\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_IMAGE_ORIENTATION,
+                Vr::Ds,
+                Value::Str("1\\0\\0\\0\\1\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_GRID_FRAME_OFFSET_VECTOR,
+                Vr::Ds,
+                Value::Str("0".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_DOSE_GRID_SCALING, Vr::Ds, Value::Str("1".to_string())).unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Str("16".to_string())).unwrap(),
+        );
+        dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0, 0])).unwrap());
         let dose = RtDoseGrid::from_dataset(&dataset).expect("dose parse");
         let reference = RtReferenceGeometry {
             rows: 1,
@@ -956,26 +1032,59 @@ mod tests {
 
     fn build_structure_dataset_with_type(points: &str, contour_type: &str) -> Dataset {
         let mut contour = Dataset::new();
-        contour.insert(Element::new(TAG_CONTOUR_GEOMETRIC_TYPE, Vr::Cs, Value::Str(contour_type.to_string()),
-        ).unwrap());
-        contour.insert(Element::new(TAG_NUMBER_OF_CONTOUR_POINTS, Vr::Is, Value::Str("4".to_string()),
-        ).unwrap());
-        contour.insert(Element::new(TAG_CONTOUR_DATA, Vr::Ds, Value::Str(points.to_string()),
-        ).unwrap());
+        contour.insert(
+            Element::new(
+                TAG_CONTOUR_GEOMETRIC_TYPE,
+                Vr::Cs,
+                Value::Str(contour_type.to_string()),
+            )
+            .unwrap(),
+        );
+        contour.insert(
+            Element::new(
+                TAG_NUMBER_OF_CONTOUR_POINTS,
+                Vr::Is,
+                Value::Str("4".to_string()),
+            )
+            .unwrap(),
+        );
+        contour.insert(
+            Element::new(TAG_CONTOUR_DATA, Vr::Ds, Value::Str(points.to_string())).unwrap(),
+        );
 
         let mut roi = Dataset::new();
-        roi.insert(Element::new(TAG_ROI_DISPLAY_COLOR, Vr::Is, Value::Str("255\\0\\0".to_string()),
-        ).unwrap());
-        roi.insert(Element::new(TAG_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![contour]),
-        ).unwrap());
+        roi.insert(
+            Element::new(
+                TAG_ROI_DISPLAY_COLOR,
+                Vr::Is,
+                Value::Str("255\\0\\0".to_string()),
+            )
+            .unwrap(),
+        );
+        roi.insert(
+            Element::new(TAG_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![contour])).unwrap(),
+        );
 
         let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
-        ).unwrap());
-        dataset.insert(Element::new(TAG_ROI_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![roi]),
-        ).unwrap());
+        dataset.insert(
+            Element::new(
+                TAG_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("9.8.7".to_string()),
+            )
+            .unwrap(),
+        );
+        dataset.insert(
+            Element::new(TAG_ROI_CONTOUR_SEQUENCE, Vr::Sq, Value::Sequence(vec![roi])).unwrap(),
+        );
         dataset
     }
 
@@ -1047,15 +1156,34 @@ mod tests {
         ))
         .expect("structure parse");
         let mut plan = Dataset::new();
-        plan.insert(Element::new(TAG_FRAME_OF_REFERENCE_UID, Vr::Ui, Value::Uid("9.8.7".to_string()),
-        ).unwrap());
-        plan.insert(Element::new(TAG_RT_PLAN_LABEL, Vr::Sh, Value::Str("PLAN".to_string()),
-        ).unwrap());
+        plan.insert(
+            Element::new(
+                TAG_FRAME_OF_REFERENCE_UID,
+                Vr::Ui,
+                Value::Uid("9.8.7".to_string()),
+            )
+            .unwrap(),
+        );
+        plan.insert(
+            Element::new(TAG_RT_PLAN_LABEL, Vr::Sh, Value::Str("PLAN".to_string())).unwrap(),
+        );
         let mut ref_item = Dataset::new();
-        ref_item.insert(Element::new(TAG_REFERENCED_SOP_INSTANCE_UID, Vr::Ui, Value::Uid("1.2.3.4".to_string()),
-        ).unwrap());
-        plan.insert(Element::new(TAG_REFERENCED_STRUCTURE_SET_SEQUENCE, Vr::Sq, Value::Sequence(vec![ref_item]),
-        ).unwrap());
+        ref_item.insert(
+            Element::new(
+                TAG_REFERENCED_SOP_INSTANCE_UID,
+                Vr::Ui,
+                Value::Uid("1.2.3.4".to_string()),
+            )
+            .unwrap(),
+        );
+        plan.insert(
+            Element::new(
+                TAG_REFERENCED_STRUCTURE_SET_SEQUENCE,
+                Vr::Sq,
+                Value::Sequence(vec![ref_item]),
+            )
+            .unwrap(),
+        );
         let summary = RtPlanSummary::from_dataset(&plan).expect("plan parse");
         summary
             .validate_structure_set(&structure)

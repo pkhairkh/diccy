@@ -28,24 +28,78 @@ fn sha256_hex(bytes: &[u8]) -> String {
 
 fn synthetic_mono_dataset() -> Dataset {
     let mut dataset = Dataset::new();
-    dataset.insert(Element::new(TAG_ROWS, Vr::Us, Value::Bytes((2u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_COLUMNS, Vr::Us, Value::Bytes((2u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_SAMPLES_PER_PIXEL, Vr::Us, Value::Bytes((1u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PHOTOMETRIC_INTERPRETATION, Vr::Cs, Value::Str("MONOCHROME2".to_string()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_ALLOCATED, Vr::Us, Value::Bytes((8u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_BITS_STORED, Vr::Us, Value::Bytes((8u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_HIGH_BIT, Vr::Us, Value::Bytes((7u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PIXEL_REPRESENTATION, Vr::Us, Value::Bytes((0u16).to_le_bytes().to_vec()),
-    ).unwrap());
-    dataset.insert(Element::new(TAG_PIXEL_DATA, Vr::Ob, Value::Bytes(vec![0u8, 64, 128, 255]),
-    ).unwrap());
+    dataset.insert(
+        Element::new(
+            TAG_ROWS,
+            Vr::Us,
+            Value::Bytes((2u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_COLUMNS,
+            Vr::Us,
+            Value::Bytes((2u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_SAMPLES_PER_PIXEL,
+            Vr::Us,
+            Value::Bytes((1u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PHOTOMETRIC_INTERPRETATION,
+            Vr::Cs,
+            Value::Str("MONOCHROME2".to_string()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_ALLOCATED,
+            Vr::Us,
+            Value::Bytes((8u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_BITS_STORED,
+            Vr::Us,
+            Value::Bytes((8u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_HIGH_BIT,
+            Vr::Us,
+            Value::Bytes((7u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PIXEL_REPRESENTATION,
+            Vr::Us,
+            Value::Bytes((0u16).to_le_bytes().to_vec()),
+        )
+        .unwrap(),
+    );
+    dataset.insert(
+        Element::new(
+            TAG_PIXEL_DATA,
+            Vr::Ob,
+            Value::Bytes(vec![0u8, 64, 128, 255]),
+        )
+        .unwrap(),
+    );
     dataset
 }
 
