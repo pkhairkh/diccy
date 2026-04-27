@@ -20,7 +20,7 @@ Provide a release-scoped design-control trace package linking requirements, arch
 
 | Design Input ID | Requirement IDs | Architecture / Service Boundary | Verification Evidence | Linked Risk IDs | Status |
 |---|---|---|---|---|---|
-| DCI-001 | `REQ-SCOPE-001`, `REQ-SCOPE-003`, `REQ-SCOPE-004` | `rdvf` public facade + workstation profile boundaries (`docs/02`) | `docs/22-Claim-to-Evidence-Matrix.md`, `reports/clinical/CLI-042.md`, `reports/release/product-intent-addendum-RC-2026.02.12.md` | RSK-S07-001, RSK-S07-006 | Verified |
+| DCI-001 | `REQ-SCOPE-001`, `REQ-SCOPE-003`, `REQ-SCOPE-004` | `diccy` public facade + workstation profile boundaries (`docs/02`) | `docs/22-Claim-to-Evidence-Matrix.md`, `reports/clinical/CLI-042.md`, `reports/release/product-intent-addendum-RC-2026.02.12.md` | RSK-S07-001, RSK-S07-006 | Verified |
 | DCI-002 | `REQ-CONF-002` | `dicom-io` admission + conformance envelope gating | `docs/03-DICOM-Conformance-Envelope.md`, `reports/security/conformance-negative-suite-RC-2026.02.12.md` | RSK-S07-002 | Verified |
 | DCI-003 | `REQ-PIX-201` | CPU-oracle pixel boundary (`dicom-pixel`) | `docs/05-Pixel-Pipeline.md`, `reports/analytical/ANL-058.md` | RSK-S07-003 | Verified |
 | DCI-004 | `REQ-SEC-405`, `REQ-SEC-420`, `REQ-SEC-423` | parser/decoder/security limits boundary (`dicom-core`, `dicom-io`, `dicom-pixel`) | `docs/09-Security-Threat-Model.md`, `reports/security/fuzz-campaign-report-RC-2026.02.11.md`, `reports/security/fuzz-wave1-RC-2026.02.12.md` | RSK-S07-002, RSK-S07-004 | Verified |

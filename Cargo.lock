@@ -324,6 +324,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "diccy"
+version = "0.1.0"
+dependencies = [
+ "dicom-core",
+ "dicom-pixel",
+ "dicom-series",
+ "modality-cr",
+ "modality-ct",
+ "modality-mg",
+ "modality-pet",
+ "pack-enhanced",
+ "pack-gsps",
+ "pack-nm",
+ "pack-rt",
+ "pack-seg",
+ "pack-sr",
+ "pack-us",
+ "pack-xa",
+ "viewer-core",
+]
+
+[[package]]
 name = "dicom-audit"
 version = "0.1.0"
 dependencies = [
@@ -1439,28 +1461,6 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "rdvf"
-version = "0.1.0"
-dependencies = [
- "dicom-core",
- "dicom-pixel",
- "dicom-series",
- "modality-cr",
- "modality-ct",
- "modality-mg",
- "modality-pet",
- "pack-enhanced",
- "pack-gsps",
- "pack-nm",
- "pack-rt",
- "pack-seg",
- "pack-sr",
- "pack-us",
- "pack-xa",
- "viewer-core",
 ]
 
 [[package]]

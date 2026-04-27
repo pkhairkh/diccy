@@ -12,7 +12,7 @@ echo "[2/5] Volume/MPR baseline path"
 cargo test -p viewer-core axis_aligned_patient_requests_match_voxel_requests -- --exact
 
 echo "[3/5] Tri-planar native demo"
-cargo run -p rdvf --example tri_planar_demo
+cargo run -p diccy --example tri_planar_demo
 
 echo "[4/5] SR commit workflow path"
 cargo test -p dicom-workflow-server sr_http_flow_create_update_retrieve_is_deterministic -- --exact

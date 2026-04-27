@@ -70,12 +70,12 @@ Run before launching profile stacks:
 
 `orthanc_adapter_example.sh` provides a reproducible adapter pattern:
 - query studies from Orthanc via `/tools/find`,
-- forward a local DICOM Part 10 file into RDVF DICOMweb STOW.
+- forward a local DICOM Part 10 file into DiCCY DICOMweb STOW.
 
 Security/fail-closed controls:
 - default to loopback endpoints; do not expose adapter endpoints publicly,
 - require explicit credentials (`ORTHANC_USER`/`ORTHANC_PASS`) when Orthanc auth is enabled,
-- treat all forwarded payloads as untrusted and rely on RDVF fail-closed parsing limits,
+- treat all forwarded payloads as untrusted and rely on DiCCY fail-closed parsing limits,
 - avoid forwarding PHI-bearing query payloads into logs; keep command-line invocations minimal.
 
 Run:

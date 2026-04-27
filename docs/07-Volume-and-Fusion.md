@@ -12,7 +12,7 @@ Current implemented baseline:
 - `VolumeGrid` includes optional patient-space metadata with deterministic voxel<->patient mapping helpers,
 - voxel-space and patient-space MPR request surfaces coexist with deterministic axis-aligned equivalence coverage,
 - WASM host exposes tri-planar validation interactions with synchronized crosshair + slab controls,
-- native demo parity is available via `cargo run -p rdvf --example tri_planar_demo`,
+- native demo parity is available via `cargo run -p diccy --example tri_planar_demo`,
 - PET/CT fusion baseline executes deterministic resample + blend with fail-closed limits.
 
 This document specifies:
@@ -191,7 +191,7 @@ Verification:
 
 ## 5. Scalability and web constraints (informative)
 
-WebGPU-based volume rendering at scale often requires residency/LOD strategies to bound memory and bandwidth. RDVF keeps baseline volume features conservative and treats advanced streaming/LOD as an optional extension.
+WebGPU-based volume rendering at scale often requires residency/LOD strategies to bound memory and bandwidth. DiCCY keeps baseline volume features conservative and treats advanced streaming/LOD as an optional extension.
 
 Reference:
 - Herzberger et al., “Residency Octree: A Hybrid Approach for Scalable Web-Based Multi-Volume Rendering” (IEEE TVCG, 2024): https://pubmed.ncbi.nlm.nih.gov/37889813/

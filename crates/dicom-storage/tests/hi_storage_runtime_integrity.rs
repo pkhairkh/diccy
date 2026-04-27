@@ -136,7 +136,7 @@ fn temp_wal_path(name: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_hi_storage_{name}_{nonce}.wal"))
+    std::env::temp_dir().join(format!("diccy_hi_storage_{name}_{nonce}.wal"))
 }
 
 #[test]

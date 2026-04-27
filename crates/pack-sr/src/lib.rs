@@ -189,7 +189,7 @@ pub struct SrBuilderDefaults {
 impl Default for SrBuilderDefaults {
     fn default() -> Self {
         Self {
-            observer: "rdvf-author".to_string(),
+            observer: "diccy-author".to_string(),
             authored_epoch_ms: 0,
         }
     }

@@ -10,7 +10,7 @@
       "binaries": ["dicom-visualizer"],
       "features": ["core", "deterministic-cpu-oracle", "headless-runtime"],
       "image_suffix": "framework-core",
-      "build_command": "cargo build -p rdvf"
+      "build_command": "cargo build -p diccy"
     },
     "workstation": {
       "default_profile": true,

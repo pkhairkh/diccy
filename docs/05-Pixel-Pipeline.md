@@ -51,7 +51,7 @@ Verification (for **REQ-PIX-200/202/203/204/206**):
 
 ## Pixel pipeline source of truth and GPU constraints (normative)
 
-RDVF treats the CPU pixel pipeline output (`Luma8`/`Rgba8`) as the **correctness oracle** and the GPU renderer as a presentation layer.
+DiCCY treats the CPU pixel pipeline output (`Luma8`/`Rgba8`) as the **correctness oracle** and the GPU renderer as a presentation layer.
 
 Requirements:
 

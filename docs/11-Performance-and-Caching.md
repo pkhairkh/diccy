@@ -153,7 +153,7 @@ Assumption: Criterion-based benchmarking is sufficient for CPU micro-benchmarks.
 
 ## 7. Web performance matrix (normative)
 
-Web viewers exhibit meaningful performance variability across browsers and OS. RDVF treats this as a first-class engineering constraint for WASM deployments.
+Web viewers exhibit meaningful performance variability across browsers and OS. DiCCY treats this as a first-class engineering constraint for WASM deployments.
 
 Reference (informative): Pereira et al., web viewer performance survey/classification: https://pubmed.ncbi.nlm.nih.gov/39349783/
 

@@ -8,7 +8,7 @@ Wave 1 introduced additive APIs in three areas:
 
 - `dicom-io`: raw-mode options, structured parser warnings, debug offset metadata.
 - `pack-sr`: deterministic SR authoring builder and update workflow.
-- `viewer-core`/`rdvf`/`viewer-wasm`: baseline MPR request/response surfaces.
+- `viewer-core`/`diccy`/`viewer-wasm`: baseline MPR request/response surfaces.
 
 Wave 2 extends those surfaces with:
 - patient-space-capable `VolumeGrid` metadata and migration adapters,
@@ -50,7 +50,7 @@ Wave 2 extends those surfaces with:
   - `PatientMprRequest`
   - `reslice_volume_patient(...)`
   - `MprRequest::{slab_thickness, slab_mode}`
-- New `rdvf` facade:
+- New `diccy` facade:
 - `assemble_volume_from_slices(...)`
 - `request_mpr_frame(...)`
 - New WASM API:

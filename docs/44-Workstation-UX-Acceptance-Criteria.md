@@ -11,7 +11,7 @@ A workstation build is accepted only when all criteria pass on the same dataset 
 |---|---|---|---|
 | Startup | Host boot to "WASM module loaded" | <= 5 seconds on baseline dev machine | `./tools/browser_smoke_renderer.sh` |
 | Study load | File select to first rendered preview | <= 3 seconds for 1-frame sample P10 | `./tools/browser_smoke_renderer.sh` |
-| Visual regression | MPR baseline + slab baseline + fusion baseline screenshot checks | zero mismatches and successful run | `RDVF_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh` |
+| Visual regression | MPR baseline + slab baseline + fusion baseline screenshot checks | zero mismatches and successful run | `DICCY_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh` |
 | Viewport interaction | Zoom + recenter response | <= 200 ms p95 interaction latency | `./tools/browser_perf_renderer.sh --output reports/performance/web-renderer-harness.json` |
 | Fallback resilience | WebGPU fallback latency | <= configured fallback latency budget and zero budget violations | `./tools/ux_benchmark_suite.sh` |
 | Reporting loop | SR create -> update -> retrieve | All 3 operations return 2xx and monotonic version increments | `cargo test -p dicom-workflow-server sr_http_flow_create_update_retrieve_is_deterministic -- --exact` |

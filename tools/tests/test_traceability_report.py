@@ -19,7 +19,7 @@ class TraceabilityReportTests(unittest.TestCase):
             root = pathlib.Path(tmp_dir)
             docs = root / "docs"
             reports = root / "reports"
-            tests_dir = root / "crates" / "rdvf" / "tests"
+            tests_dir = root / "crates" / "diccy" / "tests"
             docs.mkdir(parents=True)
             reports.mkdir(parents=True)
             tests_dir.mkdir(parents=True)

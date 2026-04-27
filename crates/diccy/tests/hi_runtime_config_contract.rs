@@ -1,4 +1,4 @@
-use rdvf::{capabilities, Capabilities, Config, ConfigParseError, Limits};
+use diccy::{capabilities, Capabilities, Config, ConfigParseError, Limits};
 
 fn serialized_keys(serialized: &str) -> Vec<String> {
     serialized
@@ -14,7 +14,7 @@ fn runtime_config_serialization_uses_version_header_and_stable_key_order() {
     let config = Config::default();
     let serialized = config.serialize();
     let lines: Vec<&str> = serialized.lines().collect();
-    assert_eq!(lines.first().copied(), Some("rdvf_config_v1"));
+    assert_eq!(lines.first().copied(), Some("diccy_config_v1"));
 
     let keys = serialized_keys(&serialized);
     let expected = vec![
@@ -116,7 +116,7 @@ fn runtime_config_json_wrapper_enforces_format_payload_and_key_uniqueness() {
     );
 
     let duplicate_format = format!(
-        "{{\"format\":\"rdvf_config_v1\",\"format\":\"rdvf_config_v1\",\"payload\":\"{}\"}}",
+        "{{\"format\":\"diccy_config_v1\",\"format\":\"diccy_config_v1\",\"payload\":\"{}\"}}",
         config.serialize()
     );
     assert_eq!(
@@ -127,7 +127,7 @@ fn runtime_config_json_wrapper_enforces_format_payload_and_key_uniqueness() {
     );
 
     let unknown = format!(
-        "{{\"format\":\"rdvf_config_v1\",\"payload\":\"{}\",\"extra\":\"oops\"}}",
+        "{{\"format\":\"diccy_config_v1\",\"payload\":\"{}\",\"extra\":\"oops\"}}",
         config.serialize()
     );
     assert_eq!(

@@ -14,7 +14,7 @@ fn temp_wal_path() -> std::path::PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("time")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_web_readyz_{nonce}.wal"))
+    std::env::temp_dir().join(format!("diccy_web_readyz_{nonce}.wal"))
 }
 
 fn send_http(port: u16, method: &str, path: &str) -> std::io::Result<(u16, String)> {

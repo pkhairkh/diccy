@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const SR_STORE_HEADER: &str = "rdvf_sr_store_v1";
+const SR_STORE_HEADER: &str = "diccy_sr_store_v1";
 
 /// Service-level SR workflow architecture snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1326,7 +1326,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time")
             .as_nanos();
-        std::env::temp_dir().join(format!("rdvf_{name}_{nonce}.{ext}"))
+        std::env::temp_dir().join(format!("diccy_{name}_{nonce}.{ext}"))
     }
 
     fn auth() -> SrAuthContext {

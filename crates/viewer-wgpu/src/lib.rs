@@ -162,13 +162,13 @@ struct LiveRenderer {
 impl LiveRenderer {
     fn new(device: wgpu::Device, queue: wgpu::Queue, target_format: wgpu::TextureFormat) -> Self {
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rdvf.fullscreen_sampler"),
+            label: Some("diccy.fullscreen_sampler"),
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rdvf.fullscreen_bind_group_layout"),
+            label: Some("diccy.fullscreen_bind_group_layout"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -206,7 +206,7 @@ impl LiveRenderer {
             self.pipeline_format = surface.format;
         }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("rdvf.surface_target"),
+            label: Some("diccy.surface_target"),
             size: wgpu::Extent3d {
                 width: surface.width,
                 height: surface.height,
@@ -241,11 +241,11 @@ impl LiveRenderer {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rdvf.render_encoder"),
+                label: Some("diccy.render_encoder"),
             });
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("rdvf.fullscreen_pass"),
+                label: Some("diccy.fullscreen_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &acquired.view,
                     resolve_target: None,
@@ -276,7 +276,7 @@ impl LiveRenderer {
     fn prepare_source(&self, frame: &DisplayFrame) -> Result<(wgpu::Texture, wgpu::BindGroup)> {
         let rgba = frame_to_rgba(frame)?;
         let source = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("rdvf.source_texture"),
+            label: Some("diccy.source_texture"),
             size: wgpu::Extent3d {
                 width: frame.width,
                 height: frame.height,
@@ -310,7 +310,7 @@ impl LiveRenderer {
         );
         let source_view = source.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rdvf.fullscreen_bind_group"),
+            label: Some("diccy.fullscreen_bind_group"),
             layout: &self.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -333,16 +333,16 @@ fn create_pipeline(
     target_format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("rdvf.fullscreen_shader"),
+        label: Some("diccy.fullscreen_shader"),
         source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(FULLSCREEN_SHADER_WGSL)),
     });
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("rdvf.fullscreen_pipeline_layout"),
+        label: Some("diccy.fullscreen_pipeline_layout"),
         bind_group_layouts: &[bind_group_layout],
         push_constant_ranges: &[],
     });
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("rdvf.fullscreen_pipeline"),
+        label: Some("diccy.fullscreen_pipeline"),
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &shader,

@@ -1,6 +1,6 @@
 # ISSUES.md — Architecture & Code Design Audit
 
-> Comprehensive evaluation of the diccy codebase with emphasis on
+> Comprehensive evaluation of the DiCCY codebase with emphasis on
 > Domain-Driven Design (DDD) principles, encapsulation, cohesion,
 > coupling, and structural health. Based on a full source-code audit
 > of all 48 workspace crates (102,346 lines of Rust).
@@ -9,7 +9,8 @@
 
 ## Sprint Resolution Summary
 
-The following sprints remediated the issues identified in this audit:
+Sprints 9–13 addressed these issues systematically. The table below shows
+the resolution status as of the completion of Sprint 13.
 
 | Sprint | Focus | Issues Addressed |
 |---|---|---|
@@ -21,14 +22,13 @@ The following sprints remediated the issues identified in this audit:
 
 ### Partially Resolved
 
-- **#1 (Encapsulation):** Core types (`Element`, `Error`, `Limits`, `Capabilities`, `S3Config`, `FusionOverlayState`, `RtDoseOverlayState`, `SessionStatus`) now have private fields with validated constructors and getters. However, many secondary types in `viewer-core` (284 pub fields), `dicom-auth` (145 pub fields), and `dicom-dimse-service` (91 pub fields) still expose public fields. Further encapsulation is needed for these crates.
+- **#1 (Encapsulation):** Core types (`Element`, `Error`, `Limits`, `Capabilities`, `S3Config`, `FusionOverlayState`, `RtDoseOverlayState`, `SessionStatus`) now have private fields with validated constructors and getters. Secondary types in `viewer-core`, `dicom-auth`, and `dicom-dimse-service` still expose some public fields.
 - **#2 (Anemic Domain Model):** Key types now have behavioral methods (`Element::as_uid()`, `Dataset::insert_validated()`, `MeasurementRecord::soft_delete()`), but many secondary types remain data-only.
-- **#10 (Stubs):** Marked with doc annotations and runtime assertions, but some stubs (S3Backend, OnnxRuntime, XrRenderer) still need production implementations.
-- **#34 (Inline Tests):** ~1190 `#[test]` functions remain in production source files (S13-T8 in progress).
+- **#10 (Stubs):** Marked with doc annotations and runtime assertions. Production implementations still needed for S3Backend, OnnxRuntime, and XrRenderer.
 
-### Unresolved
+### Open
 
-- **#33 (Test Data Inline):** S13-T8 not yet complete.
+- **#33 / #34 (Inline Tests):** ~1190 `#[test]` functions remain in production source files (S13-T8 open).
 - **#25 (Type Aliases):** Partially resolved (SessionId, UserId, Tick now newtypes in dicom-collab); other type aliases may remain.
 
 ---
@@ -577,14 +577,14 @@ Each crate has its own `tests/` directory with hand-rolled test infrastructure. 
 
 ### Problem
 
-`dicom-core` defines 16 feature flags that propagate through the crate tree. `rdvf` adds 16 more. The total feature matrix has 2^32 possible combinations, and the vast majority have never been tested. Some combinations are invalid (e.g., `codec-j2k` without the `j2k` external dependency).
+`dicom-core` defines 16 feature flags that propagate through the crate tree. The `diccy` facade crate adds 16 more. The total feature matrix has 2^32 possible combinations, and the vast majority have never been tested. Some combinations are invalid (e.g., `codec-j2k` without the `j2k` external dependency).
 
 ### Evidence
 
 | Crate | Feature Flags | Combinations |
 |---|---|---|
 | `dicom-core` | 16 features | 65,536 |
-| `rdvf` | 16 features | 65,536 |
+| `diccy` (facade) | 16 features | 65,536 |
 | Combined | 32 features | 4,294,967,296 |
 
 In practice, only a handful of combinations are ever tested (typically `--all-features` or the default).
@@ -1182,7 +1182,7 @@ Return `Vec<DicomWebRouteCapability>` or use a `const` slice `&'static [DicomWeb
 | Measurement identifiers | `Measurement.id: String` | `MeasurementRecord.id: String` |
 | Error handling | `ClinicalError`, `MprError`, `VolumeError`, `GsdfError`, `HangingProtocolError` | `Error` with `ErrorKind` |
 
-The bridge crates (`modality-pet`, `viewer-wgpu`, `rdvf`) that depend on both must manually translate between these parallel type universes.
+The bridge crates (`modality-pet`, `viewer-wgpu`, `diccy` facade) that depend on both must manually translate between these parallel type universes.
 
 ### Impact
 

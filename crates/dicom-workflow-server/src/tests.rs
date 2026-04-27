@@ -12,7 +12,7 @@
             .duration_since(UNIX_EPOCH)
             .expect("time")
             .as_nanos();
-        std::env::temp_dir().join(format!("rdvf_{name}_{nonce}.{ext}"))
+        std::env::temp_dir().join(format!("diccy_{name}_{nonce}.{ext}"))
     }
 
     fn cleanup_with_rotations(path: &Path, max_rotations: usize) {
@@ -1650,7 +1650,7 @@
         // REQ-AUTH-300: token mode allows only exact token match.
         let mode = AuthMode::Token("secret-token".to_string());
         let mut headers = BTreeMap::new();
-        headers.insert("x-rdvf-token".to_string(), "wrong-token".to_string());
+        headers.insert("x-diccy-token".to_string(), "wrong-token".to_string());
         let request = HttpRequest {
             method: "GET".to_string(),
             path: "/worklist/items".to_string(),
@@ -1660,7 +1660,7 @@
         };
         assert!(!authorize(&request, &mode, "tls"));
 
-        headers.insert("x-rdvf-token".to_string(), "secret-token".to_string());
+        headers.insert("x-diccy-token".to_string(), "secret-token".to_string());
         let request = HttpRequest {
             method: "GET".to_string(),
             path: "/worklist/items".to_string(),
@@ -6962,7 +6962,7 @@ mod parallel_tests {
             .duration_since(UNIX_EPOCH)
             .expect("time")
             .as_nanos();
-        std::env::temp_dir().join(format!("rdvf_{name}_{nonce}.{ext}"))
+        std::env::temp_dir().join(format!("diccy_{name}_{nonce}.{ext}"))
     }
 
     fn cleanup_with_rotations(path: &Path, max_rotations: usize) {

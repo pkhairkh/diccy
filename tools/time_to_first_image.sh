@@ -10,7 +10,7 @@ mkdir -p "$(dirname "${OUTPUT_PATH}")"
 echo "Running time-to-first-image benchmark (onboarding baseline)..."
 start_epoch_ms="$(date +%s%3N)"
 
-cargo test -p viewer-wasm ingest_boundary_validates_p10_before_state_mutation -- --exact >/tmp/rdvf_ttfi.log 2>&1
+cargo test -p viewer-wasm ingest_boundary_validates_p10_before_state_mutation -- --exact >/tmp/diccy_ttfi.log 2>&1
 
 end_epoch_ms="$(date +%s%3N)"
 elapsed_ms="$((end_epoch_ms - start_epoch_ms))"

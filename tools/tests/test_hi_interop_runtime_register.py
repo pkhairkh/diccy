@@ -18,7 +18,7 @@ RUNTIME_TEST_PATHS = [
     "crates/dicom-query/tests/hi_query_contract_controls.rs",
     "crates/dicom-storage/tests/hi_storage_runtime_integrity.rs",
     "crates/dicom-visualizer/tests/hi_batch_manifest_contract.rs",
-    "crates/rdvf/tests/hi_runtime_config_contract.rs",
+    "crates/diccy/tests/hi_runtime_config_contract.rs",
     "crates/viewer-wasm/tests/hi_wasm_boundary_contract.rs",
     "crates/viewer-wgpu/tests/hi_gpu_runtime_contract.rs",
     "crates/pack-enhanced/tests/hi_enhanced_geometry_contract.rs",

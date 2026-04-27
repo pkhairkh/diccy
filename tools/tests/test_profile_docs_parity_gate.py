@@ -49,7 +49,7 @@ def run_gate(
             ## Runtime artifacts by profile
             | Profile | Runtime crates (library) | Packaged entrypoints |
             |---|---|---|
-            | `framework-core` | `rdvf` | `dicom-visualizer` |
+            | `framework-core` | `diccy` | `dicom-visualizer` |
             | `backend-services` | `dicom-web-server` | `dicom-web-server` |
             """
         ),

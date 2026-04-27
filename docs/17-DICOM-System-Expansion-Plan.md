@@ -1,6 +1,6 @@
 # DICOM system expansion plan (informative)
 
-This document is an **informative** implementation plan for expanding RDVF from the workstation baseline to an **enterprise-complete DICOM system**. It does not add new normative requirements; normative changes will be captured in the relevant `docs/` specs with REQ identifiers.
+This document is an **informative** implementation plan for expanding DiCCY from the workstation baseline to an **enterprise-complete DICOM system**. It does not add new normative requirements; normative changes will be captured in the relevant `docs/` specs with REQ identifiers.
 
 ## Definition of "true functional DICOM system"
 

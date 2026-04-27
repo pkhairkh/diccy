@@ -7,7 +7,7 @@ fn temp_wal_path() -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("time")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_web_startup_preflight_{nonce}.wal"))
+    std::env::temp_dir().join(format!("diccy_web_startup_preflight_{nonce}.wal"))
 }
 
 fn run_failed_web_startup(envs: &[(&str, String)]) -> String {

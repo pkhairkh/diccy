@@ -29,7 +29,7 @@ Notes:
 
 ## 3. OHIF-class behavioral comparison
 
-| Dimension | RDVF (`viewer-wasm`) | OHIF-class expectation | Gap status |
+| Dimension | DiCCY (`viewer-wasm`) | OHIF-class expectation | Gap status |
 |---|---|---|---|
 | Startup path | Capability probe, gated WebGPU flag, CPU default | Dynamic GPU detection with graceful fallback | Closed (baseline parity) |
 | Interaction responsiveness | CPU-oracle render + auto-tuned target frame interval + bounded upload chunk policy | Smooth interactive pan/zoom on large studies | Partial (benchmark tuning ongoing) |

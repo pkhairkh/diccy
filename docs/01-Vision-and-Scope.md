@@ -100,7 +100,7 @@ This repository specifies a **PACS workstation framework** with explicit clinica
 
 Framework Intended Purpose (normative text):
 
-> RDVF is a Rust PACS workstation framework that ingests, stores, queries, retrieves, renders, annotates, and reports on DICOM studies for clinical workflow integration. Regulatory authorization and deployment claims are controlled by integrators and deployment programs.
+> DiCCY is a Rust PACS workstation framework that ingests, stores, queries, retrieves, renders, annotates, and reports on DICOM studies for clinical workflow integration. Regulatory authorization and deployment claims are controlled by integrators and deployment programs.
 
 
 Requirements:

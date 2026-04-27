@@ -14,8 +14,8 @@ if [[ ! -f "${SPEC}" ]]; then
   exit 1
 fi
 
-if [[ "${RDVF_WORKFLOW_INTEGRATION:-0}" != "1" ]]; then
-  echo "RDVF_WORKFLOW_INTEGRATION=1 not set; skipping SR workflow integration browser test."
+if [[ "${DICCY_WORKFLOW_INTEGRATION:-0}" != "1" ]]; then
+  echo "DICCY_WORKFLOW_INTEGRATION=1 not set; skipping SR workflow integration browser test."
   exit 0
 fi
 

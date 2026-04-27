@@ -23,7 +23,7 @@ Artifact classes:
 
 | Profile | Runtime crates (library) | Packaged entrypoints |
 |---|---|---|
-| `framework-core` | `rdvf`, `dicom-*` core crates, `viewer-*` core libraries | `dicom-visualizer` |
+| `framework-core` | `diccy`, `dicom-*` core crates, `viewer-*` core libraries | `dicom-visualizer` |
 | `workstation` | `viewer-wasm`, `viewer-wgpu`, `viewer-core` | No dedicated `viewer-*` binaries in this version; run via `./tools/run_viewer_wasm_frontend.sh` and `crates/viewer-wasm/web` |
 | `backend-services` | `dicom-web`, `dicom-workflow-server`, `dicom-net`, `dicom-dimse` | `dicom-web-server`, `dicom-workflow-server` |
 | `backend-services` + optional DIMSE integration | plus `dicom-dimse-service` crate, transport security/auth configuration | `dicom-dimse-service` (requires `backend-services-with-dimse.<RELEASE_ID>.tar.gz` to include at runtime) |

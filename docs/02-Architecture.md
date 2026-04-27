@@ -19,7 +19,7 @@ Reference structure (informative; names may evolve, responsibilities must not):
 ```
 crates/
   # ── Public API facade ────────────────────────────────────────────
-  rdvf/                     # public API facade, feature aggregation, stable re-exports
+  diccy/                     # public API facade, feature aggregation, stable re-exports
 
   # ── Core & shared types ──────────────────────────────────────────
   dicom-core/               # tags, VRs, dataset model, element decoding, error model, newtypes (Uid, AeTitle, …)
@@ -104,7 +104,7 @@ crates/
 
 ### Normative requirements
 
-- **REQ-ARCH-105:** The workspace **MUST** include a public API facade crate (`rdvf`) that re-exports portable core APIs and exposes feature capability queries.
+- **REQ-ARCH-105:** The workspace **MUST** include a public API facade crate (`diccy`) that re-exports portable core APIs and exposes feature capability queries.
 - **REQ-ARCH-102:** `dicom-core`, `dicom-series`, `dicom-pixel`, and `viewer-core` **MUST** build for `wasm32-unknown-unknown`.
 - **REQ-ARCH-103:** Any crate that uses `std::fs`, OS paths, or threading APIs **MUST** be isolated behind:
   - a platform-specific crate (`dicom-io`, `viewer-wasm`), and/or
@@ -112,7 +112,7 @@ crates/
 - **REQ-ARCH-104:** Any non-Rust codec implementation (FFI) **MUST** live in a dedicated crate (e.g., `dicom-codec-j2k-sys`) and be optional by feature.
 
 Verification:
-- `cargo build -p rdvf` for the public API facade.
+- `cargo build -p diccy` for the public API facade.
 - `cargo build --target wasm32-unknown-unknown` for portable crates.
 - Workspace lint (CI) to ensure OS-only dependencies are gated or isolated.
 - Feature-gated codec crates documented in `Cargo.toml` and buildable only with explicit features.
@@ -141,7 +141,7 @@ Verification:
 
 ## Configuration surfaces
 
-The system exposes a single configuration struct (`rdvf::Config`) that controls:
+The system exposes a single configuration struct (`diccy::Config`) that controls:
 
 - conformance tier and enabled packs,
 - resource limits (bytes, pixels, frames, time),
@@ -153,11 +153,11 @@ Configuration is serializable (e.g., to JSON) for reproducibility in tests and b
 Requirements:
 - **REQ-ARCH-120:** The system **MUST** expose a single configuration surface that governs conformance tier, limits, rendering options, and telemetry.
 - **REQ-ARCH-121:** Configuration **MUST** be serializable for reproducibility in tests and bug reports.
-- **REQ-ARCH-122:** `rdvf::Config` **MUST** aggregate `Limits` and feature `Capabilities` as part of the public API facade.
+- **REQ-ARCH-122:** `diccy::Config` **MUST** aggregate `Limits` and feature `Capabilities` as part of the public API facade.
 
 Verification:
 - Unit test **MUST** serialize/deserialize the config and assert semantic equality.
-- Unit test **MUST** assert `rdvf::Config::default()` includes `Limits::default()` and the detected capability set.
+- Unit test **MUST** assert `diccy::Config::default()` includes `Limits::default()` and the detected capability set.
 
 ## Concurrency model
 

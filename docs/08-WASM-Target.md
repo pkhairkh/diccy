@@ -41,7 +41,7 @@ Verification method:
 
 ## 1.1 Determinism and numerics (normative)
 
-WebAssembly execution is mostly deterministic, but the core specification permits nondeterministic NaN payload selection in some cases (see WebAssembly Numerics). RDVF avoids this by preventing NaN/Infinity generation in the pixel pipeline and by treating the CPU boundary output as the correctness oracle.
+WebAssembly execution is mostly deterministic, but the core specification permits nondeterministic NaN payload selection in some cases (see WebAssembly Numerics). DiCCY avoids this by preventing NaN/Infinity generation in the pixel pipeline and by treating the CPU boundary output as the correctness oracle.
 
 Primary reference:
 - WebAssembly core spec, Numerics: https://webassembly.github.io/spec/core/exec/numerics.html

@@ -1542,7 +1542,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time")
             .as_nanos();
-        std::env::temp_dir().join(format!("rdvf_{name}_{nonce}.{ext}"))
+        std::env::temp_dir().join(format!("diccy_{name}_{nonce}.{ext}"))
     }
 
     fn cleanup_with_rotations(path: &Path, max_rotations: usize) {

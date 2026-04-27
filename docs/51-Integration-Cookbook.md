@@ -5,7 +5,7 @@ Reference: `docs/40-Reference-Deployment-Topology.md`
 
 ## 1. Adjacent PACS/VNA interoperability model
 
-RDVF is DICOMweb-first and interoperates with adjacent PACS/VNA ecosystems through three explicit integration modes:
+DiCCY is DICOMweb-first and interoperates with adjacent PACS/VNA ecosystems through three explicit integration modes:
 
 - **Direct DICOMweb mode** – workstation and modality paths use HTTP DICOMweb and rely on `dicom-web-server` for ingest/query/retrieve.
 - **Bridge mode** – a local adapter translates legacy DIMSE flows into DICOMweb transactions.
@@ -50,17 +50,17 @@ Operational rule: if you cannot prove DIMSE availability and credential alignmen
 
 ## 5. Orthanc bridge profile example
 
-For orthanc-adjacent deployments, preferred path is an adapter boundary with Orthanc as DIMSE terminus and RDVF as DICOMweb target:
+For orthanc-adjacent deployments, preferred path is an adapter boundary with Orthanc as DIMSE terminus and DiCCY as DICOMweb target:
 
 1. Keep Orthanc as local ingestion edge for legacy modality sessions.
-2. Configure Orthanc export hook to call RDVF STOW endpoint on accepted studies.
+2. Configure Orthanc export hook to call DiCCY STOW endpoint on accepted studies.
 3. Maintain a replay queue for Orthanc callbacks that fail under transient ingress errors.
 4. Publish study-level manifest metadata from Orthanc to workflow/SR via deterministic event log.
 
 Example trigger path:
 
 ```bash
-# Orthanc (edge) -> RDVF (DICOMweb)
+# Orthanc (edge) -> DiCCY (DICOMweb)
 curl -X POST 'http://127.0.0.1:8080/studies' --data-binary '@study.zip' \
   -H 'Content-Type: application/dicom+zip'
 ```
@@ -68,10 +68,10 @@ curl -X POST 'http://127.0.0.1:8080/studies' --data-binary '@study.zip' \
 Suggested environment boundary (example only):
 
 ```env
-RDVF_DICOMWEB_BASE=http://127.0.0.1:8080
-RDVF_WORKFLOW_BASE=http://127.0.0.1:8082
-RDVF_INGEST_QUARANTINE_SECONDS=120
-RDVF_BRIDGE_MODE=orthanc
+DICCY_DICOMWEB_BASE=http://127.0.0.1:8080
+DICCY_WORKFLOW_BASE=http://127.0.0.1:8082
+DICCY_INGEST_QUARANTINE_SECONDS=120
+DICCY_BRIDGE_MODE=orthanc
 ```
 
 Security constraints for Orthanc bridging:
@@ -81,7 +81,7 @@ Security constraints for Orthanc bridging:
 
 ## 6. dcm4chee interoperability mapping guide
 
-| dcm4chee workflow touchpoint | RDVF mapping |
+| dcm4chee workflow touchpoint | DiCCY mapping |
 |---|---|
 | C-FIND (Patient/Study query) | QIDO-RS `/studies` with equivalent query keys |
 | C-MOVE (study retrieve requests) | Server-side precomputed WADO-RS pull with policy gate |
@@ -90,7 +90,7 @@ Security constraints for Orthanc bridging:
 
 Recommended migration policy:
 - Keep dcm4chee as source of truth for modality scheduling/state if already in production.
-- Use RDVF for deterministic pixel pipeline and SR lifecycle operations.
+- Use DiCCY for deterministic pixel pipeline and SR lifecycle operations.
 - Disable C-MOVE if retrieval ACL cannot be expressed in local policy contract; enforce DICOMweb pull model instead.
 - Record every translation action in non-PHI audit events for deterministic reconciliation.
 
@@ -213,22 +213,22 @@ Where DIMSE is absent, enforce the following contract:
    - enqueue WADO pull tasks with bounded retries.
    - publish retryable failures through `/interop/hl7` subscriptions so enterprise orchestrators can decide human escalation.
 
-## 14. Migration pattern: OHIF/Orthanc plugin workflows vs RDVF adapter model
+## 14. Migration pattern: OHIF/Orthanc plugin workflows vs DiCCY adapter model
 
-This pattern maps common plugin-first integrations (OHIF extensions, Orthanc bridge plugins) to the RDVF adapter boundary so teams can migrate incrementally without breaking existing ingress.
+This pattern maps common plugin-first integrations (OHIF extensions, Orthanc bridge plugins) to the DiCCY adapter boundary so teams can migrate incrementally without breaking existing ingress.
 
-| Legacy plugin workflow | Typical plugin responsibility | RDVF adapter-model equivalent | Migration cutover signal |
+| Legacy plugin workflow | Typical plugin responsibility | DiCCY adapter-model equivalent | Migration cutover signal |
 |---|---|---|---|
 | OHIF extension posts workflow side-effects directly | Viewer-driven event mutation and ad-hoc callback wiring | Route side-effects through `dicom-workflow-server` (`/workflow/tasks`, `/sr/documents`, `/interop/subscriptions`) | Viewer no longer writes directly to third-party sinks |
-| Orthanc plugin forwards DIMSE events and retries internally | Transport conversion + replay queue in plugin code | Keep Orthanc at edge; move replay + policy decisions to RDVF adapter and `/interop/hl7` pipelines | Retry policy and audit visibility move from plugin logs to RDVF audit/failure APIs |
-| Mixed OHIF + Orthanc custom hooks | Custom cross-system state coupling | Separate concerns: OHIF uses DICOMweb + workflow APIs; Orthanc uses bridge adapter to DICOMweb/interop | Shared state transitions appear as deterministic RDVF task/SR events |
+| Orthanc plugin forwards DIMSE events and retries internally | Transport conversion + replay queue in plugin code | Keep Orthanc at edge; move replay + policy decisions to DiCCY adapter and `/interop/hl7` pipelines | Retry policy and audit visibility move from plugin logs to DiCCY audit/failure APIs |
+| Mixed OHIF + Orthanc custom hooks | Custom cross-system state coupling | Separate concerns: OHIF uses DICOMweb + workflow APIs; Orthanc uses bridge adapter to DICOMweb/interop | Shared state transitions appear as deterministic DiCCY task/SR events |
 
 Recommended sequence:
 
-1. Preserve existing plugin behavior, but mirror the same events into RDVF interop endpoints in shadow mode.
-2. Move retry/circuit-breaker/auth policy from plugin code to RDVF adapter endpoints and verify parity with existing operational metrics.
-3. Cut viewer/plugin write paths over to RDVF APIs, leaving plugin paths read-only for rollback.
-4. Remove plugin-owned business logic once RDVF audit, failure queues, and rollout controls are the source of truth.
+1. Preserve existing plugin behavior, but mirror the same events into DiCCY interop endpoints in shadow mode.
+2. Move retry/circuit-breaker/auth policy from plugin code to DiCCY adapter endpoints and verify parity with existing operational metrics.
+3. Cut viewer/plugin write paths over to DiCCY APIs, leaving plugin paths read-only for rollback.
+4. Remove plugin-owned business logic once DiCCY audit, failure queues, and rollout controls are the source of truth.
 
 Rollback guidance:
 

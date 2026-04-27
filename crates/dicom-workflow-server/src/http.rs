@@ -393,7 +393,7 @@ pub fn authorize(
         WorkflowAuthMode::DenyAll => false,
         WorkflowAuthMode::Token => request
             .headers
-            .get("x-rdvf-token")
+            .get("x-diccy-token")
             .is_some_and(|value| Some(value.as_str()) == auth_token),
     }
 }

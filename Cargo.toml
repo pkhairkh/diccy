@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/rdvf",
+  "crates/diccy",
   "crates/dicom-core",
   "crates/dicom-io",
   "crates/dicom-net",

@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-//! RDVF public API facade.
+//! DICCY public API facade.
 
 mod extensions;
 
@@ -56,20 +56,20 @@ pub use viewer_core::{
     TriPlanarState, ViewerModel, Viewport2D, VolumeAssemblyConfig, VolumeError, VolumeGrid,
 };
 
-/// Top-level RDVF configuration.
+/// Top-level DICCY configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RdvfConfig {
+pub struct DiccyConfig {
     /// Resource limits.
     pub limits: Limits,
     /// Build-time feature capabilities.
     pub capabilities: Capabilities,
 }
 
-/// Backward-compatible alias for [`RdvfConfig`].
-#[deprecated(since = "0.14.0", note = "Use RdvfConfig instead")]
-pub type Config = RdvfConfig;
+/// Backward-compatible alias for [`DiccyConfig`].
+#[deprecated(since = "0.14.0", note = "Use DiccyConfig instead")]
+pub type Config = DiccyConfig;
 
-impl RdvfConfig {
+impl DiccyConfig {
     /// Create a new config with explicit limits.
     pub fn new(limits: Limits) -> Self {
         Self {
@@ -85,7 +85,7 @@ impl RdvfConfig {
 
     /// Serialize the configuration to a stable, line-based format.
     pub fn serialize(&self) -> String {
-        const HEADER: &str = "rdvf_config_v1";
+        const HEADER: &str = "diccy_config_v1";
         let mut out = String::new();
         out.push_str(HEADER);
         out.push('\n');
@@ -157,7 +157,7 @@ impl RdvfConfig {
 
     /// Serialize the configuration to a JSON wrapper around the line-based format.
     pub fn to_json_string(&self) -> String {
-        const HEADER: &str = "rdvf_config_v1";
+        const HEADER: &str = "diccy_config_v1";
         let payload = self.serialize();
         let mut out = String::from("{\"format\":\"");
         push_json_escaped(&mut out, HEADER);
@@ -199,7 +199,7 @@ impl RdvfConfig {
         }
 
         let format = format.ok_or(ConfigParseError::MissingJsonKey { key: "format" })?;
-        if format != "rdvf_config_v1" {
+        if format != "diccy_config_v1" {
             return Err(ConfigParseError::MissingHeader);
         }
 
@@ -209,7 +209,7 @@ impl RdvfConfig {
 
     /// Deserialize a configuration from the stable, line-based format.
     pub fn deserialize(input: &str) -> std::result::Result<Self, ConfigParseError> {
-        const HEADER: &str = "rdvf_config_v1";
+        const HEADER: &str = "diccy_config_v1";
         let mut lines = input.lines();
         let header = lines.next().ok_or(ConfigParseError::MissingHeader)?;
         if header != HEADER {
@@ -378,24 +378,24 @@ pub fn request_mpr_frame(
     reslice_volume(volume, request, limits)
 }
 
-impl Default for RdvfConfig {
+impl Default for DiccyConfig {
     fn default() -> Self {
         Self::new(Limits::default())
     }
 }
 
-/// Builder for [`RdvfConfig`].
+/// Builder for [`DiccyConfig`].
 #[derive(Debug, Clone, Default)]
-pub struct RdvfConfigBuilder {
+pub struct DiccyConfigBuilder {
     limits: Option<Limits>,
     capabilities: Option<Capabilities>,
 }
 
-/// Backward-compatible alias for [`RdvfConfigBuilder`].
-#[deprecated(since = "0.14.0", note = "Use RdvfConfigBuilder instead")]
-pub type ConfigBuilder = RdvfConfigBuilder;
+/// Backward-compatible alias for [`DiccyConfigBuilder`].
+#[deprecated(since = "0.14.0", note = "Use DiccyConfigBuilder instead")]
+pub type ConfigBuilder = DiccyConfigBuilder;
 
-impl RdvfConfigBuilder {
+impl DiccyConfigBuilder {
     /// Create a new builder.
     pub fn new() -> Self {
         Self::default()
@@ -414,8 +414,8 @@ impl RdvfConfigBuilder {
     }
 
     /// Build a config using defaults where not explicitly provided.
-    pub fn build(self) -> RdvfConfig {
-        RdvfConfig {
+    pub fn build(self) -> DiccyConfig {
+        DiccyConfig {
             limits: self.limits.unwrap_or_default(),
             capabilities: self.capabilities.unwrap_or_else(capabilities),
         }
@@ -706,7 +706,7 @@ mod tests {
         feature = "modality-xr"
     )))]
     fn capabilities_default_features_disabled() {
-        // REQ-FEAT-303, REQ-API-206: default profile keeps optional RDVF features disabled.
+        // REQ-FEAT-303, REQ-API-206: default profile keeps optional DICCY features disabled.
         assert!(!cfg!(feature = "tier1-deflate"));
         assert!(!cfg!(feature = "codec-jpegls"));
         assert!(!cfg!(feature = "codec-j2k"));
@@ -758,7 +758,7 @@ mod tests {
             .split_once('\n')
             .map(|(_, rest)| rest)
             .unwrap_or_default();
-        let bad = format!("rdvf_config_v2\n{payload}");
+        let bad = format!("diccy_config_v2\n{payload}");
         assert_eq!(
             super::Config::deserialize(&bad),
             Err(super::ConfigParseError::MissingHeader)
@@ -843,7 +843,7 @@ mod tests {
     #[test]
     fn config_json_rejects_unknown_key() {
         // REQ-ARCH-121: JSON wrapper must validate keys.
-        let json = "{\"format\":\"rdvf_config_v1\",\"payload\":\"rdvf_config_v1\\nlimits.max_input_bytes=1\\n\",\"extra\":\"oops\"}";
+        let json = "{\"format\":\"diccy_config_v1\",\"payload\":\"diccy_config_v1\\nlimits.max_input_bytes=1\\n\",\"extra\":\"oops\"}";
         assert_eq!(
             super::Config::from_json_string(json),
             Err(super::ConfigParseError::UnknownJsonKey {

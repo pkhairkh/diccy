@@ -47,7 +47,7 @@ class ClaimSurfaceLintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = pathlib.Path(tmp_dir)
             (root / "docs").mkdir(parents=True, exist_ok=True)
-            (root / "README.md").write_text("RDVF framework scope only.\n")
+            (root / "README.md").write_text("DICCY framework scope only.\n")
             (root / "docs/15-Regulatory-and-Standards-Mapping.md").write_text(
                 "Informative note references MDR class and diagnostic context.\n"
             )
@@ -60,7 +60,7 @@ class ClaimSurfaceLintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = pathlib.Path(tmp_dir)
             (root / "docs").mkdir(parents=True, exist_ok=True)
-            (root / "README.md").write_text("RDVF framework scope only.\n")
+            (root / "README.md").write_text("DICCY framework scope only.\n")
             (root / "docs/15-Regulatory-and-Standards-Mapping.md").write_text("informative\n")
             report_path = root / "reports/docs/claim-surface-lint.json"
             result = subprocess.run(

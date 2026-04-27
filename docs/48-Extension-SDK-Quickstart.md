@@ -5,11 +5,11 @@ Reference: `docs/41-Extension-Plugin-Contract.md`
 
 ## 1. Scope
 
-This quickstart shows how to register an `rdvf` workflow extension and handle deterministic events.
+This quickstart shows how to register a `diccy` workflow extension and handle deterministic events.
 
 ## 2. API surface
 
-Key types (from `rdvf::extensions`):
+Key types (from `diccy::extensions`):
 - `WorkflowExtension`
 - `ExtensionRegistry`
 - `ExtensionEvent`
@@ -19,7 +19,7 @@ Key types (from `rdvf::extensions`):
 ## 3. Minimal sample implementation
 
 ```rust
-use rdvf::extensions::{
+use diccy::extensions::{
     ExtensionEvent, ExtensionEventKind, ExtensionProfile, ExtensionRegistry, ExtensionResult,
     ExtensionStatus, WorkflowExtension,
 };
@@ -30,7 +30,7 @@ struct ExampleExtension;
 impl WorkflowExtension for ExampleExtension {
     fn id(&self) -> &'static str { "example.sdk" }
     fn profile(&self) -> ExtensionProfile { ExtensionProfile::Workstation }
-    fn handle(&self, event: &ExtensionEvent) -> rdvf::Result<ExtensionResult> {
+    fn handle(&self, event: &ExtensionEvent) -> diccy::Result<ExtensionResult> {
         if event.kind != ExtensionEventKind::MeasurementCaptured {
             return Ok(ExtensionResult::no_op());
         }
@@ -45,4 +45,4 @@ impl WorkflowExtension for ExampleExtension {
 
 - Duplicate extension IDs are rejected fail-closed.
 - Registration order is deterministic and execution order follows registration order.
-- Reference tests: `crates/rdvf/src/extensions.rs` unit tests.
+- Reference tests: `crates/diccy/src/extensions.rs` unit tests.

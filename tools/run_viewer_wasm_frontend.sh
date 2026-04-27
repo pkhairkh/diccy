@@ -249,13 +249,13 @@ echo "Proxy routes:"
 echo "  /dicomweb -> ${DICOMWEB_UPSTREAM}"
 echo "  /workflow -> ${WORKFLOW_UPSTREAM}"
 
-export RDVF_WEB_DIR="${WEB_DIR}"
-export RDVF_TLS_CERT="${TLS_CERT}"
-export RDVF_TLS_KEY="${TLS_KEY}"
-export RDVF_PORT="${PORT}"
-export RDVF_USE_HTTPS="${USE_HTTPS}"
-export RDVF_DICOMWEB_UPSTREAM="${DICOMWEB_UPSTREAM}"
-export RDVF_WORKFLOW_UPSTREAM="${WORKFLOW_UPSTREAM}"
+export DICCY_WEB_DIR="${WEB_DIR}"
+export DICCY_TLS_CERT="${TLS_CERT}"
+export DICCY_TLS_KEY="${TLS_KEY}"
+export DICCY_PORT="${PORT}"
+export DICCY_USE_HTTPS="${USE_HTTPS}"
+export DICCY_DICOMWEB_UPSTREAM="${DICOMWEB_UPSTREAM}"
+export DICCY_WORKFLOW_UPSTREAM="${WORKFLOW_UPSTREAM}"
 python3 - <<'PY'
 import http.server
 import os
@@ -264,13 +264,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-web_dir = os.environ["RDVF_WEB_DIR"]
-cert_path = os.environ["RDVF_TLS_CERT"]
-key_path = os.environ["RDVF_TLS_KEY"]
-port = int(os.environ["RDVF_PORT"])
-use_https = os.environ.get("RDVF_USE_HTTPS", "0") == "1"
-dicomweb_upstream = os.environ["RDVF_DICOMWEB_UPSTREAM"].rstrip("/")
-workflow_upstream = os.environ["RDVF_WORKFLOW_UPSTREAM"].rstrip("/")
+web_dir = os.environ["DICCY_WEB_DIR"]
+cert_path = os.environ["DICCY_TLS_CERT"]
+key_path = os.environ["DICCY_TLS_KEY"]
+port = int(os.environ["DICCY_PORT"])
+use_https = os.environ.get("DICCY_USE_HTTPS", "0") == "1"
+dicomweb_upstream = os.environ["DICCY_DICOMWEB_UPSTREAM"].rstrip("/")
+workflow_upstream = os.environ["DICCY_WORKFLOW_UPSTREAM"].rstrip("/")
 
 HOP_BY_HOP_HEADERS = {
     "connection",

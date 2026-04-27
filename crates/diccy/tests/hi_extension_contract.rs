@@ -1,4 +1,4 @@
-use rdvf::{
+use diccy::{
     ExtensionEvent, ExtensionEventKind, ExtensionRegistry, ExtensionStatus, SampleEchoExtension,
 };
 use std::collections::BTreeMap;

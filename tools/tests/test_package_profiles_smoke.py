@@ -193,7 +193,7 @@ class PackageProfilesSmokeTests(unittest.TestCase):
                         "binaries": ["dicom-visualizer"],
                         "features": ["core"],
                         "image_suffix": "legacy-workstation-sim",
-                        "build_command": "cargo build -p rdvf",
+                        "build_command": "cargo build -p diccy",
                     }
                 },
             }

@@ -1,4 +1,4 @@
-use rdvf::{reslice_volume, MprLimits, MprRequest, TriPlanarPlane, ViewerModel, VolumeGrid};
+use diccy::{reslice_volume, MprLimits, MprRequest, TriPlanarPlane, ViewerModel, VolumeGrid};
 
 fn main() {
     let mut volume = VolumeGrid::new([4, 4, 4], [1_000, 1_000, 1_000]).expect("volume");

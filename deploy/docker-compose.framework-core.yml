@@ -6,4 +6,4 @@ services:
     working_dir: /workspace
     volumes:
       - ..:/workspace
-    command: ["bash", "-lc", "cargo build -p rdvf && cargo test -p rdvf"]
+    command: ["bash", "-lc", "cargo build -p diccy && cargo test -p diccy"]

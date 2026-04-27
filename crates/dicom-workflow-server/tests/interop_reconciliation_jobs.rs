@@ -11,7 +11,7 @@ fn temp_dir(prefix: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("time")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_{prefix}_{nonce}"))
+    std::env::temp_dir().join(format!("diccy_{prefix}_{nonce}"))
 }
 
 fn free_port() -> u16 {

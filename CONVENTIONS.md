@@ -129,8 +129,8 @@ All types follow consistent naming patterns:
 
 | Category | Suffix | Examples |
 |----------|--------|---------|
-| Configuration | `*Config` | `DicomWebServiceConfig`, `S3Config`, `RdvfConfig`, `ReaderConfig`, `VolumeAssemblyConfig` |
-| Builder | `*Builder` | `RdvfConfigBuilder`, `LimitsBuilder` |
+| Configuration | `*Config` | `DicomWebServiceConfig`, `S3Config`, `DiccyConfig`, `ReaderConfig`, `VolumeAssemblyConfig` |
+| Builder | `*Builder` | `DiccyConfigBuilder`, `LimitsBuilder` |
 | Error | `*Error` | `ViewerError`, `VolumeError`, `ClinicalError`, `FhirAdapterError` |
 | Request | `*Request` | `StorageCommitmentRequest`, `BreakGlassRequest` |
 | Response/Result | `*Result` | `CalciumScoreResult`, `EjectionFractionResult` |
@@ -141,8 +141,8 @@ All types follow consistent naming patterns:
 **Deprecated aliases** are provided for backward compatibility:
 - `VolumeAssemblyOptions` → `VolumeAssemblyConfig` (deprecated since 0.14.0)
 - `ReaderOptions` → `ReaderConfig` (deprecated since 0.14.0)
-- `Config` → `RdvfConfig` (deprecated since 0.14.0)
-- `ConfigBuilder` → `RdvfConfigBuilder` (deprecated since 0.14.0)
+- `Config` → `DiccyConfig` (deprecated since 0.14.0)
+- `ConfigBuilder` → `DiccyConfigBuilder` (deprecated since 0.14.0)
 
 ## Crate Naming Conventions
 
@@ -152,7 +152,7 @@ All types follow consistent naming patterns:
 | `pack-` | DICOM IOD pack crates | `pack-gsps`, `pack-seg`, `pack-rt`, `pack-shared` |
 | `modality-` | Modality-specific packs | `modality-ct`, `modality-pet`, `modality-mg`, `modality-cr` |
 | `viewer-` | Viewer stack | `viewer-core`, `viewer-wgpu`, `viewer-wasm` |
-| `rdvf` | Public API facade (no prefix) | `rdvf` |
+| `diccy` | Public API facade (no prefix) | `diccy` |
 
 ## Route Capability Pattern
 

@@ -20,7 +20,7 @@ fn unique_temp_dir(label: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("time")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_hi_batch_{label}_{nonce}"))
+    std::env::temp_dir().join(format!("diccy_hi_batch_{label}_{nonce}"))
 }
 
 fn meta_element_ui(tag: Tag, value: &str) -> Vec<u8> {

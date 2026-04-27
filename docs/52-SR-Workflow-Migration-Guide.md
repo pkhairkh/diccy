@@ -35,5 +35,5 @@ Use this guide when existing integrations call `pack-sr` APIs directly and need 
 
 ```bash
 cargo test -p dicom-workflow-server sr_http_flow_create_update_retrieve_is_deterministic -- --exact
-RDVF_WORKFLOW_INTEGRATION=1 ./tools/browser_sr_workflow.sh
+DICCY_WORKFLOW_INTEGRATION=1 ./tools/browser_sr_workflow.sh
 ```

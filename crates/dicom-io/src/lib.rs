@@ -1751,7 +1751,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let mut path = std::env::temp_dir();
-        path.push(format!("rdvf-{name}-{nonce}"));
+        path.push(format!("diccy-{name}-{nonce}"));
         path
     }
 

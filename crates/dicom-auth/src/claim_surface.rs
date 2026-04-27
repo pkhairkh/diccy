@@ -19,7 +19,7 @@ const CLAIM_RESTRICTED_TERMS: [&str; 8] = [
 
 /// Controlled intended-purpose text used by system metadata views.
 pub const APPROVED_INTENDED_PURPOSE_TEXT: &str =
-    "RDVF supports deterministic visualization workflows within the declared conformance envelope.";
+    "DICCY supports deterministic visualization workflows within the declared conformance envelope.";
 
 /// Controlled wording policy for user-visible claim text.
 #[derive(Debug, Clone, PartialEq, Eq)]

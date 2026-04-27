@@ -144,7 +144,7 @@ Verification:
 
 ### Measurement modes and calibration gating (normative)
 
-RDVF distinguishes between **pixel-domain measurements** and **physical-unit measurements** (quantitative mode) within the workstation profile.
+DiCCY distinguishes between **pixel-domain measurements** and **physical-unit measurements** (quantitative mode) within the workstation profile.
 
 Requirements:
 

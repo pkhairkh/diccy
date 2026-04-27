@@ -15,7 +15,7 @@ fn temp_snapshot_path(name: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    std::env::temp_dir().join(format!("rdvf_{name}_{nonce}.snapshot"))
+    std::env::temp_dir().join(format!("diccy_{name}_{nonce}.snapshot"))
 }
 
 fn worklist_dataset(step_id: &str, modality: &str, start_date: &str, start_time: &str) -> Dataset {

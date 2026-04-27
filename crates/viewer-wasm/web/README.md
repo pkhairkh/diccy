@@ -43,24 +43,24 @@ Deterministic preset builds:
 Browser smoke tests (Chromium + Firefox, Playwright required):
 
 ```bash
-RDVF_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_smoke_renderer.sh
+DICCY_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_smoke_renderer.sh
 ```
 
 Browser visual regression for key flow screenshots (MPR baseline, MPR slab baseline, fusion baseline):
 
 ```bash
-RDVF_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh
+DICCY_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh
 ```
 
 Record baseline images first (first run, or after intentionally changing render outputs):
 
 ```bash
-RDVF_UI_FLOW_SCREENSHOT_RECORD=1 RDVF_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh
+DICCY_UI_FLOW_SCREENSHOT_RECORD=1 DICCY_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_ui_flow_screenshot.sh
 ```
 
 Browser performance harness (large-study interaction profile):
 
 ```bash
-RDVF_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_perf_renderer.sh --output reports/performance/web-renderer-harness.json
+DICCY_WASM_SMOKE_URL=http://127.0.0.1:4173 ./tools/browser_perf_renderer.sh --output reports/performance/web-renderer-harness.json
 python3 tools/webgpu_dashboard_report.py --inputs 'reports/performance/web-renderer-harness*.json' --output reports/performance/webgpu-dashboard.md
 ```
