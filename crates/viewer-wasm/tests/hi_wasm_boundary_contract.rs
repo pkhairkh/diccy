@@ -194,16 +194,26 @@ fn backend_selection_and_fallback_are_deterministic() {
     viewer.set_production_webgpu_renderer(true);
 
     let selected = viewer.configure_renderer_backend("webgpu", true, false, true, 4096);
-    assert_eq!(selected, "CPU");
-    assert_eq!(viewer.active_renderer_backend(), "CPU");
 
     let probe = viewer.backend_capability_probe_json();
     assert!(probe.contains("\"webgpu_api\":true"));
     assert!(probe.contains("\"adapter_available\":false"));
 
-    let metrics = viewer.backend_selection_metrics_json();
-    assert!(metrics.contains("\"fallback_to_cpu_count\":1"));
-    assert!(metrics.contains("DVF.WASM.GPU.INIT_FAILED"));
+    // With webgl2-backend feature, the cascade selects WebGL2 when WebGPU
+    // is unavailable but WebGL2 is available. Without the feature, CPU.
+    #[cfg(feature = "webgl2-backend")]
+    {
+        assert_eq!(selected, "WebGL2");
+        assert_eq!(viewer.active_renderer_backend(), "WebGL2");
+    }
+    #[cfg(not(feature = "webgl2-backend"))]
+    {
+        assert_eq!(selected, "CPU");
+        assert_eq!(viewer.active_renderer_backend(), "CPU");
+        let metrics = viewer.backend_selection_metrics_json();
+        assert!(metrics.contains("\"fallback_to_cpu_count\":1"));
+        assert!(metrics.contains("DVF.WASM.GPU.INIT_FAILED"));
+    }
 }
 
 #[test]

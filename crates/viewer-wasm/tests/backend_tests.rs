@@ -53,11 +53,27 @@
             max_texture_dimension_2d: 8192,
         };
         let selected = state.configure_backend("webgpu", probe, &limits);
-        assert_eq!(selected, RendererBackend::Cpu);
-        assert_eq!(state.active_backend(), RendererBackend::Cpu);
-        let metrics = state.metrics_json();
-        assert!(metrics.contains("production_webgpu_flag_disabled"));
-        assert!(metrics.contains("DVF.WASM.GPU.FLAG_DISABLED"));
+
+        // With webgl2-backend feature enabled and WebGL2 available,
+        // the runtime falls through to WebGL2 instead of CPU.
+        // Without the feature, it falls back to CPU.
+        #[cfg(feature = "webgl2-backend")]
+        {
+            assert_eq!(selected, RendererBackend::WebGL2);
+            assert_eq!(state.active_backend(), RendererBackend::WebGL2);
+            // WebGPU flag disabled but WebGL2 available: no error code set
+            // since WebGL2 was selected successfully.
+            let metrics = state.metrics_json();
+            assert!(metrics.contains("\"webgl2_lifecycle\":\"Ready\""));
+        }
+        #[cfg(not(feature = "webgl2-backend"))]
+        {
+            assert_eq!(selected, RendererBackend::Cpu);
+            assert_eq!(state.active_backend(), RendererBackend::Cpu);
+            let metrics = state.metrics_json();
+            assert!(metrics.contains("production_webgpu_flag_disabled"));
+            assert!(metrics.contains("DVF.WASM.GPU.FLAG_DISABLED"));
+        }
     }
 
     #[cfg(feature = "webgpu-backend")]

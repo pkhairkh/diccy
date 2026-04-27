@@ -54,6 +54,14 @@ members = [
   "crates/dicom-xr",
   "crates/dicom-util",
   "crates/dicom-test-util",
+  "crates/dicom-plugin",
+  "crates/dicom-viewer-sdk",
+  "crates/dicom-pwa",
+  "crates/dicom-regulatory",
+  "crates/dicom-openapi",
+  "crates/diccy-bench",
+  "crates/dicom-sdk-docs",
+  "tests/pacs-integration",
 ]
 
 [workspace.dependencies]

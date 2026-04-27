@@ -5,6 +5,18 @@
 //! Maps DICOM Patient/Study/Series to FHIR Patient/ImagingStudy resources,
 //! and DICOM SR measurement reports to FHIR Observations per the
 //! HL7 DICOM-SR on FHIR Implementation Guide.
+//!
+//! # Sprint 15 Extensions
+//!
+//! - **Publication** (`publication`): FHIR ImagingStudy resource publication on study receipt
+//! - **Endpoint** (`endpoint`): FHIR Endpoint resource for DICOMweb service
+//! - **Subscription** (`subscription`): FHIR Subscription mechanism for real-time notification
+//! - **Mapping Tables** (`mapping_tables`): DICOM-to-FHIR mapping reference documentation
+
+pub mod endpoint;
+pub mod mapping_tables;
+pub mod publication;
+pub mod subscription;
 
 use dicom_audit::{AuditEvent, AuditEventKind, AuditField, AuditValue};
 use dicom_core::{Dataset, Error, ErrorKind, Result, Tag};

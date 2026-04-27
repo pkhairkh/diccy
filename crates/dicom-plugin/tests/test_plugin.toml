@@ -1,0 +1,16 @@
+[plugin]
+name = "com.example.diccy-measure-tool"
+version = "1.0.0"
+description = "Advanced measurement tool for the DICOM viewer"
+author = "Example Corp"
+
+[plugin.permissions]
+extension_points = ["ViewerTool", "WorkflowHook"]
+network_access = false
+filesystem_read = true
+filesystem_write = false
+max_memory_mb = 128
+max_cpu_time_ms = 3000
+
+[plugin.compatibility]
+min_diccy_version = "0.14.0"

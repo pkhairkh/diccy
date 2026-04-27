@@ -12,7 +12,11 @@ dicom-audit = { path = "../dicom-audit" }
 dicom-util = { path = "../dicom-util" }
 sha2 = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 secrecy = "0.8"
+
+[dev-dependencies]
+serde_json = { workspace = true }
 
 [features]
 default = []

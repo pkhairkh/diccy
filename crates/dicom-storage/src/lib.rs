@@ -11,6 +11,7 @@
 
 pub mod commitment;
 pub mod s3_backend;
+pub mod tenant;
 pub mod vna;
 
 // Re-export all commitment types for backward compatibility.
@@ -24,6 +25,13 @@ pub use s3_backend::{MultipartUploadResult, S3Backend, S3Config};
 
 // Re-export all VNA types for backward compatibility.
 pub use vna::{LifecyclePolicy, RetentionPolicy, StudyLifecycleState, VnaEngine, VnaStudyRecord};
+
+// Re-export tenant types for multi-tenancy support.
+pub use tenant::{
+    ApiKeyTenantResolver, AuthContext, CompositeTenantResolver, JwtTenantResolver, TenantBlobStore,
+    TenantEnforcer, TenantError, TenantId, TenantNamespace, TenantPolicy, TenantResolver,
+    TenantStorageView,
+};
 
 // ===========================================================================
 // S10-T3: BlobStore trait for dependency injection
@@ -120,6 +128,54 @@ impl FileBlobStore {
 
     fn key_path(&self, key: &str) -> std::path::PathBuf {
         self.root.join(key)
+    }
+
+    /// Compute the file path for a tenant-scoped key.
+    ///
+    /// Prefixes the key with the tenant's namespace directory.
+    pub fn tenant_key_path(&self, tenant_id: &tenant::TenantId, key: &str) -> std::path::PathBuf {
+        self.root.join(tenant_id.blob_prefix()).join(key)
+    }
+
+    /// Store data under a tenant-scoped key.
+    pub fn put_tenant(&self, tenant_id: &tenant::TenantId, key: &str, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let path = self.tenant_key_path(tenant_id, key);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&path, data)?;
+        Ok(())
+    }
+
+    /// Retrieve data from a tenant-scoped key.
+    pub fn get_tenant(&self, tenant_id: &tenant::TenantId, key: &str) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let path = self.tenant_key_path(tenant_id, key);
+        let data = std::fs::read(&path).map_err(|e| format!("key not found: {key}: {e}"))?;
+        Ok(data)
+    }
+
+    /// Delete data from a tenant-scoped key.
+    pub fn delete_tenant(&self, tenant_id: &tenant::TenantId, key: &str) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let path = self.tenant_key_path(tenant_id, key);
+        std::fs::remove_file(&path).map_err(|e| format!("key not found: {key}: {e}"))?;
+        Ok(())
+    }
+
+    /// List keys for a specific tenant.
+    pub fn list_tenant(&self, tenant_id: &tenant::TenantId, prefix: &str) -> std::result::Result<Vec<String>, Box<dyn std::error::Error>> {
+        let tenant_dir = self.root.join(tenant_id.blob_prefix());
+        let full_prefix = format!("{}{}", tenant_id.blob_prefix(), prefix);
+        let mut keys = Vec::new();
+        if tenant_dir.exists() {
+            self.list_recursive(&self.root, &full_prefix, &mut keys)?;
+        }
+        // Strip the tenant prefix from returned keys
+        let tenant_prefix = tenant_id.blob_prefix();
+        let stripped: Vec<String> = keys
+            .into_iter()
+            .filter_map(|k| k.strip_prefix(&tenant_prefix).map(|s| s.to_string()))
+            .collect();
+        Ok(stripped)
     }
 }
 
@@ -259,6 +315,11 @@ pub enum IngestOutcome {
 }
 
 /// Storage engine with deterministic hashing and deduplication.
+///
+/// Supports optional multi-tenancy. When a tenant is configured, all
+/// operations are scoped to that tenant's namespace and policies.
+/// When no tenant is configured, the system operates in single-tenant
+/// mode (backward compatible).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Storage {
     limits: Limits,
@@ -272,6 +333,10 @@ pub struct Storage {
     tombstoned_instances: BTreeSet<(String, String, String)>,
     total_bytes: u64,
     persistence: Option<PathBuf>,
+    /// Optional current tenant for scoping all operations.
+    current_tenant: Option<tenant::TenantId>,
+    /// Per-tenant policy configuration.
+    tenant_policies: std::collections::HashMap<tenant::TenantId, tenant::TenantPolicy>,
 }
 
 impl Storage {
@@ -289,6 +354,8 @@ impl Storage {
             tombstoned_instances: BTreeSet::new(),
             total_bytes: 0,
             persistence: None,
+            current_tenant: None,
+            tenant_policies: std::collections::HashMap::new(),
         }
     }
 
@@ -551,6 +618,102 @@ impl Storage {
                 series_uid.to_string(),
                 instance_uid.to_string(),
             ))
+    }
+
+    // =======================================================================
+    // Multi-tenancy methods
+    // =======================================================================
+
+    /// Set the current tenant for this storage engine.
+    ///
+    /// All subsequent operations will be scoped to this tenant.
+    /// When set to `None`, the engine operates in single-tenant mode.
+    pub fn with_tenant(mut self, tenant_id: impl Into<Option<tenant::TenantId>>) -> Self {
+        self.current_tenant = tenant_id.into();
+        self
+    }
+
+    /// Return the current tenant, if set.
+    pub fn current_tenant(&self) -> Option<&tenant::TenantId> {
+        self.current_tenant.as_ref()
+    }
+
+    /// Register a tenant policy.
+    pub fn register_tenant_policy(&mut self, policy: tenant::TenantPolicy) {
+        let tenant_id = policy.tenant_id.clone();
+        self.tenant_policies.insert(tenant_id, policy);
+    }
+
+    /// Return the policy for the current tenant, if any.
+    pub fn current_tenant_policy(&self) -> Option<&tenant::TenantPolicy> {
+        self.current_tenant
+            .as_ref()
+            .and_then(|id| self.tenant_policies.get(id))
+    }
+
+    /// Return the policy for a specific tenant.
+    pub fn tenant_policy(&self, tenant_id: &tenant::TenantId) -> Option<&tenant::TenantPolicy> {
+        self.tenant_policies.get(tenant_id)
+    }
+
+    /// Create a tenant-scoped storage view backed by the given blob store.
+    ///
+    /// The view provides all storage operations automatically prefixed with
+    /// the tenant's namespace, preventing cross-tenant access.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no tenant is currently configured.
+    pub fn store_for_tenant(
+        &self,
+        blob_store: std::sync::Arc<dyn BlobStore>,
+    ) -> std::result::Result<tenant::TenantStorageView, tenant::TenantError> {
+        let tenant_id = self
+            .current_tenant
+            .clone()
+            .ok_or_else(|| tenant::TenantError::TenantResolutionFailed {
+                detail: "no tenant configured for this storage engine".to_string(),
+            })?;
+        let enforcer = tenant::TenantEnforcer::new();
+        Ok(tenant::TenantStorageView::new(blob_store, tenant_id, enforcer))
+    }
+
+    /// Check if the current tenant is allowed to access data for the given tenant.
+    ///
+    /// Fail-closed: if no tenant is configured, access is denied.
+    /// If the tenants match, access is allowed.
+    pub fn check_tenant_access(
+        &self,
+        resource_tenant: &tenant::TenantId,
+    ) -> std::result::Result<(), tenant::TenantError> {
+        match &self.current_tenant {
+            Some(current) => tenant::TenantEnforcer::enforce_scope(current, resource_tenant),
+            None => Err(tenant::TenantError::TenantResolutionFailed {
+                detail: "no tenant configured; access denied (fail-closed)".to_string(),
+            }),
+        }
+    }
+
+    /// Ingest bytes with tenant policy enforcement.
+    ///
+    /// If a tenant is configured, this checks the tenant's storage quota
+    /// before proceeding with ingestion.
+    pub fn ingest_bytes_tenant_aware(&mut self, bytes: Vec<u8>) -> Result<IngestOutcome> {
+        // If tenant is configured, enforce quota
+        if let Some(tenant_id) = &self.current_tenant {
+            if let Some(policy) = self.tenant_policies.get(tenant_id) {
+                policy
+                    .check_storage_quota(self.total_bytes + bytes.len() as u64)
+                    .map_err(|err| Box::new(Error::from_kind(
+                        ErrorKind::AuthorizationDenied {
+                            resource: "tenant_storage".to_string(),
+                            reason: err.to_string(),
+                        },
+                        "tenant quota exceeded",
+                    )))?;
+            }
+        }
+        self.ingest_bytes(bytes)
     }
 }
 

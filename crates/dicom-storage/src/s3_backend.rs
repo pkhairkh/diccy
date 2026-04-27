@@ -130,6 +130,15 @@ impl S3Config {
         // Use a two-level prefix for better S3 performance
         format!("{}/{}/{}", &hash[0..2], &hash[2..4], hash)
     }
+
+    /// Compute the S3 object key for a given canonical hash, scoped to a tenant.
+    ///
+    /// The tenant prefix is prepended, ensuring tenant isolation in S3.
+    /// For example, tenant `acme` with hash `abcdef...` produces:
+    /// `tenant-acme/ab/cd/abcdef...`
+    pub fn object_key_for_tenant(&self, tenant_id: &super::tenant::TenantId, hash: &str) -> String {
+        format!("{}{}", tenant_id.blob_prefix(), self.object_key(hash))
+    }
 }
 
 fn redact_secret(value: &str) -> String {
@@ -248,6 +257,63 @@ impl S3Backend {
     /// Set the lifecycle policy.
     pub fn set_lifecycle_policy(&mut self, policy: super::vna::LifecyclePolicy) {
         self.lifecycle_policy = policy;
+    }
+
+    // ===================================================================
+    // Multi-tenant methods
+    // ===================================================================
+
+    /// List all object keys that belong to a specific tenant.
+    ///
+    /// Returns only keys that start with the tenant's prefix, with the
+    /// tenant prefix stripped from the returned keys.
+    pub fn list_tenant_objects(
+        &self,
+        tenant_id: &super::tenant::TenantId,
+    ) -> Vec<String> {
+        let prefix = tenant_id.blob_prefix();
+        self.stored_objects
+            .keys()
+            .filter(|k| k.starts_with(&prefix))
+            .filter_map(|k| k.strip_prefix(&prefix).map(|s| s.to_string()))
+            .collect()
+    }
+
+    /// Store data under a tenant-scoped key.
+    ///
+    /// Automatically prefixes the key with the tenant's namespace.
+    pub fn put_tenant_object(
+        &mut self,
+        tenant_id: &super::tenant::TenantId,
+        key: &str,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let full_key = format!("{}{}", tenant_id.blob_prefix(), key);
+        self.put_object(&full_key, data)
+    }
+
+    /// Retrieve data from a tenant-scoped key.
+    ///
+    /// Automatically prefixes the key with the tenant's namespace.
+    pub fn get_tenant_object(
+        &self,
+        tenant_id: &super::tenant::TenantId,
+        key: &str,
+    ) -> Option<&[u8]> {
+        let full_key = format!("{}{}", tenant_id.blob_prefix(), key);
+        self.get_object(&full_key)
+    }
+
+    /// Delete an object from a tenant-scoped key.
+    ///
+    /// Automatically prefixes the key with the tenant's namespace.
+    pub fn delete_tenant_object(
+        &mut self,
+        tenant_id: &super::tenant::TenantId,
+        key: &str,
+    ) -> bool {
+        let full_key = format!("{}{}", tenant_id.blob_prefix(), key);
+        self.delete_object(&full_key)
     }
 }
 

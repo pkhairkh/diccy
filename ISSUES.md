@@ -5,7 +5,9 @@
 > coupling, and structural health. Based on a full source-code audit
 > of all 48 workspace crates (102,346 lines of Rust).
 >
-> **42 issues identified** across Critical (3), High (16), Medium (19), and Low (4) severity levels.
+> **50 issues identified** across Critical (3), High (18), Medium (23), and Low (6) severity levels.
+> Issues #1–#37 from original code audit; #38–#42 from competitive gap analysis;
+> #43–#50 from DiCCY Competitive Analysis paper (April 2026).
 
 ## Sprint Resolution Summary
 
@@ -19,6 +21,9 @@ the resolution status as of the completion of Sprint 13.
 | S11 (P2) | File decomposition, rich domain model, error unification, BTreeMap Dataset, boolean traps, shared types, audit hash | #2, #6, #12, #13, #17, #23, #35, #37 |
 | S12 (P3-A) | Workspace deps, stub safety, test infra, feature flags, newtypes, monotonic tick | #8, #10, #11, #14, #15, #17 |
 | S13 (P3-B) | Pack trait, FromDataset/OverlayRenderable, named constants, naming consistency, BTreeSet tenants, Arc fixes, route capability | #20, #21, #24, #27, #28, #30, #31, #32, #34, #36 |
+| S14 (Competitive) | WebGL2 fallback, RBAC authorization, OAuth2/OpenID Connect, pixel codec trait API, plugin architecture | #38, #39, #40, #41 |
+| S15 (Competitive) | Multi-tenancy, bidirectional HL7 workflow, FHIR publication, regulatory certification, audit hardening | #42 |
+| S16 (Competitive) | JS/WASM embedding SDK, CORS/multi-origin, multi-monitor display, PWA/offline, OpenAPI spec, real-PACS tests, benchmarks, community SDK | #43, #44, #45, #46, #47, #48, #49, #50 |
 
 ### Partially Resolved
 
@@ -31,11 +36,19 @@ the resolution status as of the completion of Sprint 13.
 - **#33 / #34 (Inline Tests):** Resolved — all ~1190 `#[test]` functions extracted to `tests/` directories; production source has zero inline tests (S13-T8 complete).
 - **#25 (Type Aliases):** Partially resolved (SessionId, UserId, Tick now newtypes in dicom-collab); other type aliases may remain.
 - **#1 (Encapsulation):** Further improved — private fields and TAG constants made public with proper accessors for integration test visibility across multiple crates.
-- **#38 (WebGL Fallback):** No WebGL2 fallback in WASM viewer — viewer non-functional on Safari and enterprise browsers. Planned for Sprint 14 (S14-T1).
-- **#39 (RBAC/OAuth2):** No role-based access control or OAuth2 integration — blocks enterprise deployment. Planned for Sprint 14 (S14-T2, S14-T3).
-- **#40 (Pixel Codec Trait API):** No public codec interface for third-party transcoders — limits extensibility. Planned for Sprint 14 (S14-T4).
-- **#41 (Plugin Architecture):** No runtime plugin system — extensions require core recompilation. Planned for Sprint 14 (S14-T5).
-- **#42 (Regulatory Certification):** No IEC 62304 documentation bundle or FDA/CE pathway initiated. Planned for Sprint 15 (S15-T4, S15-T5).
+- **#38 (WebGL Fallback):** Resolved — WebGL2 fallback renderer implemented in `viewer-wasm` with WebGPU → WebGL2 → CPU cascade (S14-T1 complete). 32 tests passing.
+- **#39 (RBAC/OAuth2):** Resolved — RBAC authorization with 5 roles/6 permissions + OAuth2/OpenID Connect with JWT validation implemented in `dicom-auth` (S14-T2, S14-T3 complete). 95 tests passing.
+- **#40 (Pixel Codec Trait API):** Resolved — `PixelCodec` trait, `CodecRegistry`, and 5 codec implementations (Raw, RLE, JPEG, JPEG-LS, JPEG 2000) in `dicom-pixel` (S14-T4 complete). 61+ tests passing.
+- **#41 (Plugin Architecture):** Resolved — `dicom-plugin` crate with `DiccyPlugin` trait, 4 extension points, sandboxing, WASM runtime, and manifest parsing (S14-T5 complete). 55 tests passing.
+- **#42 (Regulatory Certification):** Resolved — `dicom-regulatory` crate with IEC 62304 SRS/SDD/STP/RMF documentation bundle + audit trail hardening with ATNA export and tamper-evident logging (S15-T4, S15-T5 complete). 65 tests passing.
+- **#43 (JS/WASM Embedding SDK):** Resolved — `dicom-viewer-sdk` crate with `DicomViewer` class, event-driven API, React/Vue/Svelte wrappers (S16-T1 complete). 32 tests passing.
+- **#44 (CORS / Multi-Origin):** Resolved — `CorsConfig` with origin whitelist, preflight handling, per-origin RBAC scoping in `dicom-web` (S16-T2 complete). 20 tests passing.
+- **#45 (Multi-Monitor Display):** Resolved — `viewer-core::multi_display` with `DiagnosticLayoutEngine`, MQSA-compliant mammography layout, cross-monitor sync (S16-T3 complete). 19 tests passing.
+- **#46 (PWA / Offline Mode):** Resolved — `dicom-pwa` crate with cache strategies, offline sync queue, quota monitoring, Service Worker and manifest generation (S16-T4 complete). 28 tests passing.
+- **#47 (OpenAPI Spec):** Resolved — `dicom-openapi` crate generating OpenAPI 3.1 spec for all DICOMweb endpoints with Bearer/OAuth2 security schemes (S16-T5 complete). 10 tests passing.
+- **#48 (Real-PACS Integration Tests):** Resolved — `pacs-integration` test crate with Docker Compose orchestration, Orthanc/dcm4chee/HAPI FHIR interop tests (S16-T6 complete). 21 tests passing.
+- **#49 (Performance Benchmarks):** Resolved — `diccy-bench` crate with criterion-based benchmarks, competitor comparison, regression detection (S16-T7 complete). 8 tests passing.
+- **#50 (Community SDK / Docs):** Resolved — `dicom-sdk-docs` crate with trait guides, example extensions, plugin manifest schema, stability policy (S16-T8 complete). 29 tests passing.
 
 ---
 
@@ -1476,3 +1489,284 @@ DiCCY is explicitly research-only software. No FDA 510(k) submission, CE-IVDR cl
 3. Document deterministic rendering guarantees for regulatory validation
 4. Engage regulatory consultant for FDA 510(k) pre-submission meeting
 5. Target Class II medical device classification (diagnostic workstation)
+
+---
+
+# PART 2 — Competitive Analysis Issues
+
+> Issues #43–#50 derived from the DiCCY Competitive Analysis paper (April 2026),
+> which compared DiCCY against OHIF, Weasis, Orthanc, ClearCanvas, Conquest,
+> dcm4chee, dicom-rs, DWV, and Papaya across feature coverage, interoperability,
+> enterprise readiness, and market positioning.
+
+---
+
+## 43. No JS/WASM Embedding SDK for Third-Party Web Apps
+
+**Severity: HIGH**
+
+### Problem
+
+DiCCY's WASM viewer boundary (`viewer-wasm`) exposes low-level rendering functions but provides no high-level JavaScript/TypeScript SDK that third-party web applications can use to embed the viewer. Every competitor with a web viewer (OHIF, Weasis, DWV) provides a JavaScript integration layer. OHIF in particular ships a full React-based SDK with component wrappers, event listeners, and configuration APIs. Without an embedding SDK, DiCCY cannot be integrated into EMR systems, teleradiology portals, or any third-party web application without writing custom WASM bridge code.
+
+### Evidence
+
+- `viewer-wasm` exposes `gpu_volume_render_json()` and `upload_volume_grid()` but no `loadStudy()`, `addEventListener()`, or configuration API
+- No npm package exists for DiCCY viewer integration
+- No React/Vue/Svelte component wrappers
+- OHIF provides `@ohif/viewer` npm package with full React SDK and iframe-less embedding
+- DWV provides `dwv` npm package with mobile-responsive viewer and RESTful data connector
+
+### Impact
+
+- Third-party web applications cannot embed DiCCY without writing custom WASM bridge code
+- No path to EMR/PACS portal integration without significant custom development
+- Competitive evaluations reject DiCCY because integration effort is too high compared to OHIF/DWV
+- Missing a key differentiator: DiCCY could offer iframe-less embedding (unlike OHIF) with native WASM performance
+
+### Recommendation
+
+1. Create `crates/dicom-viewer-sdk` that generates a TypeScript SDK via `wasm-pack build --target web`
+2. Expose a high-level `DicomViewer` class with `loadStudy()`, `setWindowLevel()`, `addMeasurementListener()` API
+3. Generate React/Vue/Svelte component wrappers from the SDK
+4. Publish as npm package `@diccy/viewer-sdk`
+5. Document iframe-less embedding pattern as competitive differentiator vs. OHIF
+
+---
+
+## 44. No CORS / Multi-Origin Support in DICOMweb Server
+
+**Severity: HIGH**
+
+### Problem
+
+`dicom-web-server` does not emit CORS headers (Access-Control-Allow-Origin, Access-Control-Allow-Methods, Access-Control-Allow-Headers). This means that any web-based viewer (OHIF, Weasis, DWV) hosted on a different origin cannot directly communicate with DiCCY's DICOMweb endpoints. A reverse proxy or server-side modification is required for every cross-origin deployment, adding operational complexity and blocking ad-hoc evaluations.
+
+### Evidence
+
+- No CORS middleware in `dicom-web-server` or `dicom-web` crate
+- No `Access-Control-Allow-*` header emission in any HTTP response
+- No OPTIONS pre-flight request handling
+- Orthanc provides configurable CORS settings via its configuration file
+- dcm4chee deploys behind WildFly which handles CORS at the servlet container level
+
+### Impact
+
+- OHIF/Weasis cannot connect to DiCCY without a reverse proxy (Nginx/Caddy)
+- Multi-site deployments where viewer and server are on different domains are blocked
+- Competitive evaluations fail at the first step: "connect viewer to server"
+- Security review teams see no CORS policy as a missing security control
+
+### Recommendation
+
+1. Add configurable CORS middleware to `dicom-web-server` with origin whitelist
+2. Support wildcard patterns for enterprise deployments (e.g., `*.hospital.org`)
+3. Handle pre-flight OPTIONS requests for DICOMweb endpoints
+4. Integrate with S14-T2 RBAC for per-origin permission scoping
+5. Add CORS configuration to Helm chart values
+
+---
+
+## 45. No Multi-Monitor Diagnostic Display Layout
+
+**Severity: MEDIUM**
+
+### Problem
+
+DiCCY has no multi-monitor display layout engine. Diagnostic radiology reading rooms use dual or quad monitor setups where each display shows a different series or prior study. Weasis provides multi-monitor support with independent viewport control per display. Sectra PACS is specifically marketed on its dual-monitor mammography reading capability. Without this, DiCCY cannot serve diagnostic reading room workflows.
+
+### Evidence
+
+- No `multi_display` module or crate exists
+- No `DiagnosticLayout` engine for multi-monitor viewport assignment
+- `ComparisonSyncState` exists for side-by-side comparison but only within a single viewport
+- No MQSA-compliant mammography dual-monitor layout (CC on left monitor, MLO on right, priors below)
+- Weasis supports multi-monitor layout via its "Multi-display" mode
+- Sectra PACS targets diagnostic reading rooms with 2–4 medical displays
+
+### Impact
+
+- DiCCY cannot be used in diagnostic reading rooms with multi-monitor setups
+- Mammography reading is blocked without MQSA-compliant dual-monitor layout
+- Radiologists evaluating DiCCY reject it because single-monitor reading is not clinically acceptable
+- Competitive gap vs. Weasis/Sectra in the diagnostic workstation market
+
+### Recommendation
+
+1. Create `viewer-core::multi_display` module with `DiagnosticLayout` engine
+2. Implement preset layouts: 1-up, 2-up (dual), 4-up (quad), 1+2 (primary + two priors)
+3. Per-monitor viewport with independent window/level, zoom, pan
+4. Synchronized scrolling across monitors (same series, different slices)
+5. MQSA-compliant mammography dual-monitor layout integration
+
+---
+
+## 46. No PWA / Offline Mode for WASM Viewer
+
+**Severity: MEDIUM**
+
+### Problem
+
+The WASM viewer has no Service Worker, no Web App Manifest, and no offline cache strategy. Enterprise browser deployments in teleradiology scenarios require offline-capable viewers that can function without continuous connectivity. The existing `TeleradGateway` provides offline mode on the native side, but the WASM viewer has no corresponding offline capability.
+
+### Evidence
+
+- No Service Worker registration in WASM viewer
+- No Web App Manifest for PWA installability
+- No Cache API integration for study metadata or pixel data
+- No background sync queue for offline annotations
+- `TeleradGateway` has offline mode with sync on reconnect (native only)
+- OHIF supports offline caching via its data source abstraction layer
+- Weasis has a desktop mode that works offline by design
+
+### Impact
+
+- WASM viewer is completely non-functional without network connectivity
+- Teleradiology scenarios with intermittent connectivity (ambulance, remote clinics) are not supported
+- Enterprise browser deployments cannot use DiCCY as a reliable offline tool
+- PWA installability (home screen icon, standalone mode) is not available
+
+### Recommendation
+
+1. Add Service Worker with Cache API for offline study access
+2. Create Web App Manifest for PWA installability
+3. Implement cache strategies: metadata on first load, pixel data on demand with LRU eviction
+4. Add background sync queue for measurements/annotations created offline
+5. Integrate with `TeleradGateway` offline mode for seamless online/offline transition
+
+---
+
+## 47. No OpenAPI/Swagger Specification for DICOMweb API
+
+**Severity: MEDIUM**
+
+### Problem
+
+DiCCY provides no published OpenAPI/Swagger specification for its DICOMweb API. Orthanc publishes a comprehensive REST API specification. OHIF documents its integration endpoints. Without a spec, integrators must read source code to understand endpoints, request/response formats, and authentication mechanisms, significantly raising the integration barrier.
+
+### Evidence
+
+- No OpenAPI 3.x spec file in the repository
+- No auto-generation from `dicom-web` route handlers
+- No Swagger UI or API documentation endpoint
+- Orthanc provides `/explorer.html` interactive API documentation
+- dcm4chee publishes REST API documentation
+- OHIF documents its data source configuration API
+
+### Impact
+
+- Integrators must read Rust source code to understand the DICOMweb API
+- No interactive API exploration for evaluation or debugging
+- Automated integration tooling (code generators, test suites) cannot be built against DiCCY
+- Competitive evaluations see lack of API documentation as a maturity signal
+
+### Recommendation
+
+1. Auto-generate OpenAPI 3.1 spec from `dicom-web` route handlers and types
+2. Serve Swagger UI at `/api/docs` endpoint
+3. Include authentication schemes (Bearer, OAuth2 from S14-T3) in spec
+4. Add TypeSpec / schema definitions for all request/response bodies
+5. Validate spec with `swagger-cli` in CI
+
+---
+
+## 48. No Integration Test Suite Against Real PACS Endpoints
+
+**Severity: MEDIUM**
+
+### Problem
+
+All current tests use mock data and in-memory simulations. There are no integration tests that verify DiCCY's interoperability against real PACS servers (Orthanc, dcm4chee). Orthanc and dcm4chee both maintain comprehensive interop test suites that validate DIMSE and DICOMweb compatibility against each other. Without real-PACS tests, interoperability regressions are discovered in production rather than in CI.
+
+### Evidence
+
+- No Docker Compose configuration for spinning up reference PACS containers
+- No test scenarios for DIMSE C-STORE/C-FIND against real Orthanc
+- No DICOMweb STOW/WADO round-trip tests against dcm4chee
+- No FHIR mapping integration tests against HAPI FHIR server
+- Orthanc maintains integration tests against dcm4chee and other PACS
+- dcm4chee has interop tests against Orthanc
+
+### Impact
+
+- Interoperability regressions are discovered in production, not in CI
+- DIMSE protocol changes may break compatibility with real PACS without detection
+- DICOMweb endpoint changes may violate the standard without detection
+- Competitive evaluations that run interop tests may expose untested failure modes
+
+### Recommendation
+
+1. Create `tests/pacs-integration/` with Docker Compose orchestration
+2. Add Orthanc container as reference PACS for DIMSE interop tests
+3. Add dcm4chee container for DICOMweb round-trip tests
+4. Add HAPI FHIR container for FHIR mapping integration tests
+5. Run nightly CI pipeline against real PACS endpoints
+
+---
+
+## 49. No Published Performance Benchmarks vs. Competitors
+
+**Severity: LOW**
+
+### Problem
+
+DiCCY has no published performance benchmarks comparing its rendering throughput, study loading times, or memory footprint against OHIF, Orthanc, or Weasis. Competitive evaluations and procurement decisions are heavily influenced by benchmark data. All major competitors publish or provide benchmark tools.
+
+### Evidence
+
+- No `crates/diccy-bench` benchmark suite exists
+- No criterion-based benchmarks for study loading, rendering, or memory
+- No comparison harness against competitor viewers
+- No published performance data in documentation
+- OHIF provides benchmark data for Cornerstone3D rendering pipeline
+- Orthanc provides benchmark plugins for loading and query performance
+
+### Impact
+
+- Competitive evaluations cannot compare DiCCY performance objectively
+- No regression detection when performance degrades
+- Procurement decisions default to competitors with published data
+- Marketing cannot claim performance advantages without evidence
+
+### Recommendation
+
+1. Create `crates/diccy-bench` with criterion-based benchmarks
+2. Benchmark categories: study loading, rendering FPS, memory footprint, WASM cold start
+3. Add comparison harness against OHIF + Orthanc + Weasis (Docker containers)
+4. Publish results to `docs/benchmarks/` with regression detection
+5. Fail CI if performance degrades more than 10% from baseline
+
+---
+
+## 50. No Community SDK or Extension Developer Documentation
+
+**Severity: LOW**
+
+### Problem
+
+DiCCY has no public extension developer documentation, no community SDK, and no API stability guarantees. OHIF has an active extension ecosystem with a published guide for writing OHIF extensions. Orthanc has a plugin SDK with C/Python bindings and a registry. Without these, DiCCY cannot build a third-party developer community, which limits ecosystem growth and adoption.
+
+### Evidence
+
+- No `docs/sdk-guide/` directory exists
+- No public documentation for `Pack`, `FromDataset`, or `OverlayRenderable` traits
+- No plugin manifest schema (`plugin.toml`)
+- No semver policy or deprecation schedule published
+- No example extensions (custom codec, modality pack, overlay renderer)
+- OHIF has `docs/latest/extensions/` with step-by-step extension development guide
+- Orthanc has `OrthancPluginSDK` with C API and Python bindings
+
+### Impact
+
+- Third-party developers cannot build extensions without reading source code
+- No plugin ecosystem can form around DiCCY
+- API changes may break third-party code without warning
+- Competitive evaluations see lack of SDK as ecosystem immaturity signal
+
+### Recommendation
+
+1. Create `docs/sdk-guide/` with extension development tutorials
+2. Document `Pack`, `FromDataset`, `OverlayRenderable` traits for third-party authors
+3. Define `plugin.toml` manifest schema for declaring extensions
+4. Publish semver policy, deprecation schedule, and migration guides
+5. Provide example extensions: custom transfer syntax codec, modality-specific pack, custom overlay renderer

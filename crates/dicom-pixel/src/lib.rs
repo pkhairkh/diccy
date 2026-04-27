@@ -1,6 +1,10 @@
 #![deny(missing_docs)]
 
 //! Transfer syntax decoding and pixel pipeline.
+//!
+//! This crate provides a [`PixelPipeline`] for decoding DICOM pixel data into
+//! deterministic CPU-boundary [`DisplayFrame`] outputs, and a [`codec`] module
+//! with a trait-based pixel codec API and runtime registry.
 
 #[cfg(feature = "codec-jpegls")]
 use charls::CharLS;
@@ -23,6 +27,29 @@ use pack_enhanced::{select_frame_groups, EnhancedPack, SOP_CLASS_ENHANCED_MR};
 pub use pack_enhanced::SOP_CLASS_ENHANCED_CT;
 #[cfg(feature = "raster-io")]
 use std::io::Cursor;
+
+// ---- Pixel codec trait API ----
+pub mod codec;
+pub mod codec_raw;
+pub mod codec_rle;
+pub mod codec_jpeg;
+#[cfg(feature = "codec-jpegls")]
+pub mod codec_jpegls;
+#[cfg(feature = "codec-j2k")]
+pub mod codec_j2k;
+
+// Re-export key codec types at the crate root for convenience.
+pub use codec::{
+    CodecCapabilities, CodecError, CodecInput, CodecOutput, CodecRegistry, PixelCodec,
+    default_codec_registry,
+};
+pub use codec_raw::RawCodec;
+pub use codec_rle::RleCodec;
+pub use codec_jpeg::JpegBaselineCodec;
+#[cfg(feature = "codec-jpegls")]
+pub use codec_jpegls::JpegLsCodec;
+#[cfg(feature = "codec-j2k")]
+pub use codec_j2k::J2kCodec;
 
 /// Output pixel formats supported by the CPU boundary.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

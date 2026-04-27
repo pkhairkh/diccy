@@ -1,0 +1,10 @@
+[package]
+name = "diccy-bench"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dicom-core = { path = "../dicom-core" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

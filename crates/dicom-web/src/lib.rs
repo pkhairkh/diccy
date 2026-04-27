@@ -2,6 +2,7 @@
 
 //! DICOMweb request parsing/routing and in-process service runtime execution.
 
+pub mod cors;
 mod auth_middleware;
 mod qido;
 mod router;
@@ -184,6 +185,8 @@ pub struct DicomWebServiceConfig {
     pub policy: WebPolicy,
     /// Authorization and audit policy.
     pub auth: WebAuthConfig,
+    /// CORS configuration for cross-origin requests.
+    pub cors: cors::CorsConfig,
 }
 
 impl Default for DicomWebServiceConfig {
@@ -192,6 +195,7 @@ impl Default for DicomWebServiceConfig {
             limits: Limits::default(),
             policy: WebPolicy::new(TlsPolicy::RequireTls, ThrottleDecision::Allow),
             auth: WebAuthConfig::deny_all(),
+            cors: cors::default_dicomweb_cors(),
         }
     }
 }

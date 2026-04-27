@@ -18,8 +18,9 @@ use std::time::Instant;
 #[allow(missing_docs)]
 pub use crate::backend::{
     auto_tune_frame_interval_ms, fallback_latency_budget_ms, select_upload_chunk_bytes,
+    webgl2_mip_shader_sources_json, webgl2_mpr_shader_sources_json, webgl2_vr_shader_sources_json,
     BackendCapabilityProbe, BackendErrorCode, BackendRuntimeState, BackendSelectionMetrics,
-    RendererBackend, UploadStats, WasmRenderBackend, WebGpuLifecycle,
+    RendererBackend, UploadStats, WasmRenderBackend, WebGL2Lifecycle, WebGpuLifecycle,
 };
 use viewer_core::{
     reslice_volume, reslice_volume_patient, MipProjectionMode, MprLimits, MprPlane, MprRequest,
@@ -299,7 +300,11 @@ impl WasmViewer {
 
     /// Configure active renderer backend with host capability probe data.
     ///
-    /// Supported `preferred` values are `cpu` and `webgpu`.
+    /// Supported `preferred` values are `cpu`, `webgpu`, and `webgl2`.
+    /// The runtime implements a cascade: WebGPU → WebGL2 → CPU.
+    /// When `preferred` is `"webgpu"` and both WebGPU and WebGL2 flags are
+    /// enabled, the runtime tries WebGPU first and falls back to WebGL2 if
+    /// WebGPU initialization fails, then to CPU if WebGL2 also fails.
     pub fn configure_renderer_backend(
         &mut self,
         preferred: &str,
@@ -321,7 +326,7 @@ impl WasmViewer {
         backend.as_str().to_string()
     }
 
-    /// Return the active renderer backend label (`CPU` or `WebGPU`).
+    /// Return the active renderer backend label (`CPU`, `WebGPU`, or `WebGL2`).
     pub fn active_renderer_backend(&self) -> String {
         self.backend_runtime
             .borrow()
@@ -357,6 +362,18 @@ impl WasmViewer {
         self.backend_runtime.borrow().production_webgpu_enabled()
     }
 
+    /// Enable or disable WebGL2 renderer backend.
+    pub fn set_webgl2_renderer_enabled(&mut self, enabled: bool) {
+        self.backend_runtime
+            .borrow_mut()
+            .set_webgl2_backend_enabled(enabled);
+    }
+
+    /// Return whether the WebGL2 renderer backend is enabled.
+    pub fn webgl2_renderer_enabled(&self) -> bool {
+        self.backend_runtime.borrow().webgl2_backend_enabled()
+    }
+
     /// Set target frame interval in milliseconds (render cadence hint).
     pub fn set_render_frame_interval_ms(&mut self, interval_ms: u32) -> bool {
         self.backend_runtime
@@ -369,12 +386,17 @@ impl WasmViewer {
         self.backend_runtime.borrow().target_frame_interval_ms()
     }
 
-    /// Simulate WebGPU device loss for deterministic recovery testing.
+    /// Simulate GPU device loss (WebGPU) or context loss (WebGL2) for deterministic recovery testing.
     pub fn simulate_gpu_device_lost(&mut self) -> bool {
         self.backend_runtime.borrow_mut().simulate_device_lost()
     }
 
-    /// Attempt deterministic recovery after device-loss.
+    /// Simulate WebGL2 context loss for deterministic recovery testing.
+    pub fn simulate_webgl2_context_lost(&mut self) -> bool {
+        self.backend_runtime.borrow_mut().simulate_webgl2_context_lost()
+    }
+
+    /// Attempt deterministic recovery after device-loss or context-loss.
     pub fn recover_gpu_device(&mut self) -> String {
         self.backend_runtime
             .borrow_mut()
@@ -808,6 +830,16 @@ impl WasmViewer {
             return false;
         }
         self.backend_runtime.borrow().volume_rendering_available()
+    }
+
+    /// Return the WebGL2 shader sources for all volume rendering modes as JSON.
+    ///
+    /// The returned JSON has keys `"mpr"`, `"mip"`, and `"vr"`, each containing
+    /// `"vert"` and `"frag"` sub-keys with GLSL ES 3.00 shader source strings.
+    /// These shaders use 2D texture arrays (`sampler2DArray`) since WebGL2 lacks
+    /// native 3D texture support.
+    pub fn webgl2_shader_sources_json(&self) -> String {
+        self.backend_runtime.borrow().webgl2_shader_sources_json()
     }
 
     /// Return the WebGPU volume rendering shader source for CSP-safe inline use.

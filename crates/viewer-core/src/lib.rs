@@ -124,6 +124,7 @@ pub mod clinical;
 pub mod gsdf;
 pub mod hanging_protocol;
 pub mod mpr;
+pub mod multi_display;
 pub mod prefetch;
 pub mod volume;
 
@@ -160,6 +161,11 @@ pub use prefetch::{
 };
 pub use volume::{
     LegacyVolumeGrid, PatientGeometry, SlicePlane, VolumeAssemblyConfig, VolumeError, VolumeGrid,
+};
+pub use multi_display::{
+    ComparisonLockConfig, CrossMonitorSyncState, CustomLayout, DiagnosticLayoutEngine,
+    DisplayCalibration, Laterality, LayoutPreset, MammographyMqsaLayout, MammographyView,
+    MammographyViewport, MonitorId, MonitorInfo, ViewportAssignment,
 };
 
 /// A 2D point in image space (continuous coordinates).

@@ -9,12 +9,16 @@
 //! - **claim_surface** — UI claim surface management and controlled wording
 //! - **interface_control** — Interface change control, revision tracking, system metadata, and startup controls
 //! - **export_policy** — Clipboard, removable media, and workspace privacy policies
+//! - **rbac** — Role-based access control with configurable role-to-permission mapping
+//! - **oauth2** — OAuth2/OpenID Connect authentication and JWT token validation
 
 pub mod break_glass;
 pub mod claim_surface;
 pub mod config_control;
 pub mod export_policy;
 pub mod interface_control;
+pub mod oauth2;
+pub mod rbac;
 pub mod session;
 
 // Re-export all session types.
@@ -60,6 +64,19 @@ pub use export_policy::{
     ClipboardPolicy, ClipboardPolicyDecision, RemovableMediaExportRequest, RemovableMediaPolicy,
     WorkspacePrivacyMode,
 };
+
+// Re-export rbac types.
+pub use rbac::{
+    permission_for_action, Role, Permission, RbacPolicy, RolePermissionMap, StudyAccessList,
+};
+
+// Re-export oauth2 types.
+pub use oauth2::{
+    JwtClaims, JwtValidator, OAuth2Config, OpenIdConnectAuthorizer, RoleMappingConfig,
+    TokenRefreshManager,
+};
+
+use std::sync::Arc;
 
 use dicom_core::{Error, ErrorKind, Result};
 
@@ -375,20 +392,37 @@ impl Authorizer for DenyAll {
 }
 
 // ===========================================================================
-// S10-T4: RbacAuthorizer — role-based access control
+// S10-T4 / S14-T2: RbacAuthorizer — role-based access control
 // ===========================================================================
+
+/// Callback type for extracting a [`rbac::Role`] from an [`AuthSubject`].
+///
+/// The extractor inspects the subject's principal/peer fields and returns
+/// the applicable RBAC role, or `None` if the subject cannot be mapped.
+pub type RoleExtractor = Arc<dyn Fn(&AuthSubject<'_>) -> Option<rbac::Role> + Send + Sync>;
 
 /// Role-based access control (RBAC) authorizer.
 ///
 /// Checks the subject's role against a policy matrix to determine whether
 /// the requested action is permitted. This is the recommended authorizer
 /// for production use, replacing the deprecated [`AllowAll`].
+///
+/// # S14-T2 — Enhanced RBAC
+///
+/// When a [`RbacPolicy`] and [`RoleExtractor`] are configured, the authorizer
+/// extracts the caller's role from the `AuthSubject` and checks it against the
+/// permission map. When neither is configured, the legacy `BTreeMap` policy
+/// is used (allow if any role permits the action/resource pair).
 pub struct RbacAuthorizer {
-    /// Mapping from role to the set of allowed (action, resource) pairs.
+    /// Legacy mapping from session role to the set of allowed (action, resource) pairs.
     pub policy: std::collections::BTreeMap<
         session::UserRole,
         std::collections::BTreeSet<(AuthAction, AuthResourceKey)>,
     >,
+    /// S14-T2: Configurable RBAC policy with role-to-permission mapping and study-level access.
+    pub rbac_policy: Option<rbac::RbacPolicy>,
+    /// S14-T2: Callback that extracts the caller's RBAC role from AuthSubject.
+    pub role_extractor: Option<RoleExtractor>,
 }
 
 impl RbacAuthorizer {
@@ -461,10 +495,30 @@ impl RbacAuthorizer {
         .collect();
         policy.insert(session::UserRole::Viewer, viewer_rules);
 
-        Self { policy }
+        Self {
+            policy,
+            rbac_policy: None,
+            role_extractor: None,
+        }
     }
 
-    /// Grant an additional permission to a role.
+    /// Configure with an S14-T2 RBAC policy for role-to-permission checking.
+    pub fn with_rbac_policy(mut self, policy: rbac::RbacPolicy) -> Self {
+        self.rbac_policy = Some(policy);
+        self
+    }
+
+    /// Configure with a role extractor callback.
+    ///
+    /// The extractor inspects the `AuthSubject` and returns the applicable
+    /// [`rbac::Role`], or `None` if the subject cannot be mapped to a role
+    /// (which results in a deny decision).
+    pub fn with_role_extractor(mut self, extractor: RoleExtractor) -> Self {
+        self.role_extractor = Some(extractor);
+        self
+    }
+
+    /// Grant an additional permission to a role (legacy policy).
     pub fn grant(
         &mut self,
         role: session::UserRole,
@@ -477,7 +531,7 @@ impl RbacAuthorizer {
             .insert((action, resource));
     }
 
-    /// Revoke a permission from a role.
+    /// Revoke a permission from a role (legacy policy).
     pub fn revoke(
         &mut self,
         role: session::UserRole,
@@ -500,17 +554,58 @@ impl std::fmt::Debug for RbacAuthorizer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RbacAuthorizer")
             .field("role_count", &self.policy.len())
+            .field(
+                "rbac_policy",
+                &self.rbac_policy.as_ref().map(|_| "configured"),
+            )
+            .field(
+                "role_extractor",
+                &self.role_extractor.as_ref().map(|_| "configured"),
+            )
             .finish()
     }
 }
 
 impl Authorizer for RbacAuthorizer {
     fn authorize(&self, request: &AuthRequest<'_>) -> Result<AuthDecision> {
-        // For RBAC, we need a role. Since AuthSubject doesn't carry a role,
-        // we check all roles and allow if any role permits the action.
-        // In a real implementation, the session context would provide the role.
-        // Here we implement a simplified version: if any role in the policy
-        // allows the (action, resource) pair, we allow.
+        // S14-T2: When RBAC policy and role extractor are configured, use the
+        // new permission-based system.
+        if let (Some(rbac_policy), Some(extractor)) =
+            (&self.rbac_policy, &self.role_extractor)
+        {
+            let role = match extractor(&request.subject) {
+                Some(r) => r,
+                None => {
+                    return Ok(AuthDecision::Deny(AuthDenyReason::Unauthenticated));
+                }
+            };
+
+            // Map the requested action to a Permission.
+            let required_permission = match rbac::permission_for_action(
+                request.action,
+                request.resource.key,
+            ) {
+                Some(p) => p,
+                None => {
+                    // No mapping exists — fail closed.
+                    return Ok(AuthDecision::Deny(AuthDenyReason::Policy));
+                }
+            };
+
+            // Check role has the required permission.
+            if !rbac_policy.has_permission(role, required_permission) {
+                return Ok(AuthDecision::Deny(AuthDenyReason::Unauthorized));
+            }
+
+            // Check study-level access control.
+            if !rbac_policy.can_access_study(role, request.resource.study_uid) {
+                return Ok(AuthDecision::Deny(AuthDenyReason::Unauthorized));
+            }
+
+            return Ok(AuthDecision::Allow);
+        }
+
+        // Legacy path: check all roles and allow if any role permits the action.
         for (_role, rules) in &self.policy {
             if rules.contains(&(request.action, request.resource.key)) {
                 return Ok(AuthDecision::Allow);

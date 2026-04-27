@@ -5,6 +5,18 @@
 //! Provides ADT message parsing (A01/A02/A03/A08) for patient sync,
 //! ORM message parsing for order entry, ORU message generation for
 //! result delivery, and MLLP (Minimum Lower Layer Protocol) transport.
+//!
+//! # Sprint 15 Extensions
+//!
+//! - **Order Workflow** (`order_workflow`): ORM → MWL pipeline
+//! - **Result Delivery** (`result_delivery`): SR measurement → ORU message
+//! - **Patient Reconciliation** (`patient_recon`): ADT-driven patient merge/correction
+//! - **MLLP Server** (`mllp_server`): Receive HL7 messages via MLLP
+
+pub mod mllp_server;
+pub mod order_workflow;
+pub mod patient_recon;
+pub mod result_delivery;
 
 use dicom_audit::{AuditEvent, AuditEventKind, AuditField, AuditValue};
 use dicom_core::Result;
@@ -791,6 +803,11 @@ pub struct AckBuilder;
 
 impl AckBuilder {
     /// Build an acknowledgment message for a received message.
+    ///
+    /// Common ACK codes:
+    /// - "AA" — Application Accept
+    /// - "AR" — Application Reject
+    /// - "AE" — Application Error
     pub fn build_ack(
         receiving_app: &str,
         receiving_facility: &str,

@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = []
 network = []
 webgpu-backend = []
+webgl2-backend = []
 
 [dependencies]
 viewer-core = { path = "../viewer-core" }

@@ -1,0 +1,26 @@
+[package]
+name = "pacs-integration"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[test]]
+name = "orthanc_interop"
+path = "orthanc_interop.rs"
+
+[[test]]
+name = "dcm4chee_interop"
+path = "dcm4chee_interop.rs"
+
+[[test]]
+name = "fhir_hapi_interop"
+path = "fhir_hapi_interop.rs"
+
+[dependencies]
+dicom-core = { path = "../../crates/dicom-core" }
+dicom-dimse = { path = "../../crates/dicom-dimse" }
+dicom-net = { path = "../../crates/dicom-net" }
+dicom-web = { path = "../../crates/dicom-web", features = ["qido", "wado", "stow"] }
+dicom-fhir = { path = "../../crates/dicom-fhir" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }

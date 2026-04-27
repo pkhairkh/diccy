@@ -1,12 +1,24 @@
 #![deny(missing_docs)]
 
-//! Audit logging with deterministic redaction, retention, and SHA-256
-//! integrity chain verification.
+//! Audit logging with deterministic redaction, retention, SHA-256
+//! integrity chain verification, IHE ATNA export, and RBAC audit events.
 //!
 //! Each `AuditRecord` carries an `integrity_hash` computed over its contents
 //! and the previous record's hash, forming a tamper-evident chain.  Because
 //! this crate is pre-1.0, SHA-256 is the only accepted hash algorithm — no
 //! FNV migration path is provided.
+//!
+//! # Modules
+//!
+//! - **atna**: IHE ATNA (Audit Trail and Node Authentication) profile export
+//!   per RFC 3881 and DICOM SUP 95.
+//! - **tamper_evident**: Tamper-evident audit log with cryptographic signatures
+//!   for regulatory compliance.
+//! - **rbac_audit**: RBAC permission check audit events (allowed + denied).
+
+pub mod atna;
+pub mod rbac_audit;
+pub mod tamper_evident;
 
 use dicom_core::{Error, ErrorKind, Result};
 use sha2::{Digest, Sha256};
