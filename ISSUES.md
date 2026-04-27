@@ -5,7 +5,7 @@
 > coupling, and structural health. Based on a full source-code audit
 > of all 48 workspace crates (102,346 lines of Rust).
 >
-> **37 issues identified** across Critical (3), High (14), Medium (16), and Low (4) severity levels.
+> **42 issues identified** across Critical (3), High (16), Medium (19), and Low (4) severity levels.
 
 ## Sprint Resolution Summary
 
@@ -31,6 +31,11 @@ the resolution status as of the completion of Sprint 13.
 - **#33 / #34 (Inline Tests):** Resolved — all ~1190 `#[test]` functions extracted to `tests/` directories; production source has zero inline tests (S13-T8 complete).
 - **#25 (Type Aliases):** Partially resolved (SessionId, UserId, Tick now newtypes in dicom-collab); other type aliases may remain.
 - **#1 (Encapsulation):** Further improved — private fields and TAG constants made public with proper accessors for integration test visibility across multiple crates.
+- **#38 (WebGL Fallback):** No WebGL2 fallback in WASM viewer — viewer non-functional on Safari and enterprise browsers. Planned for Sprint 14 (S14-T1).
+- **#39 (RBAC/OAuth2):** No role-based access control or OAuth2 integration — blocks enterprise deployment. Planned for Sprint 14 (S14-T2, S14-T3).
+- **#40 (Pixel Codec Trait API):** No public codec interface for third-party transcoders — limits extensibility. Planned for Sprint 14 (S14-T4).
+- **#41 (Plugin Architecture):** No runtime plugin system — extensions require core recompilation. Planned for Sprint 14 (S14-T5).
+- **#42 (Regulatory Certification):** No IEC 62304 documentation bundle or FDA/CE pathway initiated. Planned for Sprint 15 (S15-T4, S15-T5).
 
 ---
 
@@ -1317,3 +1322,157 @@ This audit was performed by:
 **Total crates**: 48
 **Total lines**: 102,346
 **Total issues identified**: 37
+
+
+## 38. No WebGL Fallback in WASM Viewer — Browser Compatibility Gap
+
+**Severity: HIGH**
+
+### Problem
+
+The WASM viewer in `viewer-wasm` only supports the WebGPU rendering path. Safari (as of 2026) and many enterprise-managed browsers do not support WebGPU, making the viewer completely non-functional on those platforms. The competitive analysis identified this as the most impactful gap compared to OHIF and DWV, both of which support WebGL-based rendering.
+
+### Evidence
+
+- `viewer-wasm` unconditionally attempts WebGPU initialization
+- `BackendRuntimeState` has no `WebGL2` variant
+- No fallback shader code exists for WebGL2 context
+- The CPU fallback exists for server-side rendering but produces no interactive viewer
+
+### Impact
+
+- Viewer is unusable on Safari (desktop and iOS), Firefox pre-WebGPU, and enterprise-managed Chrome versions
+- Hospital IT policies often lock browsers to specific versions; lack of WebGL fallback blocks clinical deployment
+- This is the #1 competitive gap identified in the DiCCY vs. open-source PACS analysis (April 2026)
+
+### Recommendation
+
+1. Add runtime GPU capability detection: `navigator.gpu` → WebGPU; else → WebGL2; else → CPU
+2. Port MPR, MIP, and volume rendering shaders to WebGL2 (use 2D texture arrays for 3D data)
+3. Guarantee deterministic pixel output on both WebGPU and WebGL2 paths
+4. Add `RendererBackend` enum to `BackendRuntimeState`
+
+---
+
+## 39. No RBAC / OAuth2 Authorization — Enterprise Deployment Blocker
+
+**Severity: HIGH**
+
+### Problem
+
+DiCCY's `dicom-auth` crate only provides `AllowAll` and `DenyAll` authorizer implementations. There is no role-based access control (RBAC), no OAuth2/OpenID Connect integration, and no study-level access filtering. Competitors such as dcm4chee offer full RBAC with multi-tenancy, and OHIF supports OpenID Connect authentication. Without these, DiCCY cannot be deployed in multi-user clinical environments.
+
+### Evidence
+
+- `AllowAll` always returns `Ok(())` — any user has full access
+- `DenyAll` always returns `Err()` — no user has any access
+- No `Role` or `Permission` types exist in `dicom-auth`
+- `SessionStatus` tracks `failed_attempts` but no lockout is enforced
+- No JWT token validation or OAuth2 flow exists
+
+### Impact
+
+- Cannot deploy in hospitals where radiologists, technologists, and administrators require different access levels
+- Cannot integrate with enterprise identity providers (Keycloak, Active Directory, Auth0)
+- Audit logs cannot attribute actions to specific roles (critical for HIPAA/MDR compliance)
+- Cloud PACS deployments require tenant-scoped access control
+
+### Recommendation
+
+1. Define `Role` and `Permission` enums with configurable role-to-permission mapping
+2. Implement `RbacAuthorizer` that enforces role-based permissions on all API endpoints
+3. Add OAuth2/OpenID Connect authentication via JWT token validation
+4. Add study-level access control: filter query results by patient/study assignment
+5. Integration with `AuditLog` for all permission check outcomes (grant + deny)
+
+---
+
+## 40. No Public Pixel Codec Trait API — Blocks Third-Party Codec Integration
+
+**Severity: MEDIUM**
+
+### Problem
+
+`dicom-pixel` hardcodes codec support internally. There is no public trait interface that allows third-party codec implementations to be registered at compile time or runtime. The competitive analysis identified this as an opportunity: no open-source PACS competitor currently offers a modular codec interface, making this a potential differentiator.
+
+### Evidence
+
+- Codec selection is done via `match` on transfer syntax UID strings inside `dicom-pixel`
+- Adding a new codec (e.g., HTJ2K) requires modifying `dicom-pixel` source code
+- No `PixelCodec` trait or `CodecRegistry` exists
+- The planned codec trait API was mentioned in the competitive analysis as "open-source pixel codec infrastructure"
+
+### Impact
+
+- Cannot support emerging compression standards (HTJ2K, JPEG XL) without core modifications
+- Third-party or proprietary codecs cannot be integrated without forking
+- Missed opportunity to be the first open-source PACS with a modular codec architecture
+
+### Recommendation
+
+1. Define `PixelCodec` trait with `encode()`, `decode()`, `capabilities()`, `supported_transfer_syntaxes()`
+2. Create `CodecRegistry` for runtime codec registration and lookup
+3. Implement trait for existing codecs: Raw, JPEG-LS, JPEG 2000
+4. Document the trait API and provide a "how to add a codec" guide
+
+---
+
+## 41. No Runtime Plugin Architecture — Extensions Require Core Recompilation
+
+**Severity: MEDIUM**
+
+### Problem
+
+DiCCY's extension model relies entirely on Cargo features and crate composition. Adding new functionality (e.g., AI tools, custom measurement plugins) requires modifying the workspace and recompiling. Competitors such as OHIF (JavaScript extension system) and Weasis (Java plugin API) allow third-party extensions without core modifications. The competitive analysis identified this as a strategic gap for ecosystem growth.
+
+### Evidence
+
+- All functionality is compiled in via `Cargo.toml` feature flags
+- No dynamic library loading exists in the codebase
+- No plugin discovery or registration mechanism
+- The `libloading` crate is not a dependency anywhere in the workspace
+
+### Impact
+
+- Third parties cannot develop plugins without forking the repository
+- Clinical sites cannot customize workflows without core changes
+- Limits ecosystem growth compared to OHIF's thriving extension marketplace
+
+### Recommendation
+
+1. Define `DiccyPlugin` trait with extension points: `ViewerTool`, `ImageProcessor`, `WorkflowHook`, `StorageBackend`
+2. Implement plugin discovery via directory scanning + dynamic library loading (`libloading`)
+3. Consider WASM-based plugins for safe sandboxed execution
+4. Implement plugin capability declaration to restrict access to declared extension points
+
+---
+
+## 42. No Formal Regulatory Certification Pathway
+
+**Severity: MEDIUM**
+
+### Problem
+
+DiCCY is explicitly research-only software. No FDA 510(k) submission, CE-IVDR classification, or IEC 62304 software lifecycle documentation has been prepared. The competitive analysis notes that OHIF has FDA-compatible derivatives, and all clinical PACS systems require regulatory clearance. While DiCCY's fail-closed design and deterministic rendering are architecturally prepared for certification, the formal process has not been initiated.
+
+### Evidence
+
+- `README.md` and `docs/` contain no regulatory classification statements
+- No Software Requirements Specification (SRS) tied to `manifest.toml` REQ identifiers
+- No Software Design Description (SDD) mapping crate architecture to requirements
+- No Risk Management File (RMF) despite `ISSUES.md` severity analysis providing the raw material
+- The `docs/03` regulatory conformance envelope exists but is not structured for IEC 62304 compliance
+
+### Impact
+
+- Cannot be used for clinical diagnosis in any regulated market
+- Cannot be sold or distributed as a medical device component
+- Missed positioning as a "high-reliability PACS for regulated environments" — the competitive analysis identified this as DiCCY's strongest strategic niche
+
+### Recommendation
+
+1. Compile IEC 62304 documentation bundle: SRS, SDD, STP, RMF
+2. Map existing `manifest.toml` REQ identifiers to SRS requirements
+3. Document deterministic rendering guarantees for regulatory validation
+4. Engage regulatory consultant for FDA 510(k) pre-submission meeting
+5. Target Class II medical device classification (diagnostic workstation)

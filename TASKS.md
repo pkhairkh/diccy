@@ -1258,7 +1258,7 @@ cross-crate standardization, optimized indexing, Arc fixes, test separation, rou
 | **Sprint 13** | **Weeks 56–60** | **P3-B Consistency & Perf** | **10** | **29** |
 | **Total (Feature)** | **32 weeks** | **Sprints 1–8** | **39** | **203** |
 | **Total (Remediation)** | **28 weeks** | **Sprints 9–13** | **40** | **160** |
-| **Grand Total** | **60 weeks** | **All Sprints** | **79** | **363** |
+| **Grand Total** | **76 weeks** | **All Sprints** | **89** | **423** |
 
 ---
 
@@ -1288,3 +1288,199 @@ These principles supplement the existing Architecture Principles for all remedia
 
 6. **No `unwrap()` in new code:** All remediation code MUST use `?`, `ok_or()`, or explicit
    error handling. `unwrap()` and `expect()` are only acceptable in test code.
+
+# PART 3 — Competitive Analysis Gap Sprints
+
+> Based on the DiCCY Competitive Analysis (April 2026) comparing DiCCY against
+> nine open-source PACS frameworks: OHIF, Weasis, Orthanc, ClearCanvas, Conquest,
+> dcm4chee, dicom-rs, DWV, and Papaya. The analysis identified five strategic
+> gaps where DiCCY lags behind competitors despite strong fundamentals in
+> fail-closed parsing, deterministic rendering, and WASM architecture.
+
+---
+
+## Competitive Gap Priority Tiers
+
+### CTIER 1 — Critical (blocks production deployment)
+
+| # | Gap | Detail | Competitive Benchmark |
+|---|---|---|---|
+| C1 | WebGL Fallback in WASM Viewer | Safari and enterprise-managed browsers lack WebGPU; viewer cannot run on those platforms | OHIF, DWV support WebGL without WASM |
+| C2 | RBAC Authorization | No role-based access control; only AllowAll/DenyAll stubs exist | dcm4chee: full RBAC; OHIF: OpenID Connect |
+| C3 | No Formal Regulatory Certification | Software is research-only; no FDA 510(k) or CE-IVDR pathway initiated | OHIF has FDA-compatible derivatives |
+
+### CTIER 2 — Expected (enterprise minimum)
+
+| # | Gap | Detail | Competitive Benchmark |
+|---|---|---|---|
+| C4 | Pixel Codec Trait API | No public codec interface for third-party transcoders (JPEG 2000, HTJ2K, JPEG-LS) | No OSS competitor offers modular codec API |
+| C5 | Runtime Plugin Architecture | Extensions require core recompilation; no runtime plugin loading | OHIF: extension system; Weasis: plugin API |
+| C6 | Multi-Tenancy | No tenant isolation for cloud PACS serving multiple organizations | dcm4chee: multi-tenancy with per-tenant policies |
+| C7 | Deep HL7/FHIR Integration | dicom-fhir/dicom-hl7 crates exist but lack bidirectional order-driven workflows | dcm4chee: full HL7 + FHIR + XDS.b |
+
+### CTIER 3 — Strategic (market positioning)
+
+| # | Gap | Detail | Competitive Benchmark |
+|---|---|---|---|
+| C8 | 4D Volume Filtering | No time-series volume filtering beyond basic cine | OHIF: 4D cine support |
+| C9 | Microscopy (Complex WSI) | WSI module exists but lacks multi-focus z-stack navigation | Weasis: full microscopy support |
+| C10 | Zero-Trust Deployment Hardening | Threat model documented but not implemented end-to-end | No OSS competitor has explicit zero-trust |
+
+---
+
+### SPRINT 14 (Weeks 61–68): WebGL Fallback & Enterprise Authorization
+
+**Goal:** Browser compatibility via WebGL fallback and production-grade RBAC authorization.
+
+**Tasks:**
+
+- [ ] **S14-T1** Implement WebGL fallback renderer in `viewer-wasm`
+  - Runtime detection: probe `navigator.gpu` → WebGPU path; fallback to WebGL2
+  - Port MPR slice rendering to WebGL2 (2D texture quad shader)
+  - Port MIP/MinIP to WebGL2 (ray-march in fragment shader with 3D texture via 2D texture array)
+  - Port volume rendering to WebGL2 (transfer function + gradient shading via 2D texture arrays)
+  - Guarantee deterministic pixel output on both WebGPU and WebGL paths (validate with same cache keys)
+  - Add `RendererBackend` enum to `BackendRuntimeState`: `WebGPU | WebGL2 | CPU`
+  - **Addresses:** ISSUES.md #38, competitive gap C1
+  - **Acceptance:** Viewer renders identically on Safari (WebGL2) and Chrome (WebGPU); `cargo test -p viewer-wasm` passes with both backends
+  - **Estimated effort:** 8 days
+
+- [ ] **S14-T2** Implement RBAC authorization module in `dicom-auth`
+  - Define `Role` enum: `Radiologist`, `Technologist`, `ReferringPhysician`, `Administrator`, `Researcher`
+  - Define `Permission` enum: `ReadStudy`, `WriteReport`, `DeleteStudy`, `ExportData`, `AdminConfig`, `BreakGlass`
+  - Implement `RolePermissionMap` with configurable role-to-permission mapping
+  - Implement `RbacAuthorizer` that checks `AuthSubject.role` against `Permission` requirements
+  - Study-level access control: filter query results by patient/study assignment
+  - Integration with existing `Authorizer` trait
+  - Configuration via TOML/JSON policy file
+  - **Addresses:** ISSUES.md #39, competitive gap C2
+  - **Acceptance:** `RbacAuthorizer` enforces role-based permissions; radiologist can read/write but not admin; `cargo test -p dicom-auth` passes with RBAC tests
+  - **Estimated effort:** 6 days
+
+- [ ] **S14-T3** Implement OAuth2/OpenID Connect authentication
+  - Add `OAuth2Config` to `dicom-auth`: `issuer_url`, `client_id`, `client_secret`, `scopes`
+  - Implement JWT token validation (RS256/ES256)
+  - Implement `OpenIdConnectAuthorizer` that delegates auth to external IdP (Keycloak, Auth0)
+  - Token refresh and session management
+  - Integration with RBAC: extract roles from JWT claims
+  - **Addresses:** ISSUES.md #39, competitive gap C2
+  - **Acceptance:** Users authenticate via external IdP; JWT claims map to RBAC roles; `cargo test -p dicom-auth` passes
+  - **Estimated effort:** 6 days
+
+- [ ] **S14-T4** Define pixel codec trait API in `dicom-pixel`
+  - Create `PixelCodec` trait: `encode()`, `decode()`, `capabilities()`, `supported_transfer_syntaxes()`
+  - Define `CodecCapabilities` struct: `lossy`, `lossless`, `max_resolution`, `photometric_interpretations`
+  - Implement trait for existing codecs: Raw, JPEG-LS (via jpegls-rs), JPEG 2000 (via openjp2)
+  - Create `CodecRegistry` for runtime codec registration and lookup by transfer syntax UID
+  - Document the trait API and provide a "how to add a codec" guide
+  - **Addresses:** ISSUES.md #40, competitive gap C4
+  - **Acceptance:** `PixelCodec` trait defined with 3+ implementations; `CodecRegistry` resolves codecs by transfer syntax; `cargo test -p dicom-pixel` passes
+  - **Estimated effort:** 5 days
+
+- [ ] **S14-T5** Implement runtime plugin architecture
+  - Define `DiccyPlugin` trait: `name()`, `version()`, `on_load()`, `on_unload()`, `handlers()`
+  - Implement plugin discovery: scan plugin directory, load dynamic libraries via `libloading`
+  - Define plugin extension points: `ViewerTool`, `ImageProcessor`, `WorkflowHook`, `StorageBackend`
+  - Implement plugin sandboxing: restrict plugin access to declared extension points
+  - WebAssembly plugin target: compile plugins to WASM for safe sandboxed execution
+  - **Addresses:** ISSUES.md #41, competitive gap C5
+  - **Acceptance:** Third-party plugin loads at runtime without core recompilation; `cargo test -p diccy -- --ignored plugin_load` passes
+  - **Estimated effort:** 7 days
+
+**Sprint 14 Deliverable:** WebGL fallback (browser compatibility), RBAC + OAuth2
+authorization (enterprise readiness), pixel codec API (extensibility), runtime
+plugin architecture — closing competitive gaps C1, C2, C4, C5.
+
+---
+
+### SPRINT 15 (Weeks 69–76): Multi-Tenancy, HL7/FHIR Deep Integration & Certification Prep
+
+**Goal:** Cloud PACS multi-tenancy, bidirectional clinical workflow, and regulatory certification preparation.
+
+**Tasks:**
+
+- [ ] **S15-T1** Implement multi-tenancy in `dicom-storage` and `dicom-index`
+  - Define `TenantId` newtype with validation
+  - Add tenant column to index schema: all queries scoped by `TenantId`
+  - Implement `TenantPolicy`: storage quotas, retention rules, feature flags per tenant
+  - Tenant isolation: separate storage namespaces (S3 prefix per tenant)
+  - API gateway: resolve tenant from authentication context (JWT claim or API key)
+  - **Addresses:** competitive gap C6
+  - **Acceptance:** Two tenants can store/query studies independently; tenant A cannot see tenant B's data; `cargo test -p dicom-storage -- multi_tenant` passes
+  - **Estimated effort:** 7 days
+
+- [ ] **S15-T2** Implement bidirectional HL7 order workflow
+  - Extend `dicom-hl7` with ORM→Worklist→MWL pipeline: incoming order creates MWL entry
+  - Implement ORU result delivery: SR measurement report pushed as HL7 ORU message
+  - Implement ADT-driven patient reconciliation: patient merge/correction from ADT feed
+  - Add MLLP server mode in addition to client mode (receive HL7 messages)
+  - **Addresses:** competitive gap C7
+  - **Acceptance:** Order received via ORM → MWL entry created → Study stored → SR generated → ORU sent; round-trip test passes
+  - **Estimated effort:** 6 days
+
+- [ ] **S15-T3** Implement FHIR R4 ImagingStudy resource publication
+  - Extend `dicom-fhir` with ImagingStudy/Endpoint resource creation on study receipt
+  - Subscribe to `dicom-index` events: new study → publish FHIR ImagingStudy
+  - FHIR Subscription mechanism for real-time notification
+  - Implementation guide documentation: DICOM-to-FHIR mapping tables
+  - **Addresses:** competitive gap C7
+  - **Acceptance:** Study received via DIMSE → FHIR ImagingStudy resource published; FHIR client can query by patient/modality
+  - **Estimated effort:** 5 days
+
+- [ ] **S15-T4** Regulatory certification preparation
+  - Compile IEC 62304 software lifecycle documentation bundle
+  - Create Software Requirements Specification (SRS) from existing `manifest.toml` REQ identifiers
+  - Create Software Design Description (SDD) from crate architecture documentation
+  - Create Software Test Plan (STP) mapping integration tests to requirements
+  - Create Risk Management File (RMF) from `ISSUES.md` severity analysis
+  - Document deterministic rendering guarantees for regulatory validation
+  - **Addresses:** competitive gap C3
+  - **Acceptance:** Complete IEC 62304 documentation bundle (SRS, SDD, STP, RMF) ready for regulatory review
+  - **Estimated effort:** 6 days
+
+- [ ] **S15-T5** Implement audit trail hardening for regulatory compliance
+  - Replace FNV hash in `dicom-audit` with SHA-256 (partially done in Sprint 11)
+  - Add tamper-evident audit log: append-only, signed entries
+  - Implement audit log export in IHE ATNA profile format
+  - Add audit events for all RBAC permission checks (success + denial)
+  - **Addresses:** ISSUES.md #37, competitive gap C3
+  - **Acceptance:** Audit log entries are SHA-256 signed; ATNA export produces valid IHE ATNA messages; `cargo test -p dicom-audit` passes
+  - **Estimated effort:** 4 days
+
+**Sprint 15 Deliverable:** Multi-tenancy, bidirectional HL7/FHIR, regulatory
+certification prep, audit hardening — closing competitive gaps C3, C6, C7.
+
+---
+
+## Competitive Gap-to-Sprint Mapping
+
+| Gap | Sprint | Tasks |
+|---|---|---|
+| C1 — WebGL Fallback | Sprint 14 | S14-T1 |
+| C2 — RBAC Authorization | Sprint 14 | S14-T2, S14-T3 |
+| C3 — Regulatory Certification | Sprint 15 | S15-T4, S15-T5 |
+| C4 — Pixel Codec Trait API | Sprint 14 | S14-T4 |
+| C5 — Runtime Plugin Architecture | Sprint 14 | S14-T5 |
+| C6 — Multi-Tenancy | Sprint 15 | S15-T1 |
+| C7 — Deep HL7/FHIR Integration | Sprint 15 | S15-T2, S15-T3 |
+
+---
+
+## Competitive Analysis Sprint Effort Summary
+
+| Sprint | Duration | Core Tasks | Estimated Person-Days |
+|---|---|---|---|
+| Sprint 14: WebGL Fallback & Enterprise Auth | 8 weeks | 5 | 32 |
+| Sprint 15: Multi-Tenancy & Certification | 8 weeks | 5 | 28 |
+| **Total (Competitive)** | **16 weeks** | **10** | **60** |
+
+---
+
+## Combined Grand Total (All Sprints 1–15)
+
+| Part | Sprints | Duration | Tasks | Person-Days |
+|---|---|---|---|---|
+| Part 1: Feature Gaps | Sprint 1–8 | 32 weeks | 39 | 203 |
+| Part 2: Architecture Remediation | Sprint 9–13 | 28 weeks | 30 | 160 |
+| Part 3: Competitive Gaps | Sprint 14–15 | 16 weeks | 10 | 60 |
+| **Grand Total** | **Sprint 1–15** | **76 weeks** | **79** | **423** |
