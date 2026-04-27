@@ -423,16 +423,16 @@ struct SeenFields {
 impl SeenFields {
     fn required() -> Vec<&'static str> {
         let mut out = vec![
-            "limits.max_input_bytes()",
-            "limits.max_dataset_elements()",
-            "limits.max_sequence_depth()",
-            "limits.max_string_bytes()",
-            "limits.max_element_vl_bytes()",
-            "limits.max_frames_per_instance()",
-            "limits.max_pixels_per_frame()",
-            "limits.max_decompressed_bytes()",
-            "limits.max_gpu_texture_bytes()",
-            "limits.max_cache_bytes()",
+            "limits.max_input_bytes",
+            "limits.max_dataset_elements",
+            "limits.max_sequence_depth",
+            "limits.max_string_bytes",
+            "limits.max_element_vl_bytes",
+            "limits.max_frames_per_instance",
+            "limits.max_pixels_per_frame",
+            "limits.max_decompressed_bytes",
+            "limits.max_gpu_texture_bytes",
+            "limits.max_cache_bytes",
         ];
         let keys = capabilities().report_rows();
         for (key, _) in keys {

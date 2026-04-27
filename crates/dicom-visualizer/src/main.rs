@@ -362,7 +362,20 @@ fn describe_core_error(err: &CoreError) -> String {
         | ErrorKind::InvalidPixelTransform { detail, .. }
         | ErrorKind::IoError { detail }
         | ErrorKind::IntegrityError { detail }
-        | ErrorKind::InternalError { detail } => format!("{} detail={detail}", err.code()),
+        | ErrorKind::InternalError { detail }
+        | ErrorKind::NotFound { detail } => format!("{} detail={detail}", err.code()),
+        ErrorKind::AuthorizationDenied { resource, reason } => {
+            format!("{} resource={resource} reason={reason}", err.code())
+        }
+        ErrorKind::PolicyViolation { policy, detail } => {
+            format!("{} policy={policy} detail={detail}", err.code())
+        }
+        ErrorKind::SessionError { session_id, detail } => {
+            format!("{} session={session_id} detail={detail}", err.code())
+        }
+        ErrorKind::CollaborationError { session_id, detail } => {
+            format!("{} session={session_id} detail={detail}", err.code())
+        }
     }
 }
 

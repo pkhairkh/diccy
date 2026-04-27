@@ -2463,7 +2463,7 @@ mod tests {
             .expect_err("expected deny");
         assert!(matches!(
             err.kind(),
-            ErrorKind::DecodeError { ref stage, .. } if stage == "dicom-auth"
+            ErrorKind::AuthorizationDenied { .. }
         ));
 
         let events = events.lock().expect("audit lock");
@@ -2731,7 +2731,7 @@ mod tests {
         let err = service
             .handle_http(&stow_http, TransportSecurity::Insecure, &mut storage)
             .expect_err("cross-tenant write should fail");
-        assert!(matches!(err.kind(), ErrorKind::DecodeError { .. }));
+        assert!(matches!(err.kind(), ErrorKind::AuthorizationDenied { .. }));
         assert_eq!(storage.index().total_instances(), 0);
     }
 

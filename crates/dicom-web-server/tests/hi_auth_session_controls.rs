@@ -56,7 +56,7 @@ fn auth_denial_blocks_routed_requests() {
         .expect_err("request must be denied");
     assert!(matches!(
         err.kind(),
-        ErrorKind::DecodeError { ref stage, .. } if stage == "dicom-auth"
+        ErrorKind::AuthorizationDenied { .. }
     ));
 }
 

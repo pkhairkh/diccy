@@ -1829,9 +1829,8 @@ mod tests {
         assert!(state.zoom.is_none());
         assert!(state.pan_x.is_none());
         assert!(state.pan_y.is_none());
-        assert!(state.rotation_quadrants.is_none());
-        assert!(state.flip_x.is_none());
-        assert!(state.flip_y.is_none());
+        assert_eq!(state.rotation, Rotation::Q0);
+        assert_eq!(state.flip, Flip::None);
     }
 
     #[test]
@@ -1850,15 +1849,14 @@ mod tests {
         let state = PresentationStateBuilder::new()
             .with_zoom(2.5)
             .with_pan(10.0, -5.0)
-            .with_rotation(1)
-            .with_flip(true, false)
+            .with_rotation(Rotation::Q90)
+            .with_flip(Flip::Horizontal)
             .build();
         assert_eq!(state.zoom, Some(2.5));
         assert_eq!(state.pan_x, Some(10.0));
         assert_eq!(state.pan_y, Some(-5.0));
-        assert_eq!(state.rotation_quadrants, Some(1));
-        assert_eq!(state.flip_x, Some(true));
-        assert_eq!(state.flip_y, Some(false));
+        assert_eq!(state.rotation, Rotation::Q90);
+        assert_eq!(state.flip, Flip::Horizontal);
     }
 
     #[test]
@@ -1998,13 +1996,13 @@ mod tests {
         let dataset = encode_presentation_state(&state);
         let center = dataset
             .get(TAG_WINDOW_CENTER)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let width = dataset
             .get(TAG_WINDOW_WIDTH)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2016,19 +2014,19 @@ mod tests {
     fn encode_spatial_transform_no_flip() {
         // REQ-GSPS-302
         let state = PresentationStateBuilder::new()
-            .with_rotation(1)
-            .with_flip(false, false)
+            .with_rotation(Rotation::Q90)
+            .with_flip(Flip::None)
             .build();
         let dataset = encode_presentation_state(&state);
         let flip = dataset
             .get(TAG_IMAGE_HORIZONTAL_FLIP)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let rotation = dataset
             .get(TAG_IMAGE_ROTATION)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2040,19 +2038,19 @@ mod tests {
     fn encode_spatial_transform_horizontal_flip() {
         // REQ-GSPS-302
         let state = PresentationStateBuilder::new()
-            .with_rotation(0)
-            .with_flip(true, false)
+            .with_rotation(Rotation::Q0)
+            .with_flip(Flip::Horizontal)
             .build();
         let dataset = encode_presentation_state(&state);
         let flip = dataset
             .get(TAG_IMAGE_HORIZONTAL_FLIP)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let rotation = dataset
             .get(TAG_IMAGE_ROTATION)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2064,19 +2062,19 @@ mod tests {
     fn encode_spatial_transform_vertical_flip() {
         // REQ-GSPS-302: vertical flip = horizontal flip + 180° rotation
         let state = PresentationStateBuilder::new()
-            .with_rotation(0)
-            .with_flip(false, true)
+            .with_rotation(Rotation::Q0)
+            .with_flip(Flip::Vertical)
             .build();
         let dataset = encode_presentation_state(&state);
         let flip = dataset
             .get(TAG_IMAGE_HORIZONTAL_FLIP)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let rotation = dataset
             .get(TAG_IMAGE_ROTATION)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2088,19 +2086,19 @@ mod tests {
     fn encode_spatial_transform_both_flips() {
         // REQ-GSPS-302: both flips = 180° rotation, no horizontal flip
         let state = PresentationStateBuilder::new()
-            .with_rotation(0)
-            .with_flip(true, true)
+            .with_rotation(Rotation::Q0)
+            .with_flip(Flip::Both)
             .build();
         let dataset = encode_presentation_state(&state);
         let flip = dataset
             .get(TAG_IMAGE_HORIZONTAL_FLIP)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let rotation = dataset
             .get(TAG_IMAGE_ROTATION)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2117,7 +2115,7 @@ mod tests {
         let dataset = encode_presentation_state(&state);
         let seq = dataset
             .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Sequence(items) => Some(items.as_slice()),
                 _ => None,
             });
@@ -2126,7 +2124,7 @@ mod tests {
         assert_eq!(items.len(), 1);
         let zoom_val = items[0]
             .get(TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2142,7 +2140,7 @@ mod tests {
         let dataset = encode_presentation_state(&state);
         let seq = dataset
             .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Sequence(items) => Some(items.as_slice()),
                 _ => None,
             });
@@ -2151,7 +2149,7 @@ mod tests {
         assert_eq!(items.len(), 1);
         let pan_val = items[0]
             .get(TAG_DISPLAYED_AREA_TOP_LEFT)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2168,14 +2166,13 @@ mod tests {
             zoom: 1.5,
             pan_x: 5.0,
             pan_y: -3.0,
-            rotation_quadrants: 1,
-            flip_x: false,
-            flip_y: true,
+            rotation: Rotation::Q90,
+            flip: Flip::Vertical,
             referenced_sop_instance_uid: "1.2.3.4.5".to_string(),
         };
         assert_eq!(viewport.window_center, 40.0);
         assert_eq!(viewport.zoom, 1.5);
-        assert_eq!(viewport.flip_y, true);
+        assert!(viewport.flip.is_vertical());
         assert_eq!(viewport.referenced_sop_instance_uid, "1.2.3.4.5");
     }
 
@@ -2188,9 +2185,8 @@ mod tests {
             zoom: 1.0,
             pan_x: 0.0,
             pan_y: 0.0,
-            rotation_quadrants: 0,
-            flip_x: false,
-            flip_y: false,
+            rotation: Rotation::Q0,
+            flip: Flip::None,
             referenced_sop_instance_uid: "1.2.840.10008.5.1.4.1.1.2".to_string(),
         };
         let dataset = encode_viewport_as_gsps(&viewport);
@@ -2202,7 +2198,7 @@ mod tests {
         // Should have window center/width
         let center = dataset
             .get(TAG_WINDOW_CENTER)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2211,7 +2207,7 @@ mod tests {
         // Should have referenced series sequence with the SOP Instance UID
         let ref_series = dataset
             .get(TAG_REFERENCED_SERIES_SEQUENCE)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Sequence(items) => Some(items.as_slice()),
                 _ => None,
             });
@@ -2220,7 +2216,7 @@ mod tests {
         assert_eq!(series_items.len(), 1);
         let ref_images = series_items[0]
             .get(TAG_REFERENCED_IMAGE_SEQUENCE)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Sequence(items) => Some(items.as_slice()),
                 _ => None,
             });
@@ -2240,9 +2236,8 @@ mod tests {
             zoom: 3.0,
             pan_x: 100.0,
             pan_y: 50.0,
-            rotation_quadrants: 2,
-            flip_x: true,
-            flip_y: false,
+            rotation: Rotation::Q180,
+            flip: Flip::Horizontal,
             referenced_sop_instance_uid: "9.9.9".to_string(),
         };
         let dataset = encode_viewport_as_gsps(&viewport);
@@ -2250,13 +2245,13 @@ mod tests {
         // Check flip and rotation are encoded
         let flip = dataset
             .get(TAG_IMAGE_HORIZONTAL_FLIP)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
         let rotation = dataset
             .get(TAG_IMAGE_ROTATION)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });
@@ -2266,14 +2261,14 @@ mod tests {
         // Check zoom
         let seq = dataset
             .get(TAG_DISPLAYED_AREA_SELECTION_SEQUENCE)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Sequence(items) => Some(items.as_slice()),
                 _ => None,
             })
             .expect("displayed area sequence");
         let zoom_val = seq[0]
             .get(TAG_PRESENTATION_PIXEL_MAGNIFICATION_RATIO)
-            .and_then(|e| match &e.value {
+            .and_then(|e| match &e.value() {
                 Value::Str(s) => Some(s.as_str()),
                 _ => None,
             });

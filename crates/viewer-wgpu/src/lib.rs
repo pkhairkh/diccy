@@ -84,9 +84,7 @@ impl GpuBudget {
     pub fn reserve(&mut self, bytes: u64) -> Result<()> {
         let next = self.used_texture_bytes.saturating_add(bytes);
         if next > self.max_texture_bytes {
-            return Err(Error::new(
-                "DVF.RENDER.LIMIT_EXCEEDED",
-                ErrorKind::LimitExceeded {
+            return Err(Error::from_kind(ErrorKind::LimitExceeded {
                     limit_name: "max_gpu_texture_bytes",
                     observed: next,
                     allowed: self.max_texture_bytes,
@@ -227,9 +225,7 @@ impl LiveRenderer {
     fn encode_draw(&mut self, frame: &DisplayFrame) -> Result<()> {
         let (source_texture, bind_group) = self.prepare_source(frame)?;
         let acquired = self.acquired.as_ref().ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.SURFACE_NOT_CONFIGURED",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu_lifecycle".to_string(),
                     detail: "surface frame must be acquired before draw".to_string(),
                 },
@@ -380,9 +376,7 @@ fn frame_to_rgba(frame: &DisplayFrame) -> Result<Vec<u8>> {
             }
             Ok(out)
         }
-        PixelFormat::Luma16 => Err(Error::new(
-            "DVF.RENDER.INVALID_FRAME_FORMAT",
-            ErrorKind::InvalidPixelTransform {
+        PixelFormat::Luma16 => Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                 stage: "gpu".to_string(),
                 detail: "renderer accepts only CPU-oracle quantized Luma8/Rgba8".to_string(),
             },
@@ -396,9 +390,7 @@ fn upload_size_bytes(frame: &DisplayFrame) -> Result<u64> {
     let pixels = (frame.width as u64)
         .checked_mul(frame.height as u64)
         .ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.INVALID_FRAME_SIZE",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu".to_string(),
                     detail: "frame dimensions overflow pixel count".to_string(),
                 },
@@ -407,9 +399,7 @@ fn upload_size_bytes(frame: &DisplayFrame) -> Result<u64> {
         })?;
     match frame.format {
         PixelFormat::Luma8 | PixelFormat::Rgba8 => pixels.checked_mul(4).ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.INVALID_FRAME_SIZE",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu".to_string(),
                     detail: "frame dimensions overflow byte count".to_string(),
                 },
@@ -417,9 +407,7 @@ fn upload_size_bytes(frame: &DisplayFrame) -> Result<u64> {
             )
             .into()
         }),
-        PixelFormat::Luma16 => Err(Error::new(
-            "DVF.RENDER.INVALID_FRAME_FORMAT",
-            ErrorKind::InvalidPixelTransform {
+        PixelFormat::Luma16 => Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                 stage: "gpu".to_string(),
                 detail: "renderer accepts only CPU-oracle quantized Luma8/Rgba8".to_string(),
             },
@@ -479,9 +467,7 @@ impl WgpuRenderer {
     /// Attach a live WGPU device/queue runtime for real command encoding.
     pub fn attach_runtime(&mut self, device: wgpu::Device, queue: wgpu::Queue) -> Result<()> {
         let surface = self.surface.ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.SURFACE_NOT_CONFIGURED",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu_lifecycle".to_string(),
                     detail: "configure_surface must run before attach_runtime".to_string(),
                 },
@@ -538,9 +524,7 @@ impl WgpuRenderer {
     /// Resize the surface while preserving its configured format.
     pub fn resize_surface(&mut self, width: u32, height: u32) -> Result<()> {
         let Some(surface) = self.surface else {
-            return Err(Error::new(
-                "DVF.RENDER.SURFACE_NOT_CONFIGURED",
-                ErrorKind::InvalidPixelTransform {
+            return Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu_lifecycle".to_string(),
                     detail: "surface must be configured before resize".to_string(),
                 },
@@ -574,9 +558,7 @@ fn validate_cpu_oracle_frame(frame: &DisplayFrame) -> Result<()> {
     let pixels = (frame.width as u64)
         .checked_mul(frame.height as u64)
         .ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.INVALID_FRAME_SIZE",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu".to_string(),
                     detail: "frame dimensions overflow pixel count".to_string(),
                 },
@@ -586,9 +568,7 @@ fn validate_cpu_oracle_frame(frame: &DisplayFrame) -> Result<()> {
     let expected_bytes = match frame.format {
         PixelFormat::Luma8 => pixels,
         PixelFormat::Rgba8 => pixels.checked_mul(4).ok_or_else(|| {
-            Error::new(
-                "DVF.RENDER.INVALID_FRAME_SIZE",
-                ErrorKind::InvalidPixelTransform {
+            Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu".to_string(),
                     detail: "RGBA frame dimensions overflow byte count".to_string(),
                 },
@@ -596,9 +576,7 @@ fn validate_cpu_oracle_frame(frame: &DisplayFrame) -> Result<()> {
             )
         })?,
         PixelFormat::Luma16 => {
-            return Err(Error::new(
-                "DVF.RENDER.INVALID_FRAME_FORMAT",
-                ErrorKind::InvalidPixelTransform {
+            return Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu".to_string(),
                     detail: "renderer accepts only CPU-oracle quantized Luma8/Rgba8".to_string(),
                 },
@@ -608,9 +586,7 @@ fn validate_cpu_oracle_frame(frame: &DisplayFrame) -> Result<()> {
         }
     };
     if frame.bytes.len() as u64 != expected_bytes {
-        return Err(Error::new(
-            "DVF.RENDER.INVALID_FRAME_LENGTH",
-            ErrorKind::InvalidPixelTransform {
+        return Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                 stage: "gpu".to_string(),
                 detail: "frame byte length does not match dimensions/format".to_string(),
             },
@@ -623,9 +599,7 @@ fn validate_cpu_oracle_frame(frame: &DisplayFrame) -> Result<()> {
 
 fn validate_surface_extent(width: u32, height: u32, max_dimension: u32) -> Result<()> {
     if width == 0 || height == 0 {
-        return Err(Error::new(
-            "DVF.RENDER.INVALID_SURFACE_CONFIG",
-            ErrorKind::InvalidPixelTransform {
+        return Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                 stage: "gpu_lifecycle".to_string(),
                 detail: "surface width/height must be > 0".to_string(),
             },
@@ -634,9 +608,7 @@ fn validate_surface_extent(width: u32, height: u32, max_dimension: u32) -> Resul
         .into());
     }
     if width > max_dimension || height > max_dimension {
-        return Err(Error::new(
-            "DVF.RENDER.INVALID_SURFACE_CONFIG",
-            ErrorKind::LimitExceeded {
+        return Err(Error::from_kind(ErrorKind::LimitExceeded {
                 limit_name: "max_texture_dimension_2d",
                 observed: width.max(height) as u64,
                 allowed: max_dimension as u64,
@@ -653,9 +625,7 @@ impl Renderer for WgpuRenderer {
         // REQ-GPU-210 / REQ-PIX-201: GPU path is presentation-only and accepts CPU-quantized
         // boundary outputs (`Luma8` / `Rgba8`) only.
         let Some(surface) = self.surface else {
-            return Err(Error::new(
-                "DVF.RENDER.SURFACE_NOT_CONFIGURED",
-                ErrorKind::InvalidPixelTransform {
+            return Err(Error::from_kind(ErrorKind::InvalidPixelTransform {
                     stage: "gpu_lifecycle".to_string(),
                     detail: "configure_surface must run before render".to_string(),
                 },
@@ -701,10 +671,7 @@ mod tests {
     use viewer_core::Viewport2D;
 
     fn test_renderer() -> WgpuRenderer {
-        let limits = Limits {
-            max_gpu_texture_bytes: 1024 * 1024,
-            ..Limits::default()
-        };
+        let limits = Limits::builder().max_gpu_texture_bytes(1024 * 1024).build().unwrap();
         WgpuRenderer::from_capabilities(
             GpuCapabilities {
                 max_texture_dimension_2d: 4096,
@@ -768,7 +735,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("Luma16 must be rejected");
-        assert_eq!(err.code(), "DVF.RENDER.INVALID_FRAME_FORMAT");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -788,7 +755,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("invalid frame size");
-        assert_eq!(err.code(), "DVF.RENDER.INVALID_FRAME_LENGTH");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -824,7 +791,7 @@ mod tests {
         let err = renderer
             .render(&frame, &viewport)
             .expect_err("surface required");
-        assert_eq!(err.code(), "DVF.RENDER.SURFACE_NOT_CONFIGURED");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]
@@ -834,7 +801,7 @@ mod tests {
         let err = renderer
             .configure_surface(0, 128, wgpu::TextureFormat::Rgba8UnormSrgb)
             .expect_err("zero width rejected");
-        assert_eq!(err.code(), "DVF.RENDER.INVALID_SURFACE_CONFIG");
+        assert_eq!(err.code(), "DVF.PIXEL.INVALID_TRANSFORM");
     }
 
     #[test]

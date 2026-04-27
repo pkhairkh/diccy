@@ -1,3 +1,5 @@
+#![cfg(feature = "rendering")]
+
 use dicom_core::{Dataset, Element, ErrorKind, Tag, Value, Vr};
 use dicom_pixel::{DisplayFrame, PixelFormat};
 use pack_gsps::PresentationState;

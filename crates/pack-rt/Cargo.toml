@@ -9,6 +9,9 @@ dicom-core = { path = "../dicom-core" }
 dicom-pixel = { path = "../dicom-pixel", optional = true }
 
 [features]
-default = []
+default = ["rendering"]
 pack-rt = []
 rendering = ["dicom-pixel"]
+
+[dev-dependencies]
+dicom-pixel = { path = "../dicom-pixel" }
