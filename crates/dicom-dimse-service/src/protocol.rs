@@ -65,6 +65,7 @@ impl DimseStatus {
     }
 }
 
+#[allow(missing_docs)]
 pub(crate) fn is_pending_status(status: u16) -> bool {
     matches!(status, 0xFF00 | 0xFF01)
 }
@@ -587,6 +588,7 @@ pub fn validate_query_retrieve_status_sequence(statuses: &[DimseStatus]) -> Resu
     validate_query_status_sequence(statuses)
 }
 
+#[allow(missing_docs)]
 pub(crate) fn validate_query_status_sequence(statuses: &[DimseStatus]) -> Result<()> {
     if statuses.is_empty() {
         return Err(decode_error(
@@ -610,7 +612,8 @@ pub(crate) fn validate_query_status_sequence(statuses: &[DimseStatus]) -> Result
     Ok(())
 }
 
-pub(crate) fn dimse_protocol_violation_status(error: &Error) -> DimseStatus {
+#[allow(missing_docs)]
+pub fn dimse_protocol_violation_status(error: &Error) -> DimseStatus {
     match error.kind() {
         ErrorKind::DecodeError { detail, .. } if detail.contains("unsupported DIMSE command") => {
             DimseStatus::sop_class_not_supported()

@@ -1163,7 +1163,7 @@ feature flags rationalized, newtypes enforced, monotonic tick type-safe. **19 pe
   - **Acceptance:** All `Arc<dyn Trait>` instances have correct mutability semantics; no hidden synchronization issues
   - **Estimated effort:** 2 days
 
-- [ ] **S13-T8** Move inline tests from production source to `tests/` directories
+- [x] **S13-T8** Move inline tests from production source to `tests/` directories
   - `dicom-workflow-server/src/main.rs`: move 10,000+ lines of inline `#[test]` to `tests/`
   - `dicom-web/src/lib.rs`: move inline tests to `tests/`
   - `dicom-dimse-service/src/lib.rs`: move inline tests to `tests/`

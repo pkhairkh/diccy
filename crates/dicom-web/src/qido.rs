@@ -11,13 +11,17 @@ use dicom_query::{query as run_query, Query, QueryKey, QueryLevel, QueryMatch};
 use super::{decode_error, enforce_limit, DicomWebRequest, QueryParam};
 
 #[cfg(feature = "qido")]
-pub(crate) const TAG_MODALITY: Tag = Tag(0x0008, 0x0060);
+/// DICOM tag constant.
+pub const TAG_MODALITY: Tag = Tag(0x0008, 0x0060);
 #[cfg(feature = "qido")]
-pub(crate) const TAG_PATIENT_ID: Tag = Tag(0x0010, 0x0020);
+/// DICOM tag constant.
+pub const TAG_PATIENT_ID: Tag = Tag(0x0010, 0x0020);
 #[cfg(feature = "qido")]
-pub(crate) const TAG_ACCESSION_NUMBER: Tag = Tag(0x0008, 0x0050);
+/// DICOM tag constant.
+pub const TAG_ACCESSION_NUMBER: Tag = Tag(0x0008, 0x0050);
 #[cfg(feature = "qido")]
-pub(crate) const TAG_STUDY_DATE: Tag = Tag(0x0008, 0x0020);
+/// DICOM tag constant.
+pub const TAG_STUDY_DATE: Tag = Tag(0x0008, 0x0020);
 
 /// Execute a QIDO-RS query against decoded datasets using `dicom-query`.
 #[cfg(feature = "qido")]

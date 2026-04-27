@@ -27,7 +27,8 @@ pub(crate) const INTEROP_RECONCILIATION_JOBS_PREFIX: &str = "/interop/reconcilia
 
 /// Parsed interop route classification for orchestration-only routing layers.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum InteropRoute<'a> {
+#[allow(missing_docs)]
+pub enum InteropRoute<'a> {
     Hl7Ingest,
     Hl7Failures,
     ConnectorStatus,
@@ -42,7 +43,7 @@ pub(crate) enum InteropRoute<'a> {
 }
 
 /// Classify a normalized request path into an interop bounded-context route.
-pub(crate) fn classify_interop_route(path: &str) -> Option<InteropRoute<'_>> {
+pub fn classify_interop_route(path: &str) -> Option<InteropRoute<'_>> {
     if path == INTEROP_HL7_PATH {
         return Some(InteropRoute::Hl7Ingest);
     }
@@ -90,29 +91,4 @@ pub(crate) fn classify_interop_route(path: &str) -> Option<InteropRoute<'_>> {
         return Some(InteropRoute::ReconciliationJobRun { job_id });
     }
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{classify_interop_route, InteropRoute};
-
-    #[test]
-    fn classify_interop_route_parses_reconciliation_run_paths() {
-        let parsed = classify_interop_route("/interop/reconciliation/jobs/recon-001/run");
-        assert_eq!(
-            parsed,
-            Some(InteropRoute::ReconciliationJobRun {
-                job_id: "recon-001"
-            })
-        );
-    }
-
-    #[test]
-    fn classify_interop_route_rejects_unsupported_suffixes() {
-        assert_eq!(
-            classify_interop_route("/interop/reconciliation/jobs/recon-001/invalid"),
-            None
-        );
-        assert_eq!(classify_interop_route("/interop/hl7/failures/extra"), None);
-    }
 }

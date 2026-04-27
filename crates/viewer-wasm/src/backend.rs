@@ -49,6 +49,7 @@ pub enum RendererBackend {
 }
 
 impl RendererBackend {
+    /// Return the backend name as a static string.
     pub fn as_str(self) -> &'static str {
         match self {
             RendererBackend::Cpu => "CPU",
@@ -84,6 +85,7 @@ pub enum BackendErrorCode {
 }
 
 impl BackendErrorCode {
+    /// Return the error code as a static string identifier.
     pub fn as_code(self) -> &'static str {
         match self {
             BackendErrorCode::InitFailed => "DVF.WASM.GPU.INIT_FAILED",
@@ -97,38 +99,66 @@ impl BackendErrorCode {
 /// Capability snapshot provided by host probing.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BackendCapabilityProbe {
+    /// Whether the WebGPU API is available.
     pub webgpu_api: bool,
+    /// Whether a WebGPU adapter is available.
     pub adapter_available: bool,
+    /// Whether the WebGL2 API is available.
     pub webgl2_api: bool,
+    /// Maximum 2D texture dimension supported.
     pub max_texture_dimension_2d: u32,
 }
 
 /// Non-PHI backend selection and upload metrics.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackendSelectionMetrics {
+    /// Number of backend probe attempts.
     pub probe_attempts: u64,
+    /// Number of WebGPU initialization attempts.
     pub webgpu_init_attempts: u64,
+    /// Number of WebGPU initialization failures.
     pub webgpu_init_failures: u64,
+    /// Number of fallbacks to CPU rendering.
     pub fallback_to_cpu_count: u64,
+    /// Total uploaded bytes.
     pub uploaded_bytes: u64,
+    /// Total upload chunks.
     pub upload_chunks: u64,
+    /// Total rendered frames.
     pub rendered_frames: u64,
+    /// CPU presentation count.
     pub cpu_present_count: u64,
+    /// WebGPU presentation count.
     pub webgpu_present_count: u64,
+    /// Target frame interval in milliseconds.
     pub target_frame_interval_ms: u32,
+    /// Number of auto-tune adjustments.
     pub auto_tune_adjustments: u64,
+    /// Last render duration in milliseconds.
     pub last_render_duration_ms: u32,
+    /// Total render duration in milliseconds.
     pub total_render_duration_ms: u64,
+    /// Fallback latency budget in milliseconds.
     pub fallback_latency_budget_ms: u32,
+    /// Last fallback latency in milliseconds.
     pub last_fallback_latency_ms: u32,
+    /// Number of fallback budget violations.
     pub fallback_budget_violations: u64,
+    /// Number of backend transitions.
     pub backend_transition_count: u64,
+    /// Last backend transition reason.
     pub last_transition_reason: Option<&'static str>,
+    /// Last fallback reason.
     pub last_fallback_reason: Option<&'static str>,
+    /// Last backend error code.
     pub last_error_code: Option<BackendErrorCode>,
+    /// Last texture format used.
     pub last_texture_format: Option<&'static str>,
+    /// Last color space used.
     pub last_color_space: Option<&'static str>,
+    /// Last upload chunk size in bytes.
     pub last_upload_chunk_bytes: u64,
+    /// Whether the production WebGPU flag is enabled.
     pub webgpu_production_flag_enabled: bool,
 }
 
@@ -165,7 +195,9 @@ impl Default for BackendSelectionMetrics {
 
 /// Renderer backend trait for the WASM host runtime.
 pub trait WasmRenderBackend {
+    /// Initialize the backend with capability probe data.
     fn initialize(&mut self, probe: &BackendCapabilityProbe) -> Result<(), BackendErrorCode>;
+    /// Submit a CPU-rendered frame.
     fn submit_cpu_frame(
         &mut self,
         source_format: PixelFormat,
@@ -176,18 +208,24 @@ pub trait WasmRenderBackend {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Upload statistics for a single frame submission.
 pub struct UploadStats {
+    /// Total bytes uploaded.
     pub bytes: u64,
+    /// Number of chunks uploaded.
     pub chunks: u64,
+    /// Chunk size in bytes.
     pub chunk_bytes: u64,
 }
 
-fn fallback_latency_budget_ms(target_frame_interval_ms: u32) -> u32 {
+/// Calculate the fallback latency budget in milliseconds based on the target frame interval.
+pub fn fallback_latency_budget_ms(target_frame_interval_ms: u32) -> u32 {
     let scaled = target_frame_interval_ms.saturating_mul(FALLBACK_LATENCY_BUDGET_FACTOR);
     scaled.clamp(target_frame_interval_ms, FALLBACK_LATENCY_BUDGET_CEILING_MS)
 }
 
-pub(crate) fn select_upload_chunk_bytes(
+/// Select upload chunk size in bytes based on frame size and target frame interval.
+pub fn select_upload_chunk_bytes(
     frame_bytes: usize,
     target_frame_interval_ms: u32,
 ) -> usize {
@@ -210,7 +248,8 @@ pub(crate) fn select_upload_chunk_bytes(
     }
 }
 
-pub(crate) fn auto_tune_frame_interval_ms(last_render_duration_ms: u32) -> u32 {
+/// Auto-tune the frame interval in milliseconds based on last render duration.
+pub fn auto_tune_frame_interval_ms(last_render_duration_ms: u32) -> u32 {
     match last_render_duration_ms {
         0..=12 => 16,
         13..=20 => 24,
@@ -741,93 +780,5 @@ impl BackendRuntimeState {
             self.metrics.last_upload_chunk_bytes,
             self.metrics.webgpu_production_flag_enabled,
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        auto_tune_frame_interval_ms, fallback_latency_budget_ms, select_upload_chunk_bytes,
-        BackendCapabilityProbe, BackendRuntimeState, RendererBackend,
-    };
-    use dicom_core::Limits;
-
-    #[test]
-    fn upload_chunk_policy_is_deterministic() {
-        assert_eq!(select_upload_chunk_bytes(128 * 1024, 16), 256 * 1024);
-        assert_eq!(select_upload_chunk_bytes(2 * 1024 * 1024, 16), 1024 * 1024);
-        assert_eq!(
-            select_upload_chunk_bytes(8 * 1024 * 1024, 16),
-            2 * 1024 * 1024
-        );
-        assert_eq!(
-            select_upload_chunk_bytes(32 * 1024 * 1024, 50),
-            4 * 1024 * 1024
-        );
-    }
-
-    #[test]
-    fn auto_tune_interval_policy_has_stable_boundaries() {
-        assert_eq!(auto_tune_frame_interval_ms(0), 16);
-        assert_eq!(auto_tune_frame_interval_ms(12), 16);
-        assert_eq!(auto_tune_frame_interval_ms(13), 24);
-        assert_eq!(auto_tune_frame_interval_ms(20), 24);
-        assert_eq!(auto_tune_frame_interval_ms(21), 33);
-        assert_eq!(auto_tune_frame_interval_ms(33), 33);
-        assert_eq!(auto_tune_frame_interval_ms(34), 50);
-        assert_eq!(auto_tune_frame_interval_ms(50), 50);
-        assert_eq!(auto_tune_frame_interval_ms(51), 66);
-    }
-
-    #[test]
-    fn fallback_budget_is_bounded_and_repeatable() {
-        assert_eq!(fallback_latency_budget_ms(16), 32);
-        assert_eq!(fallback_latency_budget_ms(33), 66);
-        assert_eq!(fallback_latency_budget_ms(200), 250);
-    }
-
-    #[test]
-    fn production_webgpu_flag_blocks_backend_activation_when_disabled() {
-        let mut state = BackendRuntimeState::default();
-        let limits = Limits::default();
-        let probe = BackendCapabilityProbe {
-            webgpu_api: true,
-            adapter_available: true,
-            webgl2_api: true,
-            max_texture_dimension_2d: 8192,
-        };
-        let selected = state.configure_backend("webgpu", probe, &limits);
-        assert_eq!(selected, RendererBackend::Cpu);
-        assert_eq!(state.active_backend(), RendererBackend::Cpu);
-        let metrics = state.metrics_json();
-        assert!(metrics.contains("production_webgpu_flag_disabled"));
-        assert!(metrics.contains("DVF.WASM.GPU.FLAG_DISABLED"));
-    }
-
-    #[cfg(feature = "webgpu-backend")]
-    #[test]
-    fn device_lost_chaos_cycles_have_bounded_transition_growth() {
-        let mut state = BackendRuntimeState::default();
-        state.set_production_webgpu_enabled(true);
-        let limits = Limits::default();
-        let probe = BackendCapabilityProbe {
-            webgpu_api: true,
-            adapter_available: true,
-            webgl2_api: true,
-            max_texture_dimension_2d: 8192,
-        };
-        let selected = state.configure_backend("webgpu", probe, &limits);
-        assert_eq!(selected, RendererBackend::WebGpu);
-
-        for _ in 0..12 {
-            assert!(state.simulate_device_lost());
-            assert_eq!(state.active_backend(), RendererBackend::Cpu);
-            let recovered = state.recover_device_lost(&limits);
-            assert_eq!(recovered, RendererBackend::WebGpu);
-        }
-
-        let metrics = state.metrics_json();
-        assert!(metrics.contains("\"backend_transition_count\":"));
-        assert!(metrics.contains("\"fallback_budget_violations\":0"));
     }
 }

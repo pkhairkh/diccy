@@ -983,6 +983,17 @@ pub fn auth_denied_error(detail: &str) -> Box<Error> {
     .into()
 }
 
+#[allow(missing_docs)]
+pub fn not_found_error(detail: &str, code: &str) -> Box<Error> {
+    Error::from_kind(
+        ErrorKind::NotFound {
+            detail: detail.to_string(),
+        },
+        code,
+    )
+    .into()
+}
+
 pub fn route_path_normalize(raw_path: &str) -> Result<String, Box<Error>> {
     let trimmed = raw_path.trim();
     if trimmed.is_empty() {

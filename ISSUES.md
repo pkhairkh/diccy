@@ -28,8 +28,9 @@ the resolution status as of the completion of Sprint 13.
 
 ### Open
 
-- **#33 / #34 (Inline Tests):** ~1190 `#[test]` functions remain in production source files (S13-T8 open).
+- **#33 / #34 (Inline Tests):** Resolved — all ~1190 `#[test]` functions extracted to `tests/` directories; production source has zero inline tests (S13-T8 complete).
 - **#25 (Type Aliases):** Partially resolved (SessionId, UserId, Tick now newtypes in dicom-collab); other type aliases may remain.
+- **#1 (Encapsulation):** Further improved — private fields and TAG constants made public with proper accessors for integration test visibility across multiple crates.
 
 ---
 

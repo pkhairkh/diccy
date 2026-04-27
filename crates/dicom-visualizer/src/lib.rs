@@ -3,11 +3,16 @@
 //! Export-control primitives for provenance-safe preview/report workflows.
 
 use dicom_core::{validate_uid_strict, Dataset, Error, ErrorKind, Result, Tag};
+use dicom_pixel::{DisplayFrame, PixelFormat};
 use std::collections::BTreeSet;
+use std::path::Path;
 
-const TAG_STUDY_UID: Tag = Tag(0x0020, 0x000D);
-const TAG_SERIES_UID: Tag = Tag(0x0020, 0x000E);
-const TAG_INSTANCE_UID: Tag = Tag(0x0008, 0x0018);
+/// DICOM tag for Study Instance UID.
+pub const TAG_STUDY_UID: Tag = Tag(0x0020, 0x000D);
+/// DICOM tag for Series Instance UID.
+pub const TAG_SERIES_UID: Tag = Tag(0x0020, 0x000E);
+/// DICOM tag for SOP Instance UID.
+pub const TAG_INSTANCE_UID: Tag = Tag(0x0008, 0x0018);
 
 /// Source object context bound to export/report artifacts.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -472,41 +477,81 @@ fn integrity_error(detail: impl Into<String>) -> Box<Error> {
     .into()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use dicom_core::{Element, Value, Vr};
+/// Replace non-alphanumeric characters in a path component with underscores.
+pub fn sanitize_path_component(path: &Path) -> String {
+    path.to_string_lossy()
+        .chars()
+        .map(|ch| match ch {
+            'a'..='z' | 'A'..='Z' | '0'..='9' => ch,
+            _ => '_',
+        })
+        .collect()
+}
 
-    fn context_dataset(study: &str, series: &str, instance: &str) -> Dataset {
-        let mut dataset = Dataset::new();
-        dataset.insert(Element::new(TAG_STUDY_UID, Vr::Ui, Value::Uid(study.to_string())).unwrap());
-        dataset
-            .insert(Element::new(TAG_SERIES_UID, Vr::Ui, Value::Uid(series.to_string())).unwrap());
-        dataset.insert(
-            Element::new(TAG_INSTANCE_UID, Vr::Ui, Value::Uid(instance.to_string())).unwrap(),
-        );
-        dataset
+/// Convert a display frame to RGBA8 bytes.
+pub fn frame_to_rgba8(frame: &DisplayFrame) -> std::result::Result<Vec<u8>, String> {
+    match frame.format {
+        PixelFormat::Rgba8 => Ok(frame.bytes.clone()),
+        PixelFormat::Luma8 => {
+            let mut rgba = Vec::with_capacity(frame.bytes.len() * 4);
+            for value in &frame.bytes {
+                rgba.extend_from_slice(&[*value, *value, *value, 255u8]);
+            }
+            Ok(rgba)
+        }
+        PixelFormat::Luma16 => {
+            if !frame.bytes.len().is_multiple_of(2) {
+                return Err("Luma16 byte length must be even".to_string());
+            }
+            let mut values = Vec::with_capacity(frame.bytes.len() / 2);
+            let mut min = u16::MAX;
+            let mut max = 0u16;
+            for chunk in frame.bytes.chunks_exact(2) {
+                let value = u16::from_le_bytes([chunk[0], chunk[1]]);
+                min = min.min(value);
+                max = max.max(value);
+                values.push(value);
+            }
+            let range = max.saturating_sub(min);
+            let mut rgba = Vec::with_capacity(values.len() * 4);
+            for value in values {
+                let scaled = if range == 0 {
+                    0u8
+                } else {
+                    (((value - min) as f32 / range as f32) * 255.0).round() as u8
+                };
+                rgba.extend_from_slice(&[scaled, scaled, scaled, 255u8]);
+            }
+            Ok(rgba)
+        }
     }
+}
 
-    #[test]
-    fn export_plan_rejects_duplicate_measurement_ids() {
-        let active = extract_export_context(&context_dataset("1.2.3", "1.2.3.4", "1.2.3.4.5"))
-            .expect("context");
-        let plan = ExportPlan {
-            active_context: active.clone(),
-            bindings: vec![
-                MeasurementBinding {
-                    measurement_id: "m-1".to_string(),
-                    source_context: active.clone(),
-                },
-                MeasurementBinding {
-                    measurement_id: "m-1".to_string(),
-                    source_context: active,
-                },
-            ],
-        };
-
-        let err = validate_export_plan(&plan).expect_err("duplicate id must fail");
-        assert!(matches!(err.kind(), ErrorKind::IntegrityError { .. }));
+/// Escape CSV values, guarding against formula injection.
+pub fn csv_escape(value: &str) -> String {
+    let guarded = match value.chars().next() {
+        Some('=' | '+' | '-' | '@') => format!("'{value}"),
+        _ => value.to_string(),
+    };
+    if guarded.contains(',') || guarded.contains('"') || guarded.contains('\n') {
+        format!("\"{}\"", guarded.replace('"', "\"\""))
+    } else {
+        guarded
     }
+}
+
+/// Escape HTML-special characters to prevent XSS in generated content.
+pub fn escape_html(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#x27;"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }

@@ -993,7 +993,7 @@ pub fn persist_hl7_failure_queue(path: &str, queue: &VecDeque<Hl7FailureRecord>)
     let _ = fs::write(path, lines);
 }
 
-#[cfg(test)]
+#[allow(missing_docs)]
 pub fn render_hl7_failure_queue_legacy_v1(queue: &VecDeque<Hl7FailureRecord>) -> String {
     let mut lines = String::new();
     for record in queue {

@@ -992,7 +992,7 @@ pub fn sr_auth_context(request: &HttpRequest) -> SrAuthContext {
     }
 }
 
-pub fn render_sr_write_outcome_json(outcome: &dicom_workflow_server::SrWriteOutcome) -> String {
+pub fn render_sr_write_outcome_json(outcome: &crate::SrWriteOutcome) -> String {
     let kind = match outcome.kind {
         SrWriteOutcomeKind::Created => "created",
         SrWriteOutcomeKind::Updated => "updated",

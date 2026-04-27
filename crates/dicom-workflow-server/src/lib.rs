@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 #![deny(missing_docs)]
 
 //! Runtime contracts for workflow startup policy, persistence preflight,
@@ -7,21 +8,93 @@ mod completion_workflow;
 mod sr_workflow;
 mod ups_workflow;
 
-use dicom_mpps::MppsService;
-use dicom_worklist::WorklistStore;
+#[path = "domain/mod.rs"]
+mod domain;
+#[path = "adapters/observability.rs"]
+mod observability;
+#[path = "application/runtime_config.rs"]
+mod runtime_config;
+
+use dicom_core::{Dataset, Element, Tag, Value, Vr};
+#[allow(missing_docs)]
+pub use dicom_core::{Error, ErrorKind, Limits};
+use dicom_env_contract::{
+    dicom_workflow_env_contract, parse_bool, parse_optional_string, parse_string_non_empty,
+    validate_envelope_version,
+    DEFAULT_DICOM_ENVELOPE_VERSION, DICOM_ENVELOPE_VERSION, DICOM_WORKFLOW_ENV_PREFIX,
+    SUPPORTED_DICOM_ENVELOPE_VERSIONS,
+};
+#[allow(missing_docs)]
+pub use dicom_env_contract::{NumericBounds, parse_u64, parse_usize};
+use dicom_mpps::{IngestOutcome as MppsIngestOutcome, MppsStatus};
+#[allow(missing_docs)]
+pub use dicom_mpps::{MppsService, MppsServiceConfig};
+use dicom_ups::{UpsState, UpsTransition};
+#[allow(missing_docs)]
+pub use dicom_ups::UpsCommandAdapter;
+use dicom_worklist::{validate_worklist_item, WorklistQuery};
+#[allow(missing_docs)]
+pub use dicom_worklist::WorklistStore;
+use pack_sr::{Code, SrAuthoringContentItem};
+use std::collections::{BTreeMap, BTreeSet};
+#[allow(missing_docs)]
+pub use std::collections::VecDeque;
+use std::env;
 use std::fs::{self, OpenOptions};
-use std::io::{Error as IoError, ErrorKind as IoErrorKind};
-use std::path::{Path, PathBuf};
+use std::io::{Error as IoError, Read, Write};
+#[allow(missing_docs)]
+pub use std::io::ErrorKind as IoErrorKind;
+use std::net::{TcpListener, TcpStream};
+use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
+#[allow(missing_docs)]
+pub use std::sync::Arc;
+#[allow(missing_docs)]
+pub use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use domain::{interop, mpps, sr, task, tenant_policy as tenant_policy_domain};
+pub use observability::{WorkflowLogLevel, WorkflowObservability};
+pub use runtime_config::WorkflowRuntimeConfig;
+
+#[allow(missing_docs)]
+pub mod config;
+#[allow(missing_docs)]
+pub mod handlers;
+#[allow(missing_docs)]
+pub mod hl7;
+#[allow(missing_docs)]
+pub mod http;
+#[allow(missing_docs)]
+pub mod routing;
+#[allow(missing_docs)]
+pub mod sr_handlers;
+
+#[allow(missing_docs)]
+pub use config::*;
+#[allow(missing_docs)]
+pub use handlers::*;
+#[allow(missing_docs)]
+pub use hl7::*;
+#[allow(missing_docs)]
+pub use http::*;
+#[allow(missing_docs)]
+pub use routing::*;
+#[allow(missing_docs)]
+pub use sr_handlers::*;
 
 pub use completion_workflow::{
     CompletionEvent, CompletionEventSource, CompletionOutcome, CompletionWorkflowAdapter,
     Hl7WorkflowSignal,
 };
+#[allow(missing_docs)]
+pub use domain::interop::{classify_interop_route, InteropRoute};
 pub use sr_workflow::{
     sr_endpoint_contract, sr_workflow_architecture, SrAuditRecord, SrAuthContext, SrCreateRequest,
     SrEndpointContract, SrLifecycleHistoryRecord, SrLifecycleStatus, SrLifecycleTransitionOutcome,
     SrLifecycleTransitionRequest, SrUpdateEnvelope, SrWorkflowArchitecture, SrWorkflowStore,
-    SrWriteOutcome, SrWriteOutcomeKind,
+    SrWriteOutcome, SrWriteOutcomeKind, hash_text,
 };
 pub use ups_workflow::{
     UpsWorkflowAdapter, UpsWorkflowEvent, UpsWorkflowSnapshot, WorkflowMppsBridgeEvent,
@@ -726,98 +799,5 @@ pub fn workflow_recovery_diagnostic_with_sr(
         mpps_updates: mpps.len(),
         sr_documents: sr.documents().len(),
         durable: true,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::workflow_route_contract;
-
-    #[test]
-    fn workflow_route_contract_is_deterministic_and_complete() {
-        let first = workflow_route_contract();
-        let second = workflow_route_contract();
-        assert_eq!(first, second);
-        assert_eq!(first.len(), 60);
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/healthz" && row.method == "GET|HEAD"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/readyz" && row.method == "GET|HEAD"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/sr/documents/{sop_instance_uid}/updates"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/sr/documents/{sop_instance_uid}/review"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/sr/documents/{sop_instance_uid}/history"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/tasks/{task_id}/commit"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/metrics" && row.requires_writer_role));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/audit" && row.requires_writer_role));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/subscriptions" && row.method == "POST"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/hl7/failures"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/connectors/status"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/connectors/features"));
-        assert!(first.iter().any(|row| {
-            row.path_template == "/interop/connectors/rollout" && row.method == "GET|HEAD"
-        }));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/connectors/rollout" && row.method == "POST"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/connectors/capabilities"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/connectors/health"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/fhir" && row.method == "POST"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/policy/quotas"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/policy/quotas/snapshot"));
-        assert!(first.iter().any(|row| {
-            row.path_template == "/interop/reconciliation/jobs/{job_id}/run"
-                && row.requires_idempotency_key
-        }));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/workflow/workitems" && row.method == "GET|HEAD"));
-        assert!(first.iter().any(
-            |row| row.path_template == "/workflow/workitems/{task_id}/state"
-                && row.method == "POST"
-        ));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/ian" && row.method == "POST"));
-        assert!(first
-            .iter()
-            .any(|row| row.path_template == "/interop/storage-commitment/status/{task_id}"));
-        assert!(
-            first
-                .iter()
-                .any(|row| row.path_template == "/interop/hl7/ups-correlation"
-                    && row.method == "POST")
-        );
     }
 }

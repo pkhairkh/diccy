@@ -448,8 +448,8 @@ pub fn route_request_core(
 pub fn workflow_contract_for_request(
     method: &str,
     path: &str,
-) -> Option<dicom_workflow_server::WorkflowRouteContract> {
-    use dicom_workflow_server::workflow_route_contract;
+) -> Option<crate::WorkflowRouteContract> {
+    use crate::workflow_route_contract;
     let method = method.to_ascii_uppercase();
     for contract in workflow_route_contract() {
         if !method_matches(method.as_str(), contract.method) {
@@ -497,7 +497,7 @@ pub fn is_route_denied(templates: &[String], path: &str) -> bool {
 pub fn render_route_policy_enforcement_failure_log(
     actor: &WorkflowActorContext,
     request: &HttpRequest,
-    contract: &dicom_workflow_server::WorkflowRouteContract,
+    contract: &crate::WorkflowRouteContract,
     policy: &str,
     detail: &str,
 ) -> String {
@@ -514,7 +514,7 @@ pub fn render_route_policy_enforcement_failure_log(
 pub fn log_route_policy_enforcement_failure(
     actor: &WorkflowActorContext,
     request: &HttpRequest,
-    contract: &dicom_workflow_server::WorkflowRouteContract,
+    contract: &crate::WorkflowRouteContract,
     policy: &str,
     detail: &str,
 ) {
@@ -528,7 +528,7 @@ pub fn enforce_route_policy(
     state: &mut RuntimeState,
     actor: &WorkflowActorContext,
     request: &HttpRequest,
-    contract: &dicom_workflow_server::WorkflowRouteContract,
+    contract: &crate::WorkflowRouteContract,
     request_path: &str,
 ) -> Result<bool, Box<Error>> {
     if is_route_denied(&state.health.read().denylist_routes, request_path) {

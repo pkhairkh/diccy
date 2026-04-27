@@ -457,7 +457,7 @@ pub fn validate_tls_secret_path(
     }
 }
 
-#[cfg(test)]
+#[allow(missing_docs)]
 pub fn prepare_persistence_file(
     path: &str,
     max_bytes: u64,
@@ -476,6 +476,7 @@ pub fn transport_security_from_env(raw_security: Option<&str>) -> &'static str {
     }
 }
 
+#[derive(Debug)]
 pub enum WorkflowResponse {
     Json(u16, String),
 }
@@ -609,12 +610,13 @@ pub fn limit_exceeded(limit_name: &'static str, observed: u64, allowed: u64) -> 
 }
 
 pub fn decode_error(detail: impl Into<String>) -> Box<Error> {
+    let detail_str = detail.into();
     Error::from_kind(
         ErrorKind::DecodeError {
             stage: "dicom-workflow-server".to_string(),
-            detail: detail.into(),
+            detail: detail_str.clone(),
         },
-        "decode error",
+        detail_str,
     )
     .into()
 }

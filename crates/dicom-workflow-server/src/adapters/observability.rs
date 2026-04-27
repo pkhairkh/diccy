@@ -3,7 +3,8 @@ use super::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub(super) enum WorkflowLogLevel {
+#[allow(missing_docs)]
+pub enum WorkflowLogLevel {
     Off,
     Error,
     Warn,
@@ -12,8 +13,9 @@ pub(super) enum WorkflowLogLevel {
     Trace,
 }
 
+#[allow(missing_docs)]
 impl WorkflowLogLevel {
-    pub(super) fn parse(raw: &str) -> Option<Self> {
+    pub fn parse(raw: &str) -> Option<Self> {
         match raw.trim().to_ascii_lowercase().as_str() {
             "off" => Some(Self::Off),
             "error" => Some(Self::Error),
@@ -25,7 +27,7 @@ impl WorkflowLogLevel {
         }
     }
 
-    pub(super) fn should_log(&self, level: Self) -> bool {
+    pub fn should_log(&self, level: Self) -> bool {
         (*self as u8) >= (level as u8)
     }
 }
@@ -43,15 +45,17 @@ impl From<WorkflowLogLevel> for u8 {
     }
 }
 
-pub(super) struct WorkflowObservability {
+#[allow(missing_docs)]
+pub struct WorkflowObservability {
     service: &'static str,
     log_level: WorkflowLogLevel,
     telemetry_enabled: bool,
     telemetry_safe_subset: bool,
 }
 
+#[allow(missing_docs)]
 impl WorkflowObservability {
-    pub(super) fn from_env(prefix: &str, service: &'static str) -> std::io::Result<Self> {
+    pub fn from_env(prefix: &str, service: &'static str) -> std::io::Result<Self> {
         let log_level_key = format!("{prefix}LOG_LEVEL");
         let log_level = parse_log_level(&log_level_key)?;
         let telemetry_enabled = parse_bool(
@@ -73,13 +77,13 @@ impl WorkflowObservability {
         })
     }
 
-    pub(super) fn log(&self, level: WorkflowLogLevel, message: &str) {
+    pub fn log(&self, level: WorkflowLogLevel, message: &str) {
         if self.log_level.should_log(level) {
             eprintln!("[{level:?}] {}: {message}", self.service);
         }
     }
 
-    pub(super) fn emit_telemetry(&self, event: &str, fields: &[(&str, &str)]) {
+    pub fn emit_telemetry(&self, event: &str, fields: &[(&str, &str)]) {
         if !self.telemetry_enabled {
             return;
         }

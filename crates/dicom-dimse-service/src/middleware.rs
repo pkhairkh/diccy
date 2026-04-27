@@ -62,20 +62,24 @@ impl Default for DimseOperationResourceLimits {
 }
 
 #[derive(Clone)]
-pub(crate) struct OperationLimiter {
-    pub(crate) max_in_flight_operations: usize,
+#[allow(missing_docs)]
+pub struct OperationLimiter {
+    #[allow(missing_docs)]
+    pub max_in_flight_operations: usize,
     pub(crate) active: Arc<Mutex<usize>>,
 }
 
 impl OperationLimiter {
-    pub(crate) fn new(max_in_flight_operations: usize) -> Self {
+    #[allow(missing_docs)]
+    pub fn new(max_in_flight_operations: usize) -> Self {
         Self {
             max_in_flight_operations,
             active: Arc::new(Mutex::new(0)),
         }
     }
 
-    pub(crate) fn try_acquire(&self) -> Result<OperationGuard> {
+    #[allow(missing_docs)]
+    pub fn try_acquire(&self) -> Result<OperationGuard> {
         let mut active = self
             .active
             .lock()
@@ -89,7 +93,8 @@ impl OperationLimiter {
     }
 }
 
-pub(crate) struct OperationGuard {
+#[allow(missing_docs)]
+pub struct OperationGuard {
     active: Arc<Mutex<usize>>,
 }
 
@@ -101,7 +106,8 @@ impl Drop for OperationGuard {
     }
 }
 
-pub(crate) fn enforce_connection_limit(observed: usize, allowed: usize) -> Result<()> {
+#[allow(missing_docs)]
+pub fn enforce_connection_limit(observed: usize, allowed: usize) -> Result<()> {
     if observed > allowed {
         return Err(limit_exceeded(
             "max_connections",
@@ -123,7 +129,8 @@ pub(crate) fn enforce_operation_limit(observed: usize, allowed: usize) -> Result
     Ok(())
 }
 
-pub(crate) fn enforce_query_response_limit(
+#[allow(missing_docs)]
+pub fn enforce_query_response_limit(
     observed: usize,
     max_query_responses: usize,
 ) -> Result<()> {

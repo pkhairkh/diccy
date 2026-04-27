@@ -741,7 +741,8 @@ fn handle_connection<H: DimseService>(
 }
 
 impl DimseServerConfig {
-    pub(crate) fn effective_policy(&self) -> AssociationPolicy {
+    #[allow(missing_docs)]
+    pub fn effective_policy(&self) -> AssociationPolicy {
         let mut supported_abstract_syntaxes = self.policy.supported_abstract_syntaxes.clone();
 
         if !self.roles.c_echo_enabled {
@@ -780,7 +781,8 @@ impl DimseServerConfig {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn handle_pdus<H: DimseService>(
+#[allow(missing_docs)]
+pub fn handle_pdus<H: DimseService>(
     pdvs: Vec<Pdv>,
     association_accept: &AssociationAccept,
     context_map: &HashMap<u8, (String, String)>,
@@ -2062,19 +2064,26 @@ fn build_associate_request(
 }
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct PendingMessage {
-    command: Vec<u8>,
-    command_done: bool,
-    data: Vec<u8>,
-    data_done: bool,
-    message: Option<DimseMessage>,
+#[allow(missing_docs)]
+pub struct PendingMessage {
+    #[allow(missing_docs)]
+    pub command: Vec<u8>,
+    #[allow(missing_docs)]
+    pub command_done: bool,
+    #[allow(missing_docs)]
+    pub data: Vec<u8>,
+    #[allow(missing_docs)]
+    pub data_done: bool,
+    #[allow(missing_docs)]
+    pub message: Option<DimseMessage>,
 }
 
 // ---------------------------------------------------------------------------
 // Transport security and host filtering
 // ---------------------------------------------------------------------------
 
-pub(crate) fn enforce_tls_policy(transport: TransportSecurity, policy: TlsPolicy) -> Result<()> {
+#[allow(missing_docs)]
+pub fn enforce_tls_policy(transport: TransportSecurity, policy: TlsPolicy) -> Result<()> {
     if policy == TlsPolicy::RequireTls && transport != TransportSecurity::Tls {
         return Err(decode_error("TLS required for DIMSE association"));
     }

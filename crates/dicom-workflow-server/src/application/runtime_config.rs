@@ -1,40 +1,42 @@
 use super::*;
 
 #[derive(Clone)]
-pub(super) struct WorkflowRuntimeConfig {
-    pub(super) bind: String,
-    pub(super) worklist_state_path: String,
-    pub(super) mpps_state_path: String,
-    pub(super) sr_state_path: String,
-    pub(super) sr_audit_path: String,
-    pub(super) workflow_audit_path: String,
-    pub(super) snapshot_max_bytes: u64,
-    pub(super) snapshot_max_rotated_files: usize,
-    pub(super) audit_max_bytes: u64,
-    pub(super) audit_max_rotated_files: usize,
-    pub(super) auth_mode_raw: Option<String>,
-    pub(super) auth_token: Option<String>,
-    pub(super) tls_cert_path: Option<String>,
-    pub(super) tls_key_path: Option<String>,
-    pub(super) transport_security_raw: Option<String>,
-    pub(super) query_rate_limit: u64,
-    pub(super) mutation_rate_limit: u64,
-    pub(super) upload_cap_bytes: u64,
-    pub(super) anomaly_alert_threshold: u64,
-    pub(super) audit_export_limit: usize,
-    pub(super) audit_rate_window_ms: u64,
-    pub(super) denylist_routes: Vec<String>,
-    pub(super) hl7_transport: Hl7TransportConfig,
-    pub(super) hl7_connector_registry: BTreeMap<String, String>,
-    pub(super) hl7_connector_feature_flags: BTreeMap<String, Hl7ConnectorFeatureFlag>,
-    pub(super) hl7_connector_rollout_percents: BTreeMap<String, u64>,
-    pub(super) hl7_connector_plugins: BTreeMap<String, ConnectorPluginMetadata>,
-    pub(super) auth_mode: WorkflowAuthMode,
-    pub(super) transport_security: &'static str,
+#[allow(missing_docs)]
+pub struct WorkflowRuntimeConfig {
+    pub bind: String,
+    pub worklist_state_path: String,
+    pub mpps_state_path: String,
+    pub sr_state_path: String,
+    pub sr_audit_path: String,
+    pub workflow_audit_path: String,
+    pub snapshot_max_bytes: u64,
+    pub snapshot_max_rotated_files: usize,
+    pub audit_max_bytes: u64,
+    pub audit_max_rotated_files: usize,
+    pub auth_mode_raw: Option<String>,
+    pub auth_token: Option<String>,
+    pub tls_cert_path: Option<String>,
+    pub tls_key_path: Option<String>,
+    pub transport_security_raw: Option<String>,
+    pub query_rate_limit: u64,
+    pub mutation_rate_limit: u64,
+    pub upload_cap_bytes: u64,
+    pub anomaly_alert_threshold: u64,
+    pub audit_export_limit: usize,
+    pub audit_rate_window_ms: u64,
+    pub denylist_routes: Vec<String>,
+    pub hl7_transport: Hl7TransportConfig,
+    pub hl7_connector_registry: BTreeMap<String, String>,
+    pub hl7_connector_feature_flags: BTreeMap<String, Hl7ConnectorFeatureFlag>,
+    pub hl7_connector_rollout_percents: BTreeMap<String, u64>,
+    pub hl7_connector_plugins: BTreeMap<String, ConnectorPluginMetadata>,
+    pub auth_mode: WorkflowAuthMode,
+    pub transport_security: &'static str,
 }
 
+#[allow(missing_docs)]
 impl WorkflowRuntimeConfig {
-    pub(super) fn from_env() -> std::io::Result<Self> {
+    pub fn from_env() -> std::io::Result<Self> {
         // Defaults and bounds in this parser are the runtime source for docs/09 and docs/14.
         let bind = parse_string_non_empty(
             WORKFLOW_SERVICE_NAME,

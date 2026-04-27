@@ -2,59 +2,28 @@
 
 //! Packaged workflow runtime for durable MWL and MPPS services.
 
-use dicom_core::{Dataset, Element, Error, ErrorKind, Limits, Tag, Value, Vr};
+use dicom_core::Limits;
 use dicom_env_contract::{
-    dicom_workflow_env_contract, parse_bool, parse_optional_string, parse_string_non_empty,
-    parse_u64, parse_usize, validate_envelope_version, NumericBounds,
+    dicom_workflow_env_contract, validate_envelope_version,
     DEFAULT_DICOM_ENVELOPE_VERSION, DICOM_ENVELOPE_VERSION, DICOM_WORKFLOW_ENV_PREFIX,
     SUPPORTED_DICOM_ENVELOPE_VERSIONS,
 };
-use dicom_mpps::{IngestOutcome as MppsIngestOutcome, MppsService, MppsServiceConfig, MppsStatus};
-use dicom_ups::{UpsCommandAdapter, UpsState, UpsTransition};
+use dicom_mpps::{MppsService, MppsServiceConfig};
 use dicom_workflow_server::{
-    prepare_persistence_file_with_diagnostics, rotate_file, workflow_policy_diagnostics,
-    workflow_recovery_diagnostic_with_sr, CompletionOutcome, CompletionWorkflowAdapter,
-    SrAuthContext, SrCreateRequest, SrLifecycleHistoryRecord, SrLifecycleStatus,
-    SrLifecycleTransitionOutcome, SrLifecycleTransitionRequest, SrUpdateEnvelope, SrWorkflowStore,
-    SrWriteOutcomeKind,
+    prepare_persistence_file_with_diagnostics, workflow_policy_diagnostics,
+    workflow_recovery_diagnostic_with_sr, CompletionWorkflowAdapter, SrWorkflowStore,
 };
-use dicom_worklist::{validate_worklist_item, WorklistQuery, WorklistStore};
-use pack_sr::{Code, SrAuthoringContentItem};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use dicom_worklist::WorklistStore;
+use std::collections::BTreeMap;
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::path::{Component, Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::io::{Error as IoError, ErrorKind as IoErrorKind};
+use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
-#[path = "domain/mod.rs"]
-mod domain;
-#[path = "adapters/observability.rs"]
-mod observability;
-#[path = "application/runtime_config.rs"]
-mod runtime_config;
-
-use domain::{interop, mpps, sr, task, tenant_policy as tenant_policy_domain};
-use observability::{WorkflowLogLevel, WorkflowObservability};
-use runtime_config::WorkflowRuntimeConfig;
-
-mod config;
-mod handlers;
-mod hl7;
-mod http;
-mod routing;
-mod sr_handlers;
-
-use config::*;
-use handlers::*;
-use hl7::*;
-use http::*;
-use routing::*;
-use sr_handlers::*;
+// Import all items from the library part of the crate
+use dicom_workflow_server::*;
 
 fn main() -> std::io::Result<()> {
     let contract = dicom_workflow_env_contract(cfg!(test));
@@ -199,7 +168,7 @@ fn main() -> std::io::Result<()> {
         hl7: Hl7State::new(Hl7RuntimeState {
             subscriptions: BTreeMap::new(),
             failures: hl7_failures,
-            ups: UpsCommandAdapter::new(),
+            ups: dicom_ups::UpsCommandAdapter::new(),
             completion: CompletionWorkflowAdapter::new(),
             ian_events: BTreeMap::new(),
             storage_commitment_status: BTreeMap::new(),
@@ -357,6 +326,3 @@ fn main() -> std::io::Result<()> {
 fn has_flag(name: &str) -> bool {
     env::args().skip(1).any(|arg| arg == name)
 }
-
-#[cfg(all(test, feature = "workflow-main-tests"))]
-mod tests;

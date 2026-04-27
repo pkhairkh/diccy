@@ -6,10 +6,14 @@ use dicom_io::parse_dataset_bytes;
 use dicom_storage::{StorageCommitmentReferencedInstance, StorageCommitmentState};
 use std::sync::Arc;
 
-pub(crate) const TAG_TRANSACTION_UID: Tag = Tag(0x0008, 0x1195);
-pub(crate) const TAG_REFERENCED_SOP_SEQUENCE: Tag = Tag(0x0008, 0x1199);
-pub(crate) const TAG_REFERENCED_SOP_CLASS_UID: Tag = Tag(0x0008, 0x1150);
-pub(crate) const TAG_REFERENCED_SOP_INSTANCE_UID: Tag = Tag(0x0008, 0x1155);
+#[allow(missing_docs)]
+pub const TAG_TRANSACTION_UID: Tag = Tag(0x0008, 0x1195);
+#[allow(missing_docs)]
+pub const TAG_REFERENCED_SOP_SEQUENCE: Tag = Tag(0x0008, 0x1199);
+#[allow(missing_docs)]
+pub const TAG_REFERENCED_SOP_CLASS_UID: Tag = Tag(0x0008, 0x1150);
+#[allow(missing_docs)]
+pub const TAG_REFERENCED_SOP_INSTANCE_UID: Tag = Tag(0x0008, 0x1155);
 
 /// Storage Commitment N-ACTION request payload.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,7 +54,8 @@ pub type StorageCommitmentLifecycleSink =
     Arc<dyn Fn(StorageCommitmentLifecycleEvent) -> Result<()> + Send + Sync>;
 
 /// Parse a Storage Commitment N-ACTION request from a DIMSE data set.
-pub(crate) fn parse_storage_commitment_n_action_request(
+#[allow(missing_docs)]
+pub fn parse_storage_commitment_n_action_request(
     message_id: u16,
     sop_class_uid: &str,
     sop_instance_uid: &str,

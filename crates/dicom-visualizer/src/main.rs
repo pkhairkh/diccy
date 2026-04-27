@@ -10,8 +10,11 @@
 
 use dicom_core::{Error as CoreError, ErrorKind, Limits};
 use dicom_io::{BytesSource, P10Reader};
-use dicom_pixel::{DisplayFrame, PixelFormat, PixelPipeline, PixelPipelineConfig};
-use dicom_visualizer::{deterministic_measurement_ids, extract_export_context};
+use dicom_pixel::{PixelPipeline, PixelPipelineConfig};
+use dicom_visualizer::{
+    csv_escape, deterministic_measurement_ids, escape_html, extract_export_context,
+    frame_to_rgba8, sanitize_path_component,
+};
 use image::{ImageBuffer, ImageFormat, Rgba};
 use sha2::{Digest, Sha256};
 use std::env;
@@ -290,44 +293,6 @@ fn export_preview(
     })
 }
 
-fn frame_to_rgba8(frame: &DisplayFrame) -> Result<Vec<u8>, String> {
-    match frame.format {
-        PixelFormat::Rgba8 => Ok(frame.bytes.clone()),
-        PixelFormat::Luma8 => {
-            let mut rgba = Vec::with_capacity(frame.bytes.len() * 4);
-            for value in &frame.bytes {
-                rgba.extend_from_slice(&[*value, *value, *value, 255u8]);
-            }
-            Ok(rgba)
-        }
-        PixelFormat::Luma16 => {
-            if !frame.bytes.len().is_multiple_of(2) {
-                return Err("Luma16 byte length must be even".to_string());
-            }
-            let mut values = Vec::with_capacity(frame.bytes.len() / 2);
-            let mut min = u16::MAX;
-            let mut max = 0u16;
-            for chunk in frame.bytes.chunks_exact(2) {
-                let value = u16::from_le_bytes([chunk[0], chunk[1]]);
-                min = min.min(value);
-                max = max.max(value);
-                values.push(value);
-            }
-            let range = max.saturating_sub(min);
-            let mut rgba = Vec::with_capacity(values.len() * 4);
-            for value in values {
-                let scaled = if range == 0 {
-                    0u8
-                } else {
-                    (((value - min) as f32 / range as f32) * 255.0).round() as u8
-                };
-                rgba.extend_from_slice(&[scaled, scaled, scaled, 255u8]);
-            }
-            Ok(rgba)
-        }
-    }
-}
-
 fn describe_core_error(err: &CoreError) -> String {
     match &err.kind() {
         ErrorKind::InvalidTagValue { tag, detail } => {
@@ -379,16 +344,6 @@ fn describe_core_error(err: &CoreError) -> String {
             format!("{} session={session_id} detail={detail}", err.code())
         }
     }
-}
-
-fn sanitize_path_component(path: &Path) -> String {
-    path.to_string_lossy()
-        .chars()
-        .map(|ch| match ch {
-            'a'..='z' | 'A'..='Z' | '0'..='9' => ch,
-            _ => '_',
-        })
-        .collect()
 }
 
 fn write_integrity_metadata(
@@ -550,78 +505,4 @@ img{width:100%;height:auto;display:block;background:#000}\
     let bytes = html.into_bytes();
     fs::write(path, &bytes)?;
     Ok(bytes)
-}
-
-fn csv_escape(value: &str) -> String {
-    let guarded = match value.chars().next() {
-        Some('=' | '+' | '-' | '@') => format!("'{value}"),
-        _ => value.to_string(),
-    };
-    if guarded.contains(',') || guarded.contains('"') || guarded.contains('\n') {
-        format!("\"{}\"", guarded.replace('"', "\"\""))
-    } else {
-        guarded
-    }
-}
-
-fn escape_html(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '&' => escaped.push_str("&amp;"),
-            '<' => escaped.push_str("&lt;"),
-            '>' => escaped.push_str("&gt;"),
-            '"' => escaped.push_str("&quot;"),
-            '\'' => escaped.push_str("&#x27;"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sanitize_path_component_replaces_non_alnum() {
-        assert_eq!(sanitize_path_component(Path::new("a/b-c.dcm")), "a_b_c_dcm");
-    }
-
-    #[test]
-    fn frame_to_rgba8_from_luma8_expands_channels() {
-        let frame = DisplayFrame {
-            width: 1,
-            height: 1,
-            format: PixelFormat::Luma8,
-            bytes: vec![7],
-        };
-        let rgba = frame_to_rgba8(&frame).expect("rgba");
-        assert_eq!(rgba, vec![7, 7, 7, 255]);
-    }
-
-    #[test]
-    fn frame_to_rgba8_rejects_odd_luma16_buffer() {
-        let frame = DisplayFrame {
-            width: 1,
-            height: 1,
-            format: PixelFormat::Luma16,
-            bytes: vec![1],
-        };
-        assert!(frame_to_rgba8(&frame).is_err());
-    }
-
-    #[test]
-    fn csv_escape_guards_formula_prefixes() {
-        assert_eq!(csv_escape("=SUM(A1:A2)"), "'=SUM(A1:A2)");
-        assert_eq!(csv_escape("+cmd"), "'+cmd");
-    }
-
-    #[test]
-    fn escape_html_escapes_attribute_sensitive_characters() {
-        assert_eq!(
-            escape_html("<img src=\"x\" onerror='a'>"),
-            "&lt;img src=&quot;x&quot; onerror=&#x27;a&#x27;&gt;"
-        );
-    }
 }
