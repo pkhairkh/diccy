@@ -1,3 +1,0 @@
-<p v-if="loadingState === 'error'" :class="classTokens.alertBanner">
-{{ loadingMessage }}
-</p>

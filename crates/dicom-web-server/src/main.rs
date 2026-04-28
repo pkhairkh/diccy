@@ -209,6 +209,7 @@ fn main() -> std::io::Result<()> {
         policy: WebPolicy::new(tls_policy, ThrottleDecision::Allow)
             .with_delete_enabled(interop_policy.delete),
         auth,
+        cors: dicom_web::cors::default_dicomweb_cors(),
     }));
     let opened_storage = Storage::open(limits, &storage_wal_path)
         .map_err(|err| IoError::other(format!("failed to open durable storage WAL: {err}")))?;

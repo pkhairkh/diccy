@@ -11,6 +11,7 @@ fn service(policy: WebPolicy, auth: WebAuthConfig) -> DicomWebService {
         limits: Limits::default(),
         policy,
         auth,
+        cors: dicom_web::cors::default_dicomweb_cors(),
     })
 }
 

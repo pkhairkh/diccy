@@ -1310,6 +1310,7 @@ fn service(
                 Ok(())
             })),
         },
+        cors: dicom_web::cors::default_dicomweb_cors(),
     };
     DicomWebService::new(config)
 }

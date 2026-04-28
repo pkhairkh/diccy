@@ -2,11 +2,13 @@
 
 Date: 2026-02-24
 
+> **Note (S25-T1):** The legacy Vue frontend (`frontend/`) has been deleted. The canonical frontend is now the Next.js application at `src/`. The findings below are preserved for historical reference only.
+
 ## Scope
 
-- `frontend/src/components`
-- `frontend/src/styles`
-- `frontend/tests`
+- `frontend/src/components` *(legacy — deleted)*
+- `frontend/src/styles` *(legacy — deleted)*
+- `frontend/tests` *(legacy — deleted)*
 
 ## Findings
 

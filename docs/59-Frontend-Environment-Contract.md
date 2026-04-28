@@ -53,7 +53,7 @@ Status: normative frontend runtime contract for production deployments.
   - `frontend/tests/role-matrix.auth-outcomes.contract.test.mjs`
   - `frontend/tests/accessibility.keyboard-nav.contract.test.mjs`
   - `frontend/tests/visual.state-snapshots.contract.test.mjs`
-- Frontend implementation:
-  - `frontend/src/components/panels/ConnectorOpsPanel.vue`
-  - `frontend/src/components/pages/ConnectorAdminPage.vue`
-  - `frontend/src/components/pages/TenantHealthDashboardPage.vue`
+- Frontend implementation (Next.js — legacy Vue paths listed for reference only):
+  - `src/components/diccy/panels/ConnectorOpsPanel.tsx` *(was `frontend/src/components/panels/ConnectorOpsPanel.vue`)*
+  - `src/components/diccy/pages/connector-page.tsx` *(was `frontend/src/components/pages/ConnectorAdminPage.vue`)*
+  - `src/components/diccy/pages/health-page.tsx` *(was `frontend/src/components/pages/TenantHealthDashboardPage.vue`)*

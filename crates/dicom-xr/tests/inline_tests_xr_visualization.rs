@@ -69,8 +69,10 @@
         let mut session = XrViewerSession::new(config, "1.2.3").expect("session");
         session.start().expect("start");
 
-        let bad_pose = HeadPose::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0, 10.0], 0.0).expect("should create despite non-unit");
-        assert!(session.update_head_pose(bad_pose).is_err());
+        // HeadPose::new validates quaternion unit length at construction time,
+        // so a non-unit quaternion should be rejected by the constructor.
+        let bad_result = HeadPose::new([0.0, 0.0, 0.0], [10.0, 10.0, 10.0, 10.0], 0.0);
+        assert!(bad_result.is_err(), "non-unit quaternion should be rejected at construction");
     }
 
     #[test]
